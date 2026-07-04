@@ -239,6 +239,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 .badge-disponivel{background:#e0f7fa;color:#00695c;}
 .badge-convertida,.badge-retirada,.badge-entregue{background:var(--vj-pale);color:#1b5e20;}
 .badge-cancelada{background:var(--red-pale);color:var(--red);}
+.badge-pago{background:var(--vj-pale);color:#1b5e20;}
 .hist-filtros{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
 .hist-filtro{padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--branco);font-family:'Sora',sans-serif;font-size:11px;cursor:pointer;color:var(--mid);}
 .hist-filtro.active{background:var(--vf);color:#fff;border-color:var(--vf);}
@@ -472,10 +473,11 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 
   <div id="enc-view-historico" style="display:none">
     <div class="hist-filtros">
-      <button class="hist-filtro active" onclick="filtrarEncHist('Todos',this)">Todos</button>
+      <button class="hist-filtro" onclick="filtrarEncHist('Todos',this)">Todas</button>
       <button class="hist-filtro" onclick="filtrarEncHist('Futura',this)">Futuras</button>
       <button class="hist-filtro" onclick="filtrarEncHist('Agendada',this)">Agendadas</button>
       <button class="hist-filtro" onclick="filtrarEncHist('Pendente',this)">Pendentes</button>
+      <button class="hist-filtro active" onclick="filtrarEncHist('Disponível',this)">Disponível</button>
     </div>
     <div id="enc-hist-lista"><div class="loading-state">Carregando…</div></div>
   </div>
@@ -556,6 +558,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
         <div class="form-group" style="margin-bottom:0"><label class="form-label">Produto</label><input class="form-input" id="gas-est-produto" type="text" placeholder="Nome"></div>
         <div class="form-group" style="margin-bottom:0"><label class="form-label">Quantidade</label><input class="form-input" id="gas-est-qtd" type="number" inputmode="numeric" placeholder="0" min="1"></div>
       </div>
+      <div class="form-group" style="margin-bottom:0;margin-top:10px;"><label class="form-label">Valor de venda (R$)</label><input class="form-input" id="gas-est-venda" type="number" inputmode="decimal" placeholder="0,00" min="0" step="0.01"></div>
     </div>
     <button class="btn btn-primary" id="btn-gasto" onclick="salvarGasto()">
       <span id="btn-gasto-text">Registrar gasto ✓</span>
@@ -708,6 +711,7 @@ var produtos = [];
 var totalVenda = 0;
 var descontoVal = 0;
 var pagamentosSelecionados = {};
+var pagamentoManual = {}; // marca formas de pagamento que o operador editou manualmente (ex: valor maior pra dar troco), pra não sobrescrever quando o total mudar
 var vendaAtual = null;
 var encomendaAtual = null;
 var estoque = [];
@@ -717,7 +721,8 @@ var encomendas = [];
 var gastosDia = [];
 var estFiltroAtivo = 'todos';
 var histPeriodo = 'hoje';
-var encHistFiltro = 'Todos';
+var encHistFiltro = 'Disponível';
+var encomendaConvertendoIdx = null; // guarda a encomenda sendo convertida em venda, pra marcar como Paga ao finalizar
 var gasCat = 'Alimentação';
 var gasPag = 'Dinheiro';
 var perdaProduto = null;
@@ -1091,7 +1096,31 @@ function calcTotal() {
   var n = produtos.length;
   setEl('total-itens-desc', n===1?'1 produto':n+' produtos'+(descontoVal>0?' · Desconto R$ '+fmt(descontoVal):''));
   setEl('total-itens-label', n===1?'1 item':n+' itens');
+  sincronizarPagamentosAuto();
   recalcBalance();
+}
+
+// Reajusta as formas de pagamento que o operador ainda NÃO editou manualmente
+// (ex: dinheiro que estava só "sobrando o resto") pra cobrir o que falta do
+// total, descontando o que já foi fixado na mão (ex: débito travado em 100,
+// ou um valor a mais de propósito pra dar troco). Assim desconto/produto
+// mudando não deixa "troco" fantasma nem falta escondida em vendas com
+// mais de uma forma de pagamento.
+function sincronizarPagamentosAuto(){
+  var keys = Object.keys(pagamentosSelecionados);
+  if(!keys.length) return;
+  var autoKeys = keys.filter(function(k){return !pagamentoManual[k];});
+  if(!autoKeys.length) return; // tudo foi ajustado na mão, não mexe em nada
+  var somaManual = keys.filter(function(k){return pagamentoManual[k];})
+    .reduce(function(s,k){return s+(pagamentosSelecionados[k]||0);},0);
+  var restante = Math.max(0, totalVenda - somaManual);
+  var cadaUm = autoKeys.length>1 ? restante/autoKeys.length : restante;
+  autoKeys.forEach(function(k){
+    var valor = Math.round(cadaUm*100)/100;
+    pagamentosSelecionados[k]=valor;
+    var inp=document.getElementById('pay-val-'+k);
+    if(inp) inp.value=valor.toFixed(2);
+  });
 }
 
 // ── PAGAMENTO ──────────────────────────────────────────────
@@ -1112,12 +1141,13 @@ function toggleChip(btn, tipo) {
     if(resto > 0){ inp2.value = resto.toFixed(2); pagamentosSelecionados[tipo] = resto; recalcBalance(); }
   } else {
     delete pagamentosSelecionados[tipo];
+    delete pagamentoManual[tipo];
     var r = document.getElementById('pay-row-'+tipo); if(r) r.remove();
   }
   recalcBalance();
 }
 
-function updatePayValue(tipo, val) {pagamentosSelecionados[tipo]=parseFloat(val)||0;recalcBalance();}
+function updatePayValue(tipo, val) {pagamentoManual[tipo]=true;pagamentosSelecionados[tipo]=parseFloat(val)||0;recalcBalance();}
 
 function autoFill(tipo) {
   var pago = Object.entries(pagamentosSelecionados).filter(function(e){return e[0]!==tipo;}).reduce(function(s,e){return s+e[1];},0);
@@ -1185,6 +1215,14 @@ async function finalizarVenda() {
   });
   atualizarAlertas();
 
+  // Se essa venda veio da conversão de uma encomenda, marca a encomenda como Paga
+  if(encomendaConvertendoIdx!==null && encomendas[encomendaConvertendoIdx]){
+    encomendas[encomendaConvertendoIdx].Status = 'Pago';
+    if(webhookUrl) enviarParaSheets({tipo:'encomenda_update',linha:encomendaConvertendoIdx+2,status:'Pago'});
+    renderEncHistorico();
+    encomendaConvertendoIdx = null;
+  }
+
   salvarLocal(vendaAtual);
   abrirModalRecibo(vendaAtual, salvo);
 }
@@ -1241,8 +1279,9 @@ function novaVenda() {
   totalVenda=0; document.getElementById('total-display').innerHTML='<span>R$</span>0,00';
   document.querySelectorAll('.pay-chip').forEach(function(b){b.classList.remove('selected');});
   document.getElementById('pay-inputs').innerHTML='';
-  pagamentosSelecionados={}; recalcBalance();
+  pagamentosSelecionados={}; pagamentoManual={}; recalcBalance();
   vendaAtual=null;
+  encomendaConvertendoIdx=null;
 }
 
 // ── ESTOQUE ────────────────────────────────────────────────
@@ -1495,6 +1534,14 @@ function enviarWhatsappEncomenda(){
   window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(txt),'_blank');
 }
 
+function comunicarEncDisponivel(idx){
+  var e = encomendas[idx];
+  if(!e||!e.Telefone){showToast('Sem telefone cadastrado para essa encomenda',true);return;}
+  var tel = String(e.Telefone).replace(/\D/g,'');
+  var txt = '🌸 *Sua encomenda está disponível!*\n\n👤 *Cliente:* '+(e.Cliente||e.Nome||'')+'\n📋 *Pedido:* '+(e.Descricao||'')+'\n\nJá pode vir retirar quando quiser. Te esperamos! 🌸';
+  window.open('https://wa.me/'+tel+'?text='+encodeURIComponent(txt),'_blank');
+}
+
 function novaEncomenda(){
   document.getElementById('modal-encomenda').classList.remove('open');
   ['enc-tel','enc-nome','enc-desc','enc-data-ret','enc-hora-ret','enc-endereco','enc-recebedor','enc-valor'].forEach(function(id){document.getElementById(id).value='';});
@@ -1520,7 +1567,10 @@ function renderEncHistorico(){
     var acoes='';
     if(e.Status==='Pendente'&&e.Tipo==='Agendada') acoes+='<button class="enc-act primary" onclick="updateEncStatus('+i+',\'Confirmada\')">Confirmar</button>';
     if(e.Status==='Pendente'&&e.Tipo==='Futura')   acoes+='<button class="enc-act primary" onclick="updateEncStatus('+i+',\'Disponível\')">Disponível</button>';
-    if(e.Status==='Disponível')                    acoes+='<button class="enc-act primary" onclick="converterEncVenda('+i+')">Converter em venda</button>';
+    if(e.Status==='Disponível'){
+      acoes+='<button class="enc-act primary" onclick="converterEncVenda('+i+')">Converter em venda</button>';
+      acoes+='<button class="enc-act" style="background:#25D366;color:#fff;" onclick="comunicarEncDisponivel('+i+')">📲 Comunicar</button>';
+    }
     if(e.Status==='Confirmada')                    acoes+='<button class="enc-act primary" onclick="updateEncStatus('+i+',\''+(e.Entrega==='Sim'?'Entregue':'Retirada')+'\')">Marcar '+(e.Entrega==='Sim'?'entregue':'retirada')+'</button>';
     if(['Pendente','Confirmada','Disponível'].indexOf(e.Status)>=0) acoes+='<button class="enc-act danger" onclick="updateEncStatus('+i+',\'Cancelada\')">Cancelar</button>';
     return '<div class="enc-card">'+
@@ -1559,7 +1609,7 @@ async function updateEncStatus(idx,novoStatus){
   if(webhookUrl) await enviarParaSheets({tipo:'encomenda_update',linha:idx+2,status:novoStatus});
 }
 
-// Converter encomenda em venda: preenche tela de venda e navega
+// Converter encomenda em venda: preenche tela de venda (cliente + produto) e navega
 function converterEncVenda(idx){
   var e = encomendas[idx];
   // Atualiza status
@@ -1568,22 +1618,25 @@ function converterEncVenda(idx){
   // Navega para aba venda
   var btnVenda = document.querySelector('.nav-btn');
   showPage('venda', btnVenda);
-  // Preenche telefone e nome
+  // Limpa tela de venda (reseta produtos/pagamentos)
+  novaVenda();
+  // Lembra qual encomenda está sendo convertida, pra marcar como Paga quando a venda for finalizada
+  // (precisa ser depois do novaVenda(), que zera esse rastreio)
+  encomendaConvertendoIdx = idx;
+  // Preenche cliente
   document.getElementById('telefone').value = e.Telefone||'';
   document.getElementById('nome').value = e.Cliente||e.Nome||'';
   document.getElementById('nome-wrap').style.display = 'block';
   document.getElementById('cliente-known').style.display = 'none';
-  // Limpa produtos e adiciona linha vazia para o operador selecionar os itens
-  novaVenda();
-  // Re-preenche cliente após novaVenda limpar
-  document.getElementById('telefone').value = e.Telefone||'';
-  document.getElementById('nome').value = e.Cliente||e.Nome||'';
-  document.getElementById('nome-wrap').style.display = 'block';
-  // Pré-preenche valor no campo de desconto se havia pagamento parcial
-  if(parseFloat(e.Valor||0)>0){
-    document.getElementById('desconto-val').value = '0';
+  // Pré-preenche o produto com base na descrição/valor da encomenda
+  var valorEnc = parseFloat(e.Valor||0)||0;
+  if(produtos[0]){
+    produtos[0].nome = e.Descricao||'';
+    produtos[0].valorUnit = valorEnc;
   }
-  showToast('Cliente preenchido — adicione os produtos e finalize');
+  renderProdutos();
+  calcTotal();
+  showToast('Cliente e produto preenchidos — confira e finalize');
 }
 
 // Busca cliente na aba Encomenda igual à aba Venda
@@ -1638,6 +1691,8 @@ async function salvarGasto(){
   var togEst = document.getElementById('tog-gas-est').classList.contains('on');
   var produto = togEst?document.getElementById('gas-est-produto').value.trim():'';
   var qtdEst  = togEst?parseInt(document.getElementById('gas-est-qtd').value)||0:0;
+  var valorVenda = togEst?parseFloat(document.getElementById('gas-est-venda').value)||0:0;
+  if(togEst && produto && qtdEst>0 && !valorVenda){showToast('Informe o valor de venda do produto',false,'warn');return;}
 
   setLoading('btn-gasto','btn-gasto-text','spinner-gasto',true,'Salvando…');
   var ok = await enviarParaSheets({
@@ -1646,7 +1701,7 @@ async function salvarGasto(){
     descricao:desc, categoria:gasCat, valor:valor,
     formaPagamento:gasPag,
     entraEstoque:togEst?'Sim':'Nao',
-    produto:produto, qtdEstoque:qtdEst,
+    produto:produto, qtdEstoque:qtdEst, valorVenda:valorVenda,
     operador:operador||'PDV'
   });
   setLoading('btn-gasto','btn-gasto-text','spinner-gasto',false,'Registrar gasto ✓');
@@ -1659,16 +1714,18 @@ async function salvarGasto(){
     document.getElementById('gas-valor').value='';
     document.getElementById('gas-est-produto').value='';
     document.getElementById('gas-est-qtd').value='';
+    document.getElementById('gas-est-venda').value='';
     // Se entra no estoque: dispara também ajuste_estoque para garantir
     if(togEst && produto && qtdEst > 0) {
       var ep = estoque.find(function(x){return x.Nome===produto;});
       if(ep) {
         var novaQtd = (parseInt(ep.Qtd||0)+qtdEst);
         ep.Qtd = novaQtd;
-        // Envia ajuste de estoque separado
+        if(valorVenda>0) ep.Preco_Venda = valorVenda;
+        // Envia ajuste de estoque separado (inclui valor de venda e responsável)
         await enviarParaSheets({
           tipo:'ajuste_estoque', loja:pdvLoja,
-          nome:produto, novaQtd:novaQtd,
+          nome:produto, novaQtd:novaQtd, precoVenda:valorVenda,
           motivo:'Gasto com entrada no estoque', operador:operador||'PDV'
         });
         renderEstoque(); atualizarAlertas();
@@ -1678,7 +1735,7 @@ async function salvarGasto(){
           tipo:'upsert_produto', loja:pdvLoja,
           nome:produto, categoria:gasCat,
           emoji:'📦', qtd:qtdEst,
-          precoCusto:0, precoVenda:0,
+          precoCusto:0, precoVenda:valorVenda,
           fornecedor:'', alertaMinimo:5, lote:'',
           operador:operador||'PDV'
         });
