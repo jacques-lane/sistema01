@@ -64,7 +64,13 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 .lchip[data-l="viveiro"].on{background:var(--vv);}
 .lchip-all{font-size:11px;color:var(--light);cursor:pointer;padding:2px 6px;text-decoration:underline;}
 .lchip-all:hover{color:var(--vf);}
-.period-bar{display:flex;align-items:center;gap:6px;}
+.period-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.per-chips{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.pchip{padding:6px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--branco);color:var(--mid);font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.pchip:hover{border-color:var(--vj);}
+.pchip.on{background:var(--vf);color:#fff;border-color:var(--vf);}
+.per-custom{display:flex;align-items:center;gap:6px;}
+.per-lbl{font-size:11px;color:var(--light);white-space:nowrap;}
 .pi{padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Sora',sans-serif;font-size:11px;color:var(--grafite);outline:none;background:var(--branco);}
 .pi:focus{border-color:var(--vj);}
 .btn-l{padding:7px 14px;background:var(--vf);color:white;border:none;border-radius:8px;font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;}
@@ -253,7 +259,19 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
       </div>
     </div>
     <div class="period-bar">
-      <input type="date" class="pi" id="dt-from"><span style="font-size:11px;color:var(--light)">até</span><input type="date" class="pi" id="dt-to">
+      <div class="per-chips" id="per-chips">
+        <button class="pchip" data-p="hoje" onclick="setPeriodo('hoje')">Hoje</button>
+        <button class="pchip on" data-p="mes" onclick="setPeriodo('mes')">Este mês</button>
+        <button class="pchip" data-p="3m" onclick="setPeriodo('3m')">Últ. 3 meses</button>
+        <button class="pchip" data-p="12m" onclick="setPeriodo('12m')">Últ. 12 meses</button>
+        <button class="pchip" data-p="ano" onclick="setPeriodo('ano')">Este ano</button>
+        <button class="pchip" data-p="tudo" onclick="setPeriodo('tudo')">Tudo</button>
+        <button class="pchip" data-p="custom" onclick="setPeriodo('custom')">Personalizado</button>
+      </div>
+      <div class="per-custom" id="per-custom" style="display:none;">
+        <input type="date" class="pi" id="dt-from" onchange="onCustomDateChange()"><span style="font-size:11px;color:var(--light)">até</span><input type="date" class="pi" id="dt-to" onchange="onCustomDateChange()">
+      </div>
+      <span class="per-lbl" id="per-lbl"></span>
       <button class="btn-l" onclick="loadData()"><div class="sp-sm" id="btn-sp"></div><span id="btn-lbl">Carregar</span></button>
     </div>
   </div>
@@ -520,6 +538,7 @@ var cfg={url:localStorage.getItem('mayse_dash_url')||'',token:localStorage.getIt
 var D={vendas:[],encomendas:[],estoque:[],compras:[],gastos:[],pagamentos:[],clientes:[],pdvs:[]};
 var lojasAtivas=new Set(['juquia','cambuci']);
 var secAtiva='visao',saiTipo='gasto',encTipoM='Futura',estFil='todos',saiFil='todos',saiStFil='todos';
+var periodoAtivo='mes'; var perDe=null, perAte=null; // filtro de período global (aplicado em gDL)
 var ajProd=null,pdProd=null,pdMot='',cliEdit=null,ingList=[],pdvPend={};
 var _vendaAnaliticaCache=[];
 var cFat=null,cForn=null;
@@ -603,8 +622,7 @@ window.addEventListener('DOMContentLoaded',function(){
   else{var ls=document.getElementById('lsc');if(ls)ls.style.display='flex';setTimeout(function(){var lp=document.getElementById('lpw');if(lp)lp.focus();},100);}
 });
 function doLogin(){var pw=document.getElementById('lpw').value;if(pw===SENHA){sessionStorage.setItem('mayse_dash_auth','1');var ls=document.getElementById('lsc');if(ls)ls.style.display='none';initApp();}else{document.getElementById('lerr').style.display='block';document.getElementById('lpw').value='';}}
-function initApp(){var ls=document.getElementById('lsc');if(ls)ls.style.display='none';initCfg();initDts();updFL();}
-function initDts(){var h=new Date(),p=new Date(h.getFullYear(),h.getMonth(),1);document.getElementById('dt-from').value=p.toISOString().split('T')[0];document.getElementById('dt-to').value=h.toISOString().split('T')[0];}
+function initApp(){var ls=document.getElementById('lsc');if(ls)ls.style.display='none';initCfg();setPeriodo('mes');updFL();}
 
 /* ── SIDEBAR ── */
 function togSB(){document.getElementById('sb').classList.toggle('col');document.getElementById('main').classList.toggle('col');}
@@ -650,8 +668,72 @@ function updFL(){
 /* gDL: filtro central de loja — usa lSlug para normalizar */
 function gDL(arr){
   return (arr||[]).filter(function(r){
-    return lojasAtivas.has(lSlug(r.Loja||r.loja||r.Cidade||r.cidade||''));
+    if(!lojasAtivas.has(lSlug(r.Loja||r.loja||r.Cidade||r.cidade||''))) return false;
+    if(perDe||perAte){
+      var raw = r.Data!==undefined&&r.Data!==''&&r.Data!==null ? r.Data
+              : (r.Vencimento!==undefined&&r.Vencimento!==''&&r.Vencimento!==null ? r.Vencimento
+              : (r.Data_Cadastro!==undefined&&r.Data_Cadastro!==''&&r.Data_Cadastro!==null ? r.Data_Cadastro : null));
+      if(raw!==null){
+        var d=parsePtD(raw);
+        if(d){
+          if(perDe && d.getTime()<perDe.getTime()) return false;
+          if(perAte && d.getTime()>perAte.getTime()) return false;
+        }
+      }
+    }
+    return true;
   });
+}
+
+/* ── PERÍODO (filtro de data global) ── */
+function isoDate(d){ if(!d) return ''; return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+function calcPeriodo(p){
+  var hoje=new Date(); hoje.setHours(0,0,0,0);
+  var de=null, ate=new Date(hoje);
+  if(p==='hoje'){ de=new Date(hoje); }
+  else if(p==='mes'){ de=new Date(hoje.getFullYear(),hoje.getMonth(),1); }
+  else if(p==='3m'){ de=new Date(hoje.getFullYear(),hoje.getMonth()-2,1); }
+  else if(p==='12m'){ de=new Date(hoje.getFullYear(),hoje.getMonth()-11,1); }
+  else if(p==='ano'){ de=new Date(hoje.getFullYear(),0,1); }
+  else if(p==='tudo'){ de=null; ate=null; }
+  return {de:de, ate:ate};
+}
+
+function updPerLbl(){
+  var el=document.getElementById('per-lbl'); if(!el) return;
+  if(!perDe&&!perAte){ el.textContent='Todo o período'; return; }
+  var f=function(d){return d?String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear():'';};
+  el.textContent=f(perDe)+' – '+f(perAte);
+}
+
+function setPeriodo(p){
+  periodoAtivo=p;
+  document.querySelectorAll('.pchip').forEach(function(b){b.classList.toggle('on', b.dataset.p===p);});
+  var custom=document.getElementById('per-custom');
+  if(p==='custom'){
+    custom.style.display='flex';
+    var deEl=document.getElementById('dt-from'), ateEl=document.getElementById('dt-to');
+    if(!deEl.value||!ateEl.value){
+      var pr=calcPeriodo('mes');
+      deEl.value=isoDate(pr.de); ateEl.value=isoDate(pr.ate);
+    }
+    onCustomDateChange();
+    return;
+  }
+  custom.style.display='none';
+  var r=calcPeriodo(p);
+  perDe=r.de; perAte=r.ate;
+  updPerLbl();
+  if(D.vendas.length) renAll();
+}
+
+function onCustomDateChange(){
+  var deVal=document.getElementById('dt-from').value, ateVal=document.getElementById('dt-to').value;
+  perDe = deVal? new Date(deVal+'T00:00:00') : null;
+  perAte = ateVal? new Date(ateVal+'T00:00:00') : null;
+  updPerLbl();
+  if(D.vendas.length) renAll();
 }
 
 /* ── CONFIG ── */
@@ -1134,7 +1216,8 @@ function exportarDRE(){
   const csv=[['Data','Entradas','Saidas','Resultado','Saldo Acumulado'],...rows].map(r=>r.join(',')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download=`mayse-dre-${document.getElementById('dt-from').value}.csv`;a.click();URL.revokeObjectURL(url);
+  const nomePeriodo=(perDe?isoDate(perDe):'inicio')+'_a_'+(perAte?isoDate(perAte):'hoje');
+  const a=document.createElement('a');a.href=url;a.download=`mayse-dre-${nomePeriodo}.csv`;a.click();URL.revokeObjectURL(url);
 }
 function aplicarFiltrosAnalitica(){
   const forma = document.getElementById('filt-pag')?.value||'';
