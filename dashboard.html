@@ -136,6 +136,8 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 .dt td{font-size:12px;padding:10px 12px;border-bottom:1px solid var(--border);color:var(--grafite);vertical-align:middle;}
 .dt tr:last-child td{border-bottom:none;}
 .dt tr:hover td{background:#fafaf8;}
+.dt-compact th,.dt-compact td{padding:6px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;}
+.dt-compact td:nth-child(2){max-width:260px;}
 .dt tfoot td{background:var(--cream);font-weight:700;border-top:2px solid var(--border);}
 .fbtns{display:flex;gap:6px;flex-wrap:wrap;}
 .fbtn{padding:5px 12px;border-radius:20px;border:1px solid var(--border);background:var(--branco);color:var(--mid);font-family:'Sora',sans-serif;font-size:11px;cursor:pointer;transition:all .15s;}
@@ -373,10 +375,10 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
         <div class="ch"><div><div class="ct">Tabela de saídas</div></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <div class="fbtns" id="sai-tipo-btns"><button class="fbtn active" onclick="filSai('todos',this)">Todos</button><button class="fbtn" onclick="filSai('gasto',this)">Gastos</button><button class="fbtn" onclick="filSai('compra',this)">Compras</button><button class="fbtn" onclick="filSai('pagamento',this)">Pagamentos</button></div>
-            <div class="fbtns" id="sai-st-btns"><button class="fbtn active" onclick="filSaiSt('todos',this)">Todos status</button><button class="fbtn" onclick="filSaiSt('Pago',this)">Pagos</button><button class="fbtn" onclick="filSaiSt('Pendente',this)">Pendentes</button><button class="fbtn" onclick="filSaiSt('Vencido',this)">Vencidos</button></div>
+            <div class="fbtns" id="sai-st-btns"><button class="fbtn active" onclick="filSaiSt('todos',this)">Todos status</button><button class="fbtn" onclick="filSaiSt('A vencer',this)">A vencer</button><button class="fbtn" onclick="filSaiSt('Vencido',this)">Vencidos</button><button class="fbtn" onclick="filSaiSt('Pago',this)">Pagos</button></div>
           </div>
         </div>
-        <div class="tw"><table class="dt"><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Loja</th><th>Categoria</th><th>Valor</th><th>Vencimento</th><th>Status</th><th></th></tr></thead><tbody id="tb-sai"></tbody></table></div>
+        <div class="tw"><table class="dt dt-compact"><thead><tr><th>Vencimento</th><th>Descrição</th><th>Loja</th><th>Tipo</th><th>Categoria</th><th>Sub categoria</th><th>Valor</th><th>Status</th><th></th></tr></thead><tbody id="tb-sai"></tbody></table></div>
       </div>
     </div>
 
@@ -906,9 +908,13 @@ function exportCSV(){var vnd=gDL(D.vendas);var hdr=['Loja','Data','Hora','Client
 
 /* ── SAÍDAS ── */
 var _saiL=[];
+var _saiSaldo=0;
 function renSai(){
   var gst=gDL(D.gastos),cmp=gDL(D.compras),pag=gDL(D.pagamentos);
   var tg=gst.reduce(function(s,g){return s+parseFloat(g.Valor||0);},0),tc=cmp.reduce(function(s,c){return s+parseFloat(c.Valor_Total||0);},0),tp=pag.reduce(function(s,p){return s+parseFloat(p.Valor||0);},0),tap=pag.filter(function(p){return(p.Status||'').toLowerCase()!=='pago';}).reduce(function(s,p){return s+parseFloat(p.Valor||0);},0);
+  var vndSaldo=gDL(D.vendas),totalEnt=vndSaldo.reduce(function(s,v){return s+parseFloat(v.Total||0);},0);
+  var totalSaiPagas=tg+tc+pag.filter(function(p){return(p.Status||'').toLowerCase()==='pago';}).reduce(function(s,p){return s+parseFloat(p.Valor||0);},0);
+  _saiSaldo=totalEnt-totalSaiPagas;
   sEl('sk-tot',fmt(tg+tc+tp));sEl('sk-gst',fmt(tg));sEl('sk-cmp',fmt(tc));sEl('sk-ap',fmt(tap));
   var pt=[{l:'Gastos',v:tg,c:'#C97A1A'},{l:'Compras',v:tc,c:'#3B5BC9'},{l:'Pagamentos',v:tp,c:'#9c56b8'}],mpt=Math.max.apply(null,pt.map(function(x){return x.v;}))||1;
   document.getElementById('ch-st').innerHTML=pt.map(function(x){return'<div class="br"><span class="bl">'+x.l+'</span><div class="bt"><div class="bf" style="width:'+Math.round(x.v/mpt*100)+'%;background:'+x.c+'"></div></div><span class="bv">'+fmt(x.v)+'</span></div>';}).join('');
@@ -916,23 +922,34 @@ function renSai(){
   var al=Object.entries(pl).sort(function(a,b){return b[1]-a[1];}),ml=al[0]?al[0][1]:1;
   document.getElementById('ch-sl').innerHTML=al.map(function(e){return'<div class="br"><span class="bl">'+esc(LNOMES[e[0]]||e[0])+'</span><div class="bt"><div class="bf" style="width:'+Math.round(e[1]/ml*100)+'%;background:'+(LCORES[e[0]]||'var(--vj)')+'"></div></div><span class="bv">'+fmt(e[1])+'</span></div>';}).join('');
   _saiL=[];
-  gst.forEach(function(g){_saiL.push({dt:g.Data,tp:'gasto',desc:g.Descricao,lj:lSlug(g.Loja||''),cat:g.Categoria,val:parseFloat(g.Valor||0),st:'Pago',venc:'—',raw:g});});
-  cmp.forEach(function(c){_saiL.push({dt:c.Data,tp:'compra',desc:(c.Fornecedor||'—')+' — '+(c.Produto||''),lj:lSlug(c.Loja||''),cat:'Fornecedor',val:parseFloat(c.Valor_Total||0),st:'Pago',venc:'—',raw:c});});
+  gst.forEach(function(g){_saiL.push({venc:g.Data,tp:'gasto',desc:g.Descricao,lj:lSlug(g.Loja||''),cat:g.Categoria,sub:'—',val:parseFloat(g.Valor||0),st:'Pago',raw:g});});
+  cmp.forEach(function(c){_saiL.push({venc:c.Data,tp:'compra',desc:(c.Fornecedor||'—')+' — '+(c.Produto||''),lj:lSlug(c.Loja||''),cat:'Fornecedor',sub:'—',val:parseFloat(c.Valor_Total||0),st:'Pago',raw:c});});
   pag.forEach(function(p,i){
-    var hoje=new Date(),d=parsePtD(p.Vencimento),st=p.Status||'Pendente';
-    if(st.toLowerCase()==='pendente'&&d&&d<hoje)st='Vencido';
-    _saiL.push({dt:p.Vencimento,tp:'pagamento',desc:p.Descricao,lj:lSlug(p.Loja||''),cat:p.Categoria,val:parseFloat(p.Valor||0),st:st,venc:p.Vencimento||'—',_pi:i,raw:p});
+    var hoje=new Date();hoje.setHours(0,0,0,0);
+    var d=parsePtD(p.Vencimento),st;
+    if((p.Status||'').toLowerCase()==='pago')st='Pago';
+    else if(d&&d.getTime()<hoje.getTime())st='Vencido';
+    else st='A vencer';
+    _saiL.push({venc:p.Vencimento,tp:'pagamento',desc:p.Descricao,lj:lSlug(p.Loja||''),cat:p.Categoria,sub:p.Subcategoria||'—',val:parseFloat(p.Valor||0),st:st,_pi:i,raw:p});
   });
+  _saiL.sort(function(a,b){var da=parsePtD(a.venc),db=parsePtD(b.venc);return(da?da.getTime():0)-(db?db.getTime():0);});
   filSaiRen();
 }
 function filSaiRen(){
   var fil=_saiL.filter(function(l){return(saiFil==='todos'||l.tp===saiFil)&&(saiStFil==='todos'||l.st===saiStFil);});
   var stB=function(s){var cls=s==='Pago'?'b-ok':s==='Vencido'?'b-venc':'b-pnd';return'<span class="bdg '+cls+'">'+s+'</span>';};
-  document.getElementById('tb-sai').innerHTML=fil.map(function(l){
-    var mb=l.tp==='pagamento'&&l.st!=='Pago'?'<button style="font-size:10px;padding:2px 8px;border-radius:8px;border:1px solid var(--vj);color:var(--vf);background:var(--vj-pale);cursor:pointer;font-family:Sora,sans-serif;" onclick="marcarPago('+_saiL.indexOf(l)+')">Pagar</button>':'';
-    return'<tr><td>'+esc(l.dt)+'</td><td><span class="bdg b-pnd" style="background:var(--cream);color:var(--mid)">'+l.tp.charAt(0).toUpperCase()+l.tp.slice(1)+'</span></td><td>'+esc(l.desc)+'</td><td><span class="lb '+LPILL[l.lj]+'">'+esc(LNOMES[l.lj]||l.lj)+'</span></td><td style="color:var(--light)">'+esc(l.cat)+'</td><td style="font-weight:600;color:var(--red)">'+fmt(l.val)+'</td><td style="color:var(--light)">'+esc(l.venc)+'</td>'+stB(l.st)+'<td>'+mb+'</td></tr>';
-  }).join('');
-  if(!fil.length)document.getElementById('tb-sai').innerHTML='<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--light);">Nenhum registro</td></tr>';
+  var htmlRows=[],saldoInserido=false;
+  fil.forEach(function(l){
+    if(!saldoInserido&&l.st==='Vencido'){
+      var cor=_saiSaldo>=0?'var(--vf)':'var(--red)';
+      htmlRows.push('<tr style="background:var(--vj-pale);"><td colspan="6" style="font-weight:700;color:var(--vf);">💰 Saldo da conta até hoje</td><td style="font-weight:700;color:'+cor+'">'+fmt(_saiSaldo)+'</td><td colspan="2"></td></tr>');
+      saldoInserido=true;
+    }
+    var idx=_saiL.indexOf(l);
+    var acao=l.st==='Pago'?'<span style="font-size:11px;color:var(--light);font-weight:600;">Pago</span>':'<button style="font-size:10px;padding:2px 8px;border-radius:8px;border:1px solid var(--vj);color:var(--vf);background:var(--vj-pale);cursor:pointer;font-family:Sora,sans-serif;" onclick="marcarPago('+idx+')">Pagar</button>';
+    htmlRows.push('<tr><td>'+esc(l.venc||'—')+'</td><td title="'+esc(l.desc||'')+'">'+esc(l.desc||'—')+'</td><td><span class="lb '+LPILL[l.lj]+'">'+esc(LNOMES[l.lj]||l.lj)+'</span></td><td><span class="bdg b-pnd" style="background:var(--cream);color:var(--mid)">'+l.tp.charAt(0).toUpperCase()+l.tp.slice(1)+'</span></td><td style="color:var(--light)">'+esc(l.cat||'—')+'</td><td style="color:var(--light)">'+esc(l.sub||'—')+'</td><td style="font-weight:600;color:var(--red)">'+fmt(l.val)+'</td><td>'+stB(l.st)+'</td><td>'+acao+'</td></tr>');
+  });
+  document.getElementById('tb-sai').innerHTML=htmlRows.join('')||'<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--light);">Nenhum registro</td></tr>';
 }
 function filSai(f,b){saiFil=f;document.querySelectorAll('#sai-tipo-btns .fbtn').forEach(function(x){x.classList.remove('active');});b.classList.add('active');filSaiRen();}
 function filSaiSt(f,b){saiStFil=f;document.querySelectorAll('#sai-st-btns .fbtn').forEach(function(x){x.classList.remove('active');});b.classList.add('active');filSaiRen();}
