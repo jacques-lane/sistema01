@@ -738,6 +738,24 @@ function onCustomDateChange(){
   if(D.vendas.length) renAll();
 }
 
+// Saldo real acumulado ANTES do início do período selecionado (entradas - saídas já pagas),
+// respeitando as lojas ativas. Usado como ponto de partida do "Saldo acumulado" no Fluxo de
+// Caixa e na DRE, pra não fingir que o saldo sempre começa do zero a cada período.
+function calcSaldoInicial(){
+  if(!perDe) return 0; // período "Tudo" (ou sem limite inferior): não existe "antes"
+  function lj(r){return lojasAtivas.has(lSlug(r.Loja||r.loja||r.Cidade||r.cidade||''));}
+  function antes(raw){
+    if(raw===undefined||raw===null||raw==='')return false;
+    var d=parsePtD(raw);
+    return d&&d.getTime()<perDe.getTime();
+  }
+  var totalEnt=(D.vendas||[]).filter(function(v){return lj(v)&&antes(v.Data);}).reduce(function(s,v){return s+parseFloat(v.Total||0);},0);
+  var totalSai=(D.gastos||[]).filter(function(g){return lj(g)&&antes(g.Data);}).reduce(function(s,g){return s+parseFloat(g.Valor||0);},0)
+    +(D.compras||[]).filter(function(c){return lj(c)&&antes(c.Data);}).reduce(function(s,c){return s+parseFloat(c.Valor_Total||0);},0)
+    +(D.pagamentos||[]).filter(function(p){return lj(p)&&(p.Status||'').toLowerCase()==='pago'&&antes(p.Vencimento||p.Data);}).reduce(function(s,p){return s+parseFloat(p.Valor||0);},0);
+  return totalEnt-totalSai;
+}
+
 /* ── CONFIG ── */
 function initCfg(){if(cfg.url)document.getElementById('cfg-url').value=cfg.url;if(cfg.token)document.getElementById('cfg-tok').value='••••••••';if(cfg.url&&cfg.token){sEl('cfg-st','✓ Conectado');document.getElementById('cfg-st').style.color='var(--vj)';}renPDVs();}
 function saveCfg(){var u=document.getElementById('cfg-url').value.trim(),t=document.getElementById('cfg-tok').value.trim();if(!u||!t){showToast('Preencha URL e token','warn');return;}if(t==='••••••••')t=cfg.token;cfg.url=u;cfg.token=t;localStorage.setItem('mayse_dash_url',u);localStorage.setItem('mayse_dash_token',t);sEl('cfg-st','✓ Salvo');document.getElementById('cfg-st').style.color='var(--vj)';showToast('Configuração salva!');}
@@ -1140,7 +1158,8 @@ function renderFluxoCaixa(vendas,despesas){
 
   const entradas=dias.map(d=>vendas.filter(r=>fmtDateBR(parsePtD(r.Data))===d).reduce((s,r)=>s+parseFloat(r.Total||0),0));
   const saidas=dias.map(d=>despesas.filter(r=>fmtDateBR(parsePtD(r.Vencimento))===d).reduce((s,r)=>s+parseFloat(r.Valor||0),0));
-  let acum=0;
+  const saldoInicial=calcSaldoInicial();
+  let acum=saldoInicial;
   const saldos=dias.map((_,i)=>{acum+=(entradas[i]-saidas[i]);return acum;});
 
   if(cFluxo){cFluxo.destroy();cFluxo=null;}
@@ -1172,7 +1191,8 @@ function renderFluxoCaixa(vendas,despesas){
   if(leg) leg.innerHTML=dias.length?`
     <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--mid);"><div style="width:10px;height:10px;border-radius:2px;background:rgba(131,171,51,.75)"></div>Entradas</div>
     <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--mid);"><div style="width:10px;height:10px;border-radius:2px;background:rgba(229,57,53,.7)"></div>Saídas</div>
-    <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--mid);"><div style="width:16px;height:3px;background:#3B5BC9;border-radius:2px;"></div>Saldo</div>`:'';
+    <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--mid);"><div style="width:16px;height:3px;background:#3B5BC9;border-radius:2px;"></div>Saldo</div>
+    <div style="display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:${saldoInicial>=0?'var(--vf)':'var(--red)'};">Saldo inicial do período: ${fmt(saldoInicial)}</div>`:'';
 }
 function renderDespesasCat(despesas){
   const byCat={};
@@ -1194,8 +1214,15 @@ function renderDRE(vendas,despesas){
   const dias=[...diasSet].sort((a,b)=>parsePtD(a)-parsePtD(b));
   const tbody=document.getElementById('tb-dre'),tfoot=document.getElementById('tf-dre');
   if(!tbody) return;
-  let totalEnt=0,totalSai=0,acum=0;
-  tbody.innerHTML=dias.map(dia=>{
+  const saldoInicial=calcSaldoInicial();
+  let totalEnt=0,totalSai=0,acum=saldoInicial;
+  const linhaSaldoInicial=`<tr style="background:var(--vj-pale);">
+    <td style="font-weight:700;color:var(--vf);">Saldo inicial (antes do período)</td>
+    <td colspan="2"></td>
+    <td></td>
+    <td style="text-align:right;font-weight:700;color:${saldoInicial>=0?'var(--vf)':'var(--red)'};">${fmt(saldoInicial)}</td>
+  </tr>`;
+  tbody.innerHTML=linhaSaldoInicial+dias.map(dia=>{
     const ent=vendas.filter(r=>fmtDateBR(parsePtD(r.Data))===dia).reduce((s,r)=>s+parseFloat(r.Total||0),0);
     const sai=despesas.filter(r=>fmtDateBR(parsePtD(r.Vencimento))===dia).reduce((s,r)=>s+parseFloat(r.Valor||0),0);
     const res=ent-sai;acum+=res;totalEnt+=ent;totalSai+=sai;
@@ -1207,14 +1234,14 @@ function renderDRE(vendas,despesas){
       <td style="text-align:right;font-weight:700;color:${acum>=0?'var(--vf)':'var(--red)'};">${fmt(acum)}</td>
     </tr>`;
   }).join('');
-  if(!dias.length) tbody.innerHTML='<tr><td colspan="5"><div class="empty-state"><div class="empty-msg">Sem dados no período</div></div></td></tr>';
+  if(!dias.length) tbody.innerHTML=linhaSaldoInicial+'<tr><td colspan="5"><div class="empty-state"><div class="empty-msg">Sem dados no período</div></div></td></tr>';
   const lt=totalEnt-totalSai;
   if(tfoot) tfoot.innerHTML=`<tr style="background:var(--cream);font-weight:700;border-top:2px solid var(--border);">
-    <td>TOTAL</td>
+    <td>TOTAL DO PERÍODO</td>
     <td style="text-align:right;color:var(--vj);">${fmt(totalEnt)}</td>
     <td style="text-align:right;color:var(--red);">${fmt(totalSai)}</td>
     <td style="text-align:right;color:${lt>=0?'var(--vj)':'var(--red)'};">${fmt(lt)}</td>
-    <td style="text-align:right;color:${lt>=0?'var(--vf)':'var(--red)'};">${fmt(lt)}</td>
+    <td style="text-align:right;color:${acum>=0?'var(--vf)':'var(--red)'};">${fmt(acum)}</td>
   </tr>`;
 }
 function exportarDRE(){
@@ -1223,14 +1250,16 @@ function exportarDRE(){
   vendas.forEach(r=>{const d=parsePtD(r.Data);if(d)diasSet.add(fmtDateBR(d));});
   despesas.forEach(r=>{const d=parsePtD(r.Vencimento);if(d)diasSet.add(fmtDateBR(d));});
   const dias=[...diasSet].sort((a,b)=>parsePtD(a)-parsePtD(b));
-  let acum=0;
+  const saldoInicial=calcSaldoInicial();
+  let acum=saldoInicial;
   const rows=dias.map(dia=>{
     const ent=vendas.filter(r=>fmtDateBR(parsePtD(r.Data))===dia).reduce((s,r)=>s+parseFloat(r.Total||0),0);
     const sai=despesas.filter(r=>fmtDateBR(parsePtD(r.Vencimento))===dia).reduce((s,r)=>s+parseFloat(r.Valor||0),0);
     acum+=ent-sai;
     return [dia,ent.toFixed(2),sai.toFixed(2),(ent-sai).toFixed(2),acum.toFixed(2)];
   });
-  const csv=[['Data','Entradas','Saidas','Resultado','Saldo Acumulado'],...rows].map(r=>r.join(',')).join('\n');
+  const linhaInicial=['Saldo inicial (antes do período)','','','',saldoInicial.toFixed(2)];
+  const csv=[['Data','Entradas','Saidas','Resultado','Saldo Acumulado'],linhaInicial,...rows].map(r=>r.join(',')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob);
   const nomePeriodo=(perDe?isoDate(perDe):'inicio')+'_a_'+(perAte?isoDate(perAte):'hoje');
