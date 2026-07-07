@@ -112,6 +112,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 .bf{height:100%;border-radius:4px;transition:width .5s;}
 .bv{font-size:11px;font-weight:600;color:var(--grafite);width:80px;text-align:right;flex-shrink:0;}
 .tl{display:flex;flex-direction:column;}
+#tl-contas{max-height:330px;overflow-y:auto;}
 .tli{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);}
 .tli:last-child{border-bottom:none;}
 .tld{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px;}
@@ -289,7 +290,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
       </div>
       <div class="g2" style="margin-bottom:20px;">
         <div class="cc"><div class="ch"><div><div class="ct">Faturamento por dia</div><div class="csb">Barras por loja</div></div><div class="cleg" id="fat-leg"></div></div><div style="height:180px;"><canvas id="c-fat"></canvas></div></div>
-        <div class="cc"><div class="ch"><div><div class="ct">Próximos vencimentos</div><div class="csb">7 dias</div></div></div><div class="tl" id="tl-contas"><div class="empty">Carregue os dados</div></div></div>
+        <div class="cc"><div class="ch"><div><div class="ct">Próximos vencimentos</div><div class="csb">Todos os pendentes</div></div></div><div class="tl" id="tl-contas"><div class="empty">Carregue os dados</div></div></div>
       </div>
       <div class="g2">
         <div class="cc"><div class="ch"><div><div class="ct">🕐 Horários de pico</div><div class="csb">8h–19h · fora agrupadas nas extremidades</div></div></div><div class="bc" id="ch-pico"><div class="empty">Carregue os dados</div></div></div>
@@ -686,6 +687,13 @@ function gDL(arr){
     return true;
   });
 }
+/* gLojaOnly: filtra só por loja ativa, ignorando o período global — usado em widgets
+   "sempre atuais" (ex.: Próximos vencimentos) que não devem ser cortados pelo filtro de data */
+function gLojaOnly(arr){
+  return (arr||[]).filter(function(r){
+    return lojasAtivas.has(lSlug(r.Loja||r.loja||r.Cidade||r.cidade||''));
+  });
+}
 
 /* ── PERÍODO (filtro de data global) ── */
 function isoDate(d){ if(!d) return ''; return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -784,11 +792,10 @@ function renAll(){renVisao();if(secAtiva==='entradas')renEntradas();if(secAtiva=
 
 /* ── VISÃO GERAL ── */
 function renVisao(){
-  var vnd=gDL(D.vendas),pag=gDL(D.pagamentos);
+  var vnd=gDL(D.vendas),pag=gLojaOnly(D.pagamentos);
   var fat=vnd.reduce(function(s,v){return s+parseFloat(v.Total||0);},0),qtd=vnd.length;
   sEl('kv-fat',fmt(fat));sEl('kv-vnd',qtd);sEl('kv-tkt',fmt(qtd?fat/qtd:0));
-  var h7=new Date().getTime()+7*86400000;
-  var ap=pag.filter(function(p){var d=parsePtD(p.Vencimento);return (p.Status||'').toLowerCase()!=='pago'&&d&&d.getTime()<=h7;});
+  var ap=pag.filter(function(p){return (p.Status||'').toLowerCase()!=='pago';});
   sEl('kv-ap',fmt(ap.reduce(function(s,p){return s+parseFloat(p.Valor||0);},0)));
   sEl('kv-ap-s',ap.length+' vencimento'+(ap.length!==1?'s':''));
   var arr=[...lojasAtivas];
@@ -835,10 +842,10 @@ function renChPico(vnd,cid){
 
 function renTimeline(ap){
   var el=document.getElementById('tl-contas');
-  if(!ap.length){el.innerHTML='<div class="empty">Nenhum vencimento nos próximos 7 dias</div>';return;}
+  if(!ap.length){el.innerHTML='<div class="empty">Nenhum vencimento pendente</div>';return;}
   var hoje=new Date();hoje.setHours(0,0,0,0);
   var s=ap.slice().sort(function(a,b){return(parsePtD(a.Vencimento)||new Date(0)).getTime()-(parsePtD(b.Vencimento)||new Date(0)).getTime();});
-  el.innerHTML=s.slice(0,6).map(function(p){
+  el.innerHTML=s.map(function(p){
     var d=parsePtD(p.Vencimento);
     var vencido=d&&d.getTime()<hoje.getTime();
     var c=vencido?'var(--red)':'var(--gold)';
