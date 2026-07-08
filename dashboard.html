@@ -113,6 +113,32 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 .bv{font-size:11px;font-weight:600;color:var(--grafite);width:80px;text-align:right;flex-shrink:0;}
 .tl{display:flex;flex-direction:column;}
 #tl-contas{max-height:330px;overflow-y:auto;}
+.proj-card{border:1px solid var(--border);border-radius:var(--rs);margin-bottom:10px;overflow:hidden;}
+.proj-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;background:var(--cream);gap:10px;flex-wrap:wrap;}
+.proj-head:hover{background:var(--vj-pale);}
+.proj-head-l{display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;min-width:0;}
+.proj-nome{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.proj-chev{display:inline-block;transition:transform .15s;font-size:11px;color:var(--light);flex-shrink:0;}
+.proj-chev.open{transform:rotate(90deg);}
+.proj-head-r{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.proj-bar{width:80px;height:6px;background:var(--border);border-radius:4px;overflow:hidden;}
+.proj-bar-f{height:100%;background:var(--vf);}
+.proj-pct{font-size:11px;color:var(--light);width:32px;text-align:right;}
+.proj-cnt{font-size:11px;color:var(--light);}
+.proj-body{padding:6px 14px 14px 34px;}
+.tarefa-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;flex-wrap:wrap;}
+.tarefa-row:last-child{border-bottom:none;}
+.tarefa-nome{flex:1;min-width:120px;}
+.tarefa-nome.done{text-decoration:line-through;color:var(--light);}
+.tarefa-resp{font-size:11px;color:var(--light);background:var(--cream);padding:2px 8px;border-radius:10px;white-space:nowrap;}
+.tarefa-prazo{font-size:11px;color:var(--light);white-space:nowrap;}
+.tarefa-prazo.venc{color:var(--red);font-weight:600;}
+.tarefa-status{font-size:10px;padding:3px 8px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-family:'Sora',sans-serif;font-weight:600;white-space:nowrap;}
+.tarefa-status.st-afazer{background:var(--cream);color:var(--mid);}
+.tarefa-status.st-fazendo{background:#fff5e6;color:#a15c00;border-color:#f0d98a;}
+.tarefa-status.st-feito{background:var(--vj-pale);color:var(--vf);border-color:var(--vf);}
+.proj-add{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.proj-add input{flex:1;min-width:100px;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Sora',sans-serif;font-size:12px;outline:none;}
 .tli{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);}
 .tli:last-child{border-bottom:none;}
 .tld{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px;}
@@ -244,6 +270,8 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <button class="si" onclick="goSec('encomendas',this)" title="Encomendas"><span class="ico">📋</span><span class="si-lbl">Encomendas</span></button>
     <button class="si" onclick="goSec('estoque',this)" title="Estoque"><span class="ico">📦</span><span class="si-lbl">Estoque</span></button>
     <button class="si" onclick="goSec('compras',this)" title="Compras"><span class="ico">🛒</span><span class="si-lbl">Compras</span></button>
+    <div class="sb-sec">Gestão</div>
+    <button class="si" id="nav-projetos" onclick="goSec('projetos',this)" title="Projetos"><span class="ico">🗂️</span><span class="si-lbl">Projetos</span></button>
   </nav>
   <div class="sb-footer"><div class="sb-cfg" onclick="goSec('config',null)"><span style="font-size:15px">⚙️</span><span class="sb-cfg-lbl">Configurações</span></div></div>
 </div>
@@ -296,6 +324,10 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
       <div class="g2">
         <div class="cc"><div class="ch"><div><div class="ct">🕐 Horários de pico</div><div class="csb">8h–19h · fora agrupadas nas extremidades</div></div></div><div class="bc" id="ch-pico"><div class="empty">Carregue os dados</div></div></div>
         <div class="cc"><div class="ch"><div><div class="ct">Vendas por operador</div></div></div><div class="bc" id="ch-op"><div class="empty">Carregue os dados</div></div></div>
+      </div>
+      <div class="cc" style="margin-top:20px;">
+        <div class="ch"><div><div class="ct">🗂️ Projetos</div><div class="csb">Progresso por projeto e tarefas mais urgentes</div></div><button class="btn-l" onclick="goSec('projetos',document.getElementById('nav-projetos'))">Ver todos</button></div>
+        <div id="vg-proj-resumo"><div class="empty">Carregue os dados</div></div>
       </div>
     </div>
 
@@ -457,15 +489,27 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
       <div class="kgrid">
         <div class="kpi ro"><div class="ki">🛒</div><div class="kl">Itens p/ comprar</div><div class="kv ro" id="cp-sug-n">—</div><div class="ks">estoque abaixo do mínimo</div></div>
         <div class="kpi gn"><div class="ki">💸</div><div class="kl">Gasto em compras</div><div class="kv" id="cp-tot">—</div><div class="ks">no período selecionado</div></div>
-        <div class="kpi go"><div class="ki">⚠️</div><div class="kl">Margem abaixo do ideal</div><div class="kv go" id="cp-marg-n">—</div><div class="ks">produtos comprados nesse período</div></div>
+        <div class="kpi go"><div class="ki">⚠️</div><div class="kl">Margem abaixo do ideal</div><div class="kv go" id="cp-marg-n">—</div><div class="ks">produtos no estoque, hoje</div></div>
       </div>
       <div class="cc" style="margin-bottom:20px;">
-        <div class="ch"><div><div class="ct">Lista de compras sugerida</div><div class="csb">Comprados com estoque no mínimo ou abaixo — produção própria (viveiro) não entra aqui</div></div><button class="btn-l" onclick="abMCompra()">+ Registrar compra</button></div>
+        <div class="ch"><div><div class="ct">Lista de compras sugerida</div><div class="csb">⭐ prioritários sempre no topo · comprados com estoque no mínimo ou abaixo · produção própria (viveiro) não entra aqui</div></div><button class="btn-l" onclick="abMCompra()">+ Registrar compra</button></div>
         <div id="cp-sug-lst"><div class="empty">Carregue os dados</div></div>
+      </div>
+      <div class="cc" style="margin-bottom:20px;">
+        <div class="ch"><div><div class="ct">Produtos com margem abaixo do ideal</div><div class="csb">Todo o estoque, não só compras recentes — preço de venda não cobre 3x o custo atual</div></div></div>
+        <div id="cp-marg-lst"><div class="empty">Carregue os dados</div></div>
       </div>
       <div class="cc">
         <div class="ch"><div><div class="ct">Histórico de compras</div><div class="csb">Uma linha por compra, com a margem resultante sobre o preço de venda atual</div></div></div>
         <table class="dt dt-compact"><thead><tr><th>Data</th><th>Produto</th><th>Fornecedor</th><th>Loja</th><th>Qtd</th><th>Valor unit.</th><th>Valor total</th><th>Margem</th></tr></thead><tbody id="tb-compras"><tr><td colspan="8" style="text-align:center;padding:24px;color:var(--light);">Carregue os dados</td></tr></tbody></table>
+      </div>
+    </div>
+
+    <!-- PROJETOS -->
+    <div id="sec-projetos" class="section">
+      <div class="cc">
+        <div class="ch"><div><div class="ct">Projetos</div><div class="csb">Clique num projeto para ver e adicionar tarefas · não é filtrado por loja/período</div></div><button class="btn-l" onclick="abMProjeto()">+ Novo projeto</button></div>
+        <div id="proj-lst"><div class="empty">Carregue os dados</div></div>
       </div>
     </div>
 
@@ -516,6 +560,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 <div class="fg2"><div class="fg"><label class="fl">Fornecedor</label><input class="fi" id="fp-forn" type="text" placeholder="Fornecedor"></div><div class="fg"><label class="fl">Alerta mínimo</label><input class="fi" id="fp-alrt" type="number" min="0" placeholder="5" value="5"></div></div>
 <div class="fg2"><div class="fg"><label class="fl">Qtd inicial</label><input class="fi" id="fp-qtd" type="number" min="0" placeholder="0" value="0"></div><div class="fg"><label class="fl">Lote/validade</label><input class="fi" id="fp-lote" type="text" placeholder="Ex: 2025-06"></div></div>
 <div class="fg2"><div class="fg"><label class="fl">Preço custo</label><input class="fi" id="fp-cst" type="number" min="0" step="0.01" placeholder="0,00"></div><div class="fg"><label class="fl">Preço venda</label><input class="fi" id="fp-vnd" type="number" min="0" step="0.01" placeholder="0,00"></div></div>
+<div class="fg" style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--cream);border-radius:8px;margin-bottom:10px;"><div><div style="font-size:13px;">⭐ Prioridade de compra</div><div style="font-size:11px;color:var(--light);">Sempre aparece no topo da lista de compras sugerida</div></div><button class="tog" id="tog-fp-prior" onclick="this.classList.toggle('on')" aria-label="toggle prioridade produto"></button></div>
 <div class="fmsg" id="fm-prod"></div><div class="mft"><button class="btn-cn" onclick="fM('produto')">Cancelar</button><button class="btn-sb" id="btn-fp" onclick="subProd()"><div class="msp" id="sp-prod"></div>Salvar</button></div></div></div>
 
 <div class="mov" id="m-compra" onclick="cMov(event,'m-compra')"><div class="mo"><button class="mc" onclick="fM('compra')">×</button><div class="mt">Registrar compra</div><div class="mst">Atualiza o estoque e o custo do produto automaticamente.</div>
@@ -565,7 +610,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 <script>
 var SENHA='mayseJuquia2026Sistema';
 var cfg={url:localStorage.getItem('mayse_dash_url')||'',token:localStorage.getItem('mayse_dash_token')||''};
-var D={vendas:[],encomendas:[],estoque:[],compras:[],gastos:[],pagamentos:[],clientes:[],pdvs:[]};
+var D={vendas:[],encomendas:[],estoque:[],compras:[],gastos:[],pagamentos:[],clientes:[],pdvs:[],projetos:[],tarefas:[]};
 var lojasAtivas=new Set(['juquia','cambuci']);
 var secAtiva='visao',saiTipo='gasto',encTipoM='Futura',estFil='todos',saiFil='todos',saiStFil='todos';
 var periodoAtivo='mes'; var perDe=null, perAte=null; // filtro de período global (aplicado em gDL)
@@ -659,7 +704,7 @@ function togSB(){document.getElementById('sb').classList.toggle('col');document.
 function openMSB(){document.getElementById('sb').classList.add('mob');document.getElementById('sb-ov').classList.add('show');}
 function closeMSB(){document.getElementById('sb').classList.remove('mob');document.getElementById('sb-ov').classList.remove('show');}
 
-var SEC_TITLES={visao:'Visão geral',financeiro:'Financeiro',entradas:'Entradas',saidas:'Saídas',clientes:'Clientes',encomendas:'Encomendas',estoque:'Estoque',compras:'Compras',config:'Configurações'};
+var SEC_TITLES={visao:'Visão geral',financeiro:'Financeiro',entradas:'Entradas',saidas:'Saídas',clientes:'Clientes',encomendas:'Encomendas',estoque:'Estoque',compras:'Compras',projetos:'Projetos',config:'Configurações'};
 function goSec(id,btn){
   document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
   document.querySelectorAll('.si').forEach(function(b){b.classList.remove('active');});
@@ -676,6 +721,7 @@ function goSec(id,btn){
     if(id==='saidas')renSai();
     if(id==='financeiro')renderFinanceiro();
     if(id==='compras')renCompras();
+    if(id==='projetos')renProjetos();
   }
 }
 
@@ -804,10 +850,11 @@ async function loadData(){
   document.getElementById('btn-lbl').textContent='Carregando…';document.getElementById('btn-sp').style.display='block';
   document.getElementById('lov').classList.add('show');
   try{
-    var rs=await Promise.all([apiGet('Vendas'),apiGet('Encomendas'),apiGet('Estoque'),apiGet('Compras'),apiGet('Gastos'),apiGet('Pagamentos'),apiGet('Clientes'),apiGet('PDVs')]);
+    var rs=await Promise.all([apiGet('Vendas'),apiGet('Encomendas'),apiGet('Estoque'),apiGet('Compras'),apiGet('Gastos'),apiGet('Pagamentos'),apiGet('Clientes'),apiGet('PDVs'),apiGet('Projetos'),apiGet('Tarefas')]);
     D.vendas=rs[0].data||[];D.encomendas=rs[1].data||[];D.estoque=rs[2].data||[];
     D.compras=rs[3].data||[];D.gastos=rs[4].data||[];D.pagamentos=rs[5].data||[];
     D.clientes=rs[6].data||[];D.pdvs=rs[7].data||[];
+    D.projetos=rs[8].data||[];D.tarefas=rs[9].data||[];
     var ops={};D.vendas.forEach(function(v){if(v.Operador)ops[v.Operador]=1;});
     var sel=document.getElementById('filt-op');
     if(sel)sel.innerHTML='<option value="">Todos</option>'+Object.keys(ops).map(function(o){return'<option>'+esc(o)+'</option>';}).join('');
@@ -816,7 +863,7 @@ async function loadData(){
   document.getElementById('btn-lbl').textContent='Carregar';document.getElementById('btn-sp').style.display='none';
   document.getElementById('lov').classList.remove('show');
 }
-function renAll(){renVisao();if(secAtiva==='entradas')renEntradas();if(secAtiva==='saidas')renSai();if(secAtiva==='clientes')renCli();if(secAtiva==='encomendas')renEnc();if(secAtiva==='estoque')renEst();if(secAtiva==='financeiro')renderFinanceiro();if(secAtiva==='compras')renCompras();}
+function renAll(){renVisao();if(secAtiva==='entradas')renEntradas();if(secAtiva==='saidas')renSai();if(secAtiva==='clientes')renCli();if(secAtiva==='encomendas')renEnc();if(secAtiva==='estoque')renEst();if(secAtiva==='financeiro')renderFinanceiro();if(secAtiva==='compras')renCompras();if(secAtiva==='projetos')renProjetos();}
 
 /* ── VISÃO GERAL ── */
 function renVisao(){
@@ -832,6 +879,7 @@ function renVisao(){
     document.getElementById('kv-vnd-sp').innerHTML=arr.map(function(id){var c=D.vendas.filter(function(r){return lSlug(r.Loja||'')===id;}).length;return'<span class="kp p'+id.substring(0,2)+'">'+LNOMES[id].substring(0,3)+' '+c+'</span>';}).join('');
   }else{document.getElementById('kv-fat-sp').innerHTML='';document.getElementById('kv-vnd-sp').innerHTML='';}
   renChFat(vnd);renChPico(vnd,'ch-pico');renTimeline(ap);renOp(vnd);
+  renResumoProjetos();
 }
 
 function renChFat(vnd){
@@ -1012,16 +1060,21 @@ function marcarPago(i){if(!_saiL[i])return;_saiL[i].st='Pago';_saiL[i].raw.Statu
 var cpIdealPreco=null;
 function estComprado(p){return String(p.Fornecedor||'').trim()!=='';}
 function estBaixo(p){var q=parseInt(p.Qtd||0),m=parseInt(p.Alerta_Minimo||5);return q<=m;}
+function ehPrioritario(p){return String(p.Prioridade||'').toLowerCase()==='sim';}
 function margemAtual(precoVenda,custo){custo=parseFloat(custo||0);if(!custo)return null;return parseFloat(precoVenda||0)/custo;}
 function renCompras(){
   var est=gDL(D.estoque);
   var sug=est.filter(function(p){return estComprado(p)&&estBaixo(p);});
-  sug.sort(function(a,b){return(parseInt(a.Qtd||0)-parseInt(a.Alerta_Minimo||5))-(parseInt(b.Qtd||0)-parseInt(b.Alerta_Minimo||5));});
+  sug.sort(function(a,b){
+    var pa=ehPrioritario(a)?0:1,pb=ehPrioritario(b)?0:1;
+    if(pa!==pb)return pa-pb;
+    return(parseInt(a.Qtd||0)-parseInt(a.Alerta_Minimo||5))-(parseInt(b.Qtd||0)-parseInt(b.Alerta_Minimo||5));
+  });
   sEl('cp-sug-n',sug.length);
   document.getElementById('cp-sug-lst').innerHTML=sug.length?sug.map(function(p){
-    var q=parseInt(p.Qtd||0),m=parseInt(p.Alerta_Minimo||5),zero=q===0,lj=lSlug(p.Loja||'');
-    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">'+
-      '<div><div style="font-weight:600;font-size:13px;">'+(p.Emoji||'🌷')+' '+esc(p.Nome||'')+'</div>'+
+    var q=parseInt(p.Qtd||0),m=parseInt(p.Alerta_Minimo||5),zero=q===0,lj=lSlug(p.Loja||''),prio=ehPrioritario(p);
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);'+(prio?'background:var(--gold-pale);margin:0 -4px;padding-left:4px;padding-right:4px;border-radius:6px;':'')+'">'+
+      '<div><div style="font-weight:600;font-size:13px;">'+(prio?'⭐ ':'')+(p.Emoji||'🌷')+' '+esc(p.Nome||'')+'</div>'+
       '<div style="font-size:11px;color:var(--light);">'+(LNOMES[lj]||p.Loja)+' · '+esc(p.Fornecedor||'—')+'</div></div>'+
       '<div style="text-align:right;">'+
       '<div style="font-size:12px;font-weight:700;color:'+(zero?'var(--red)':'var(--gold)')+';">'+q+' / mín. '+m+'</div>'+
@@ -1032,7 +1085,6 @@ function renCompras(){
   var cmp=gDL(D.compras);
   sEl('cp-tot',fmt(cmp.reduce(function(s,c){return s+parseFloat(c.Valor_Total||0);},0)));
   var s2=cmp.slice().sort(function(a,b){var da=parsePtD(a.Data),db=parsePtD(b.Data);return(db?db.getTime():0)-(da?da.getTime():0);});
-  var margBaixa=0;
   var rows=s2.map(function(c){
     var lj=lSlug(c.Loja||'');
     var prod=D.estoque.find(function(p){return p.Nome===c.Produto&&lSlug(p.Loja||'')===lj;});
@@ -1040,13 +1092,30 @@ function renCompras(){
     var custo=parseFloat(c.Valor_Unit||0);
     var marg=margemAtual(pv,custo);
     var margTxt='—',margCor='var(--light)';
-    if(marg!==null){margTxt=marg.toFixed(1)+'x';margCor=marg>=3?'var(--vf)':'var(--red)';if(marg<3)margBaixa++;}
+    if(marg!==null){margTxt=marg.toFixed(1)+'x';margCor=marg>=3?'var(--vf)':'var(--red)';}
     return '<tr><td>'+esc(c.Data||'—')+'</td><td title="'+esc(c.Produto||'')+'">'+esc(c.Produto||'—')+'</td><td>'+esc(c.Fornecedor||'—')+'</td><td><span class="lb '+LPILL[lj]+'">'+esc(LNOMES[lj]||c.Loja)+'</span></td><td>'+esc(c.Qtd||'—')+'</td><td>'+fmt(custo)+'</td><td style="font-weight:600;">'+fmt(c.Valor_Total)+'</td><td style="font-weight:700;color:'+margCor+';">'+margTxt+'</td></tr>';
   });
-  sEl('cp-marg-n',margBaixa);
   document.getElementById('tb-compras').innerHTML=rows.join('')||'<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--light);">Nenhuma compra no período</td></tr>';
   var dl=document.getElementById('cp-prod-list');
   if(dl){var nomes=[...new Set(D.estoque.filter(estComprado).map(function(p){return p.Nome;}))];dl.innerHTML=nomes.map(function(n){return '<option value="'+esc(n)+'">';}).join('');}
+
+  /* Produtos com margem atual abaixo do ideal (3x), independente de terem sido comprados recentemente */
+  var todosMarg=est.map(function(p){var marg=margemAtual(p.Preco_Venda,p.Preco_Custo);return{p:p,i:D.estoque.indexOf(p),marg:marg};}).filter(function(x){return x.marg!==null&&x.marg<3;});
+  todosMarg.sort(function(a,b){return a.marg-b.marg;});
+  sEl('cp-marg-n',todosMarg.length);
+  var elMarg=document.getElementById('cp-marg-lst');
+  if(elMarg){
+    elMarg.innerHTML=todosMarg.length?todosMarg.map(function(x){
+      var p=x.p,lj=lSlug(p.Loja||''),ideal=parseFloat(p.Preco_Custo||0)*3;
+      return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);">'+
+        '<div><div style="font-weight:600;font-size:13px;">'+(p.Emoji||'🌷')+' '+esc(p.Nome||'')+'</div>'+
+        '<div style="font-size:11px;color:var(--light);">'+(LNOMES[lj]||p.Loja)+' · custo '+fmt(p.Preco_Custo)+' · venda atual '+fmt(p.Preco_Venda)+'</div></div>'+
+        '<div style="text-align:right;">'+
+        '<div style="font-size:12px;font-weight:700;color:var(--red);">'+x.marg.toFixed(1)+'x <span style="font-weight:400;color:var(--light);">(ideal '+fmt(ideal)+')</span></div>'+
+        '<button style="margin-top:4px;font-size:10px;padding:3px 10px;border-radius:8px;border:1px solid var(--vj);color:var(--vf);background:var(--vj-pale);cursor:pointer;font-family:Sora,sans-serif;" onclick="abMProd('+x.i+')">Ajustar preço</button>'+
+        '</div></div>';
+    }).join('') : '<div class="empty">Todos os produtos estão com margem saudável 🎉</div>';
+  }
 }
 function abMCompra(nome,loja){
   document.getElementById('fm-compra').className='fmsg';
@@ -1100,6 +1169,99 @@ async function subCompra(){
     if(p){p.Qtd=(parseInt(p.Qtd||0)+qtd);p.Preco_Custo=vu;if(novoPreco)p.Preco_Venda=novoPreco;}
     showToast('Compra registrada!');fM('compra');renCompras();if(secAtiva==='estoque')renEst();
   }else sFMsg('fm-compra','Erro ao salvar','err');
+}
+
+/* ── PROJETOS ── */
+var projAbertos=new Set();
+var _projOrdem=[];
+function renProjetos(){
+  var projs=D.projetos.slice();
+  var porNome={};
+  projs.forEach(function(p){porNome[p.Nome]={proj:p,tarefas:[]};});
+  D.tarefas.forEach(function(t,i){
+    var nome=t.Projeto||'(sem projeto)';
+    if(!porNome[nome])porNome[nome]={proj:{Nome:nome,Emoji:'📁'},tarefas:[]};
+    porNome[nome].tarefas.push(Object.assign({},t,{_ti:i}));
+  });
+  var ordem=projs.map(function(p){return p.Nome;});
+  Object.keys(porNome).forEach(function(n){if(ordem.indexOf(n)<0)ordem.push(n);});
+  _projOrdem=ordem;
+  var el=document.getElementById('proj-lst');
+  if(!ordem.length){el.innerHTML='<div class="empty">Nenhum projeto ainda — clique em "+ Novo projeto"</div>';return;}
+  var hoje=new Date();hoje.setHours(0,0,0,0);
+  el.innerHTML=ordem.map(function(nome,idx){
+    var g=porNome[nome],p=g.proj,tarefas=g.tarefas;
+    var feitas=tarefas.filter(function(t){return t.Status==='Feito';}).length;
+    var pct=tarefas.length?Math.round(feitas/tarefas.length*100):0;
+    var aberto=projAbertos.has(nome);
+    var linhasTarefas=tarefas.slice().sort(function(a,b){
+      if((a.Status==='Feito')!==(b.Status==='Feito'))return a.Status==='Feito'?1:-1;
+      var da=parsePtD(a.Data_Prazo),db=parsePtD(b.Data_Prazo);
+      return(da?da.getTime():Infinity)-(db?db.getTime():Infinity);
+    }).map(function(t){
+      var d=parsePtD(t.Data_Prazo);
+      var venc=d&&d.getTime()<hoje.getTime()&&t.Status!=='Feito';
+      var stCls=t.Status==='Feito'?'st-feito':t.Status==='Fazendo'?'st-fazendo':'st-afazer';
+      return '<div class="tarefa-row"><button class="tarefa-status '+stCls+'" onclick="cicloStatus('+t._ti+')">'+esc(t.Status||'A fazer')+'</button><span class="tarefa-nome'+(t.Status==='Feito'?' done':'')+'">'+esc(t.Tarefa||'')+'</span>'+(t.Responsavel?'<span class="tarefa-resp">'+esc(t.Responsavel)+'</span>':'')+(t.Data_Prazo?'<span class="tarefa-prazo'+(venc?' venc':'')+'">'+esc(t.Data_Prazo)+(venc?' · atrasada':'')+'</span>':'')+'</div>';
+    }).join('')||'<div class="empty" style="padding:8px 0;">Nenhuma tarefa ainda</div>';
+    return '<div class="proj-card"><div class="proj-head" onclick="toggleProj('+idx+')">'
+      +'<div class="proj-head-l"><span class="proj-chev'+(aberto?' open':'')+'">▸</span><span class="proj-emoji">'+(p.Emoji||'📁')+'</span><span class="proj-nome">'+esc(nome)+'</span></div>'
+      +'<div class="proj-head-r"><div class="proj-bar"><div class="proj-bar-f" style="width:'+pct+'%"></div></div><span class="proj-pct">'+pct+'%</span><span class="proj-cnt">'+feitas+'/'+tarefas.length+'</span></div></div>'
+      +'<div class="proj-body" style="display:'+(aberto?'block':'none')+';">'+linhasTarefas
+      +'<div class="proj-add"><input type="text" placeholder="Nova tarefa…" id="pt-nova-'+idx+'"><input type="text" placeholder="Responsável" style="max-width:120px;" id="pt-resp-'+idx+'"><input type="date" id="pt-prazo-'+idx+'" style="max-width:140px;"><button class="btn-l" style="padding:6px 12px;" onclick="addTarefa('+idx+')">+ Tarefa</button></div></div></div>';
+  }).join('');
+}
+function toggleProj(idx){var nome=_projOrdem[idx];if(!nome)return;if(projAbertos.has(nome))projAbertos.delete(nome);else projAbertos.add(nome);renProjetos();}
+async function addTarefa(idx){
+  var nome=_projOrdem[idx];if(!nome)return;
+  var elNova=document.getElementById('pt-nova-'+idx);
+  var nomeTarefa=elNova.value.trim();
+  if(!nomeTarefa){showToast('Informe o nome da tarefa','warn');return;}
+  var resp=document.getElementById('pt-resp-'+idx).value.trim();
+  var prazo=document.getElementById('pt-prazo-'+idx).value;
+  var prazoBr=prazo?isoToDateBR(prazo):'';
+  D.tarefas.push({Projeto:nome,Tarefa:nomeTarefa,Responsavel:resp,Status:'A fazer',Data_Prazo:prazoBr});
+  projAbertos.add(nome);
+  renProjetos();renResumoProjetos();
+  await apiPost({tipo:'nova_tarefa',projeto:nome,tarefa:nomeTarefa,responsavel:resp,dataPrazo:prazoBr,status:'A fazer',operador:'Dashboard'});
+  showToast('Tarefa adicionada!');
+}
+function cicloStatus(idx){
+  var t=D.tarefas[idx];if(!t)return;
+  var prox={'A fazer':'Fazendo','Fazendo':'Feito','Feito':'A fazer'};
+  t.Status=prox[t.Status||'A fazer']||'Fazendo';
+  renProjetos();renResumoProjetos();
+  apiPost({tipo:'atualizar_tarefa',linha:idx+2,status:t.Status});
+}
+async function abMProjeto(){
+  var nome=prompt('Nome do novo projeto:');
+  if(!nome||!nome.trim())return;
+  nome=nome.trim();
+  var emoji=prompt('Emoji (opcional):','📁')||'📁';
+  D.projetos.push({Nome:nome,Emoji:emoji,Ativo:'Sim'});
+  projAbertos.add(nome);
+  renProjetos();
+  await apiPost({tipo:'novo_projeto',nome:nome,emoji:emoji,operador:'Dashboard'});
+  showToast('Projeto criado!');
+}
+function renResumoProjetos(){
+  var el=document.getElementById('vg-proj-resumo');
+  if(!el)return;
+  if(!D.projetos.length&&!D.tarefas.length){el.innerHTML='<div class="empty">Nenhum projeto cadastrado ainda</div>';return;}
+  var porNome={};
+  D.projetos.forEach(function(p){porNome[p.Nome]={proj:p,tarefas:[]};});
+  D.tarefas.forEach(function(t){var nome=t.Projeto||'(sem projeto)';if(!porNome[nome])porNome[nome]={proj:{Nome:nome,Emoji:'📁'},tarefas:[]};porNome[nome].tarefas.push(t);});
+  var ordem=D.projetos.map(function(p){return p.Nome;});
+  Object.keys(porNome).forEach(function(n){if(ordem.indexOf(n)<0)ordem.push(n);});
+  var barras=ordem.map(function(nome){
+    var g=porNome[nome],tarefas=g.tarefas,feitas=tarefas.filter(function(t){return t.Status==='Feito';}).length;
+    var pct=tarefas.length?Math.round(feitas/tarefas.length*100):0;
+    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px;"><span style="width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;">'+(g.proj.Emoji||'📁')+' '+esc(nome)+'</span><div class="proj-bar" style="flex:1;"><div class="proj-bar-f" style="width:'+pct+'%"></div></div><span style="width:60px;text-align:right;color:var(--light);flex-shrink:0;">'+feitas+'/'+tarefas.length+'</span></div>';
+  }).join('')||'<div class="empty">Nenhum projeto ainda</div>';
+  var hoje=new Date();hoje.setHours(0,0,0,0);
+  var urgentes=D.tarefas.map(function(t,i){return Object.assign({},t,{_ti:i});}).filter(function(t){return t.Status!=='Feito'&&t.Data_Prazo;}).sort(function(a,b){var da=parsePtD(a.Data_Prazo),db=parsePtD(b.Data_Prazo);return(da?da.getTime():Infinity)-(db?db.getTime():Infinity);}).slice(0,5);
+  var urgHtml=urgentes.length?urgentes.map(function(t){var d=parsePtD(t.Data_Prazo);var venc=d&&d.getTime()<hoje.getTime();return '<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:4px 0;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(t.Tarefa||'')+' <span style="color:var(--light);">— '+esc(t.Projeto||'')+'</span></span><span style="flex-shrink:0;color:'+(venc?'var(--red)':'var(--light)')+';font-weight:'+(venc?'700':'400')+';">'+esc(t.Data_Prazo)+(venc?' · atrasada':'')+'</span></div>';}).join(''):'<div class="empty" style="padding:6px 0;">Nenhuma tarefa com prazo pendente</div>';
+  el.innerHTML='<div style="margin-bottom:14px;">'+barras+'</div><div style="border-top:1px solid var(--border);padding-top:10px;"><div style="font-size:11px;color:var(--light);font-weight:600;margin-bottom:6px;text-transform:uppercase;">Mais urgentes</div>'+urgHtml+'</div>';
 }
 
 /* ── CLIENTES ── */
@@ -1174,7 +1336,7 @@ function renEst(){
     var al=q===0?'<span class="ec-al zero">Zerado</span>':q<=mn?'<span class="ec-al low">Baixo</span>':'';
     var lj=lSlug(p.Loja||''),ri=D.estoque.indexOf(p);
     var mg=parseFloat(p.Preco_Custo||0)>0?Math.round((parseFloat(p.Preco_Venda||0)-parseFloat(p.Preco_Custo||0))/parseFloat(p.Preco_Custo)*100):0;
-    return'<div class="ec '+cl+'"><span class="ec-lj"><span class="lb '+LPILL[lj]+'">'+(LNOMES[lj]||p.Loja||'')+'</span></span><div class="ec-em">'+(p.Emoji||'🌷')+'</div><div class="ec-nm">'+esc(p.Nome||'')+'</div><div class="ec-ct">'+(p.Categoria||'—')+'</div><div class="ec-q '+qc+'">'+q+'</div>'+al+'<div class="ec-pr">R$ '+fmtN(p.Preco_Venda)+(p.Lote?'  ·  '+esc(p.Lote):'')+'</div>'+(mg>0?'<div class="ec-mg">Margem +'+mg+'%</div>':'')+'<div class="ec-ac"><button class="ec-btn" onclick="abAj('+ri+')">Ajustar</button><button class="ec-btn" onclick="edProd('+ri+')">Editar</button><button class="ec-btn tf" onclick="abMTf('+ri+')">⇄</button><button class="ec-btn dn" onclick="abPd('+ri+')">Perda</button></div></div>';
+    return'<div class="ec '+cl+'"><span class="ec-lj"><span class="lb '+LPILL[lj]+'">'+(LNOMES[lj]||p.Loja||'')+'</span></span><div class="ec-em">'+(p.Emoji||'🌷')+'</div><div class="ec-nm">'+(ehPrioritario(p)?'⭐ ':'')+esc(p.Nome||'')+'</div><div class="ec-ct">'+(p.Categoria||'—')+'</div><div class="ec-q '+qc+'">'+q+'</div>'+al+'<div class="ec-pr">R$ '+fmtN(p.Preco_Venda)+(p.Lote?'  ·  '+esc(p.Lote):'')+'</div>'+(mg>0?'<div class="ec-mg">Margem +'+mg+'%</div>':'')+'<div class="ec-ac"><button class="ec-btn" onclick="abAj('+ri+')">Ajustar</button><button class="ec-btn" onclick="edProd('+ri+')">Editar</button><button class="ec-btn tf" onclick="abMTf('+ri+')">⇄</button><button class="ec-btn dn" onclick="abPd('+ri+')">Perda</button></div></div>';
   }).join('');
 }
 function setEF(f,b){estFil=f;document.querySelectorAll('#sec-estoque .fbtn').forEach(function(x){x.classList.remove('active');});b.classList.add('active');renEst();}
@@ -1233,9 +1395,9 @@ function abMCli(){cliEdit=null;sEl('m-cli-ttl','Cadastrar cliente');['fcn','fct'
 async function subCli(){var nm=document.getElementById('fcn').value.trim(),tel=document.getElementById('fct').value.trim();if(!nm||!tel){sFMsg('fm-cli','Preencha nome e telefone','err');return;}setML('btn-fcli','sp-cli',true);var ok=await apiPost({tipo:'upsert_cliente',telefone:tel,nome:nm,loja:document.getElementById('fcl').value,operador:'Dashboard'});setML('btn-fcli','sp-cli',false);if(ok){showToast('Cliente salvo!');fM('cliente');}else sFMsg('fm-cli','Erro ao salvar','err');}
 
 /* ── MODAL PRODUTO ── */
-function abMProd(idx){document.getElementById('fm-prod').className='fmsg';if(idx!==undefined){var p=D.estoque[idx];sEl('mp-ttl','Editar produto');document.getElementById('fp-em').value=p.Emoji||'🌷';document.getElementById('fp-nm').value=p.Nome||'';document.getElementById('fp-lj').value=lSlug(p.Loja||'juquia');document.getElementById('fp-cat').value=p.Categoria||'';document.getElementById('fp-forn').value=p.Fornecedor||'';document.getElementById('fp-alrt').value=p.Alerta_Minimo||5;document.getElementById('fp-qtd').value=p.Qtd||0;document.getElementById('fp-lote').value=p.Lote||'';document.getElementById('fp-cst').value=p.Preco_Custo||0;document.getElementById('fp-vnd').value=p.Preco_Venda||0;}else{sEl('mp-ttl','Cadastrar produto');['fp-em','fp-nm','fp-cat','fp-forn','fp-lote'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fp-alrt').value=5;document.getElementById('fp-qtd').value=0;document.getElementById('fp-cst').value='';document.getElementById('fp-vnd').value='';}document.getElementById('m-produto').classList.add('open');}
+function abMProd(idx){document.getElementById('fm-prod').className='fmsg';var togP=document.getElementById('tog-fp-prior');if(idx!==undefined){var p=D.estoque[idx];sEl('mp-ttl','Editar produto');document.getElementById('fp-em').value=p.Emoji||'🌷';document.getElementById('fp-nm').value=p.Nome||'';document.getElementById('fp-lj').value=lSlug(p.Loja||'juquia');document.getElementById('fp-cat').value=p.Categoria||'';document.getElementById('fp-forn').value=p.Fornecedor||'';document.getElementById('fp-alrt').value=p.Alerta_Minimo||5;document.getElementById('fp-qtd').value=p.Qtd||0;document.getElementById('fp-lote').value=p.Lote||'';document.getElementById('fp-cst').value=p.Preco_Custo||0;document.getElementById('fp-vnd').value=p.Preco_Venda||0;togP.classList.toggle('on',(p.Prioridade||'').toLowerCase()==='sim');}else{sEl('mp-ttl','Cadastrar produto');['fp-em','fp-nm','fp-cat','fp-forn','fp-lote'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fp-alrt').value=5;document.getElementById('fp-qtd').value=0;document.getElementById('fp-cst').value='';document.getElementById('fp-vnd').value='';togP.classList.remove('on');}document.getElementById('m-produto').classList.add('open');}
 function edProd(idx){abMProd(idx);}
-async function subProd(){var nm=document.getElementById('fp-nm').value.trim();if(!nm){sFMsg('fm-prod','Informe o nome','err');return;}setML('btn-fp','sp-prod',true);var ok=await apiPost({tipo:'upsert_produto',loja:document.getElementById('fp-lj').value,emoji:document.getElementById('fp-em').value||'🌷',nome:nm,categoria:document.getElementById('fp-cat').value,fornecedor:document.getElementById('fp-forn').value,qtd:parseFloat(document.getElementById('fp-qtd').value)||0,alertaMinimo:parseFloat(document.getElementById('fp-alrt').value)||5,precoCusto:parseFloat(document.getElementById('fp-cst').value)||0,precoVenda:parseFloat(document.getElementById('fp-vnd').value)||0,lote:document.getElementById('fp-lote').value,operador:'Dashboard'});setML('btn-fp','sp-prod',false);if(ok){showToast('Produto salvo!');fM('produto');}else sFMsg('fm-prod','Erro ao salvar','err');}
+async function subProd(){var nm=document.getElementById('fp-nm').value.trim();if(!nm){sFMsg('fm-prod','Informe o nome','err');return;}var prioridade=document.getElementById('tog-fp-prior').classList.contains('on')?'Sim':'Nao';setML('btn-fp','sp-prod',true);var ok=await apiPost({tipo:'upsert_produto',loja:document.getElementById('fp-lj').value,emoji:document.getElementById('fp-em').value||'🌷',nome:nm,categoria:document.getElementById('fp-cat').value,fornecedor:document.getElementById('fp-forn').value,qtd:parseFloat(document.getElementById('fp-qtd').value)||0,alertaMinimo:parseFloat(document.getElementById('fp-alrt').value)||5,precoCusto:parseFloat(document.getElementById('fp-cst').value)||0,precoVenda:parseFloat(document.getElementById('fp-vnd').value)||0,lote:document.getElementById('fp-lote').value,prioridade:prioridade,operador:'Dashboard'});setML('btn-fp','sp-prod',false);if(ok){showToast('Produto salvo!');fM('produto');renEst();if(secAtiva==='compras')renCompras();}else sFMsg('fm-prod','Erro ao salvar','err');}
 
 /* ── MODAL AJUSTE ── */
 function abAj(idx){ajProd=D.estoque[idx];document.getElementById('aj-sb').textContent=(ajProd.Nome||'')+' · Qtd atual: '+(ajProd.Qtd||0);document.getElementById('aj-val').textContent=parseInt(ajProd.Qtd||0);document.getElementById('aj-mot').value='';document.getElementById('m-ajuste').classList.add('open');}

@@ -656,6 +656,11 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
       <div class="form-group" style="margin-bottom:0"><label class="form-label">Preço venda</label><input class="form-input" id="prod-venda" type="number" inputmode="decimal" placeholder="0,00"></div>
     </div>
     <div class="form-group"><label class="form-label">Lote / validade (opcional)</label><input class="form-input" id="prod-lote" type="text" placeholder="Ex: 2025-06"></div>
+    <div class="toggle-row">
+      <div><div class="toggle-lbl">⭐ Prioridade de compra</div><div class="toggle-sub">Sempre no topo da lista de compras do Jax</div></div>
+      <button class="toggle-sw" id="tog-prod-prior" onclick="toggleSw('tog-prod-prior','prod-prior-dummy')" aria-label="toggle prioridade produto"></button>
+    </div>
+    <div id="prod-prior-dummy" style="display:none;"></div>
     <button class="btn btn-primary" onclick="salvarProduto()">
       <span id="btn-prod-text">Cadastrar</span>
       <div class="spinner" id="spinner-prod"></div>
@@ -1360,6 +1365,7 @@ function abrirModalProduto() {
   document.getElementById('prod-alerta').value='5';
   document.getElementById('prod-custo').value='';
   document.getElementById('prod-venda').value='';
+  document.getElementById('tog-prod-prior').classList.remove('on');
   document.getElementById('modal-produto').classList.add('open');
 }
 
@@ -1378,6 +1384,7 @@ async function salvarProduto() {
     precoCusto:  parseFloat(document.getElementById('prod-custo').value)||0,
     precoVenda:  parseFloat(document.getElementById('prod-venda').value)||0,
     lote:    document.getElementById('prod-lote').value.trim(),
+    prioridade: document.getElementById('tog-prod-prior').classList.contains('on')?'Sim':'Nao',
     operador: operador||'PDV'
   };
   var ok = await enviarParaSheets(payload);
