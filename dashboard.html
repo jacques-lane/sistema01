@@ -697,7 +697,7 @@ window.addEventListener('DOMContentLoaded',function(){
   else{var ls=document.getElementById('lsc');if(ls)ls.style.display='flex';setTimeout(function(){var lp=document.getElementById('lpw');if(lp)lp.focus();},100);}
 });
 function doLogin(){var pw=document.getElementById('lpw').value;if(pw===SENHA){sessionStorage.setItem('mayse_dash_auth','1');var ls=document.getElementById('lsc');if(ls)ls.style.display='none';initApp();}else{document.getElementById('lerr').style.display='block';document.getElementById('lpw').value='';}}
-function initApp(){var ls=document.getElementById('lsc');if(ls)ls.style.display='none';initCfg();setPeriodo('mes');updFL();}
+function initApp(){var ls=document.getElementById('lsc');if(ls)ls.style.display='none';initCfg();setPeriodo('mes');updFL();if(cfg.url&&cfg.token)loadData();}
 
 /* ── SIDEBAR ── */
 function togSB(){document.getElementById('sb').classList.toggle('col');document.getElementById('main').classList.toggle('col');}
