@@ -243,6 +243,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <button class="si" onclick="goSec('clientes',this)" title="Clientes"><span class="ico">👥</span><span class="si-lbl">Clientes</span></button>
     <button class="si" onclick="goSec('encomendas',this)" title="Encomendas"><span class="ico">📋</span><span class="si-lbl">Encomendas</span></button>
     <button class="si" onclick="goSec('estoque',this)" title="Estoque"><span class="ico">📦</span><span class="si-lbl">Estoque</span></button>
+    <button class="si" onclick="goSec('compras',this)" title="Compras"><span class="ico">🛒</span><span class="si-lbl">Compras</span></button>
   </nav>
   <div class="sb-footer"><div class="sb-cfg" onclick="goSec('config',null)"><span style="font-size:15px">⚙️</span><span class="sb-cfg-lbl">Configurações</span></div></div>
 </div>
@@ -286,7 +287,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
         <div class="kpi gn"><div class="ki">💰</div><div class="kl">Faturamento</div><div class="kv" id="kv-fat">—</div><div class="ks" id="kv-fat-s"></div><div class="ksp" id="kv-fat-sp"></div></div>
         <div class="kpi ro"><div class="ki">🛒</div><div class="kl">Vendas</div><div class="kv ro" id="kv-vnd">—</div><div class="ks" id="kv-vnd-s"></div><div class="ksp" id="kv-vnd-sp"></div></div>
         <div class="kpi dk"><div class="ki">🎯</div><div class="kl">Ticket médio</div><div class="kv" id="kv-tkt">—</div><div class="ks">por venda</div></div>
-        <div class="kpi go"><div class="ki">⚠️</div><div class="kl">A pagar (7 dias)</div><div class="kv go" id="kv-ap">—</div><div class="ks" id="kv-ap-s"></div></div>
+        <div class="kpi go"><div class="ki">⚠️</div><div class="kl">A pagar (pendentes)</div><div class="kv go" id="kv-ap">—</div><div class="ks" id="kv-ap-s"></div></div>
       </div>
       <div class="g2" style="margin-bottom:20px;">
         <div class="cc"><div class="ch"><div><div class="ct">Faturamento por dia</div><div class="csb">Barras por loja</div></div><div class="cleg" id="fat-leg"></div></div><div style="height:180px;"><canvas id="c-fat"></canvas></div></div>
@@ -451,6 +452,23 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
       <div class="egrid" id="est-grid"><div class="empty">Carregue os dados</div></div></div>
     </div>
 
+    <!-- COMPRAS -->
+    <div id="sec-compras" class="section">
+      <div class="kgrid">
+        <div class="kpi ro"><div class="ki">🛒</div><div class="kl">Itens p/ comprar</div><div class="kv ro" id="cp-sug-n">—</div><div class="ks">estoque abaixo do mínimo</div></div>
+        <div class="kpi gn"><div class="ki">💸</div><div class="kl">Gasto em compras</div><div class="kv" id="cp-tot">—</div><div class="ks">no período selecionado</div></div>
+        <div class="kpi go"><div class="ki">⚠️</div><div class="kl">Margem abaixo do ideal</div><div class="kv go" id="cp-marg-n">—</div><div class="ks">produtos comprados nesse período</div></div>
+      </div>
+      <div class="cc" style="margin-bottom:20px;">
+        <div class="ch"><div><div class="ct">Lista de compras sugerida</div><div class="csb">Comprados com estoque no mínimo ou abaixo — produção própria (viveiro) não entra aqui</div></div><button class="btn-l" onclick="abMCompra()">+ Registrar compra</button></div>
+        <div id="cp-sug-lst"><div class="empty">Carregue os dados</div></div>
+      </div>
+      <div class="cc">
+        <div class="ch"><div><div class="ct">Histórico de compras</div><div class="csb">Uma linha por compra, com a margem resultante sobre o preço de venda atual</div></div></div>
+        <table class="dt dt-compact"><thead><tr><th>Data</th><th>Produto</th><th>Fornecedor</th><th>Loja</th><th>Qtd</th><th>Valor unit.</th><th>Valor total</th><th>Margem</th></tr></thead><tbody id="tb-compras"><tr><td colspan="8" style="text-align:center;padding:24px;color:var(--light);">Carregue os dados</td></tr></tbody></table>
+      </div>
+    </div>
+
     <!-- CONFIG -->
     <div id="sec-config" class="section">
       <div class="cc" style="margin-bottom:16px;"><div class="ct" style="margin-bottom:16px;">Conexão com Google Sheets</div>
@@ -499,6 +517,15 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 <div class="fg2"><div class="fg"><label class="fl">Qtd inicial</label><input class="fi" id="fp-qtd" type="number" min="0" placeholder="0" value="0"></div><div class="fg"><label class="fl">Lote/validade</label><input class="fi" id="fp-lote" type="text" placeholder="Ex: 2025-06"></div></div>
 <div class="fg2"><div class="fg"><label class="fl">Preço custo</label><input class="fi" id="fp-cst" type="number" min="0" step="0.01" placeholder="0,00"></div><div class="fg"><label class="fl">Preço venda</label><input class="fi" id="fp-vnd" type="number" min="0" step="0.01" placeholder="0,00"></div></div>
 <div class="fmsg" id="fm-prod"></div><div class="mft"><button class="btn-cn" onclick="fM('produto')">Cancelar</button><button class="btn-sb" id="btn-fp" onclick="subProd()"><div class="msp" id="sp-prod"></div>Salvar</button></div></div></div>
+
+<div class="mov" id="m-compra" onclick="cMov(event,'m-compra')"><div class="mo"><button class="mc" onclick="fM('compra')">×</button><div class="mt">Registrar compra</div><div class="mst">Atualiza o estoque e o custo do produto automaticamente.</div>
+<div class="fg2"><div class="fg"><label class="fl">Data *</label><input class="fi" id="cp-dt" type="date"></div><div class="fg"><label class="fl">Loja *</label><select class="fsl" id="cp-lj"><option value="juquia">Juquiá</option><option value="cambuci">Cambuci</option><option value="pessoal">Pessoal</option><option value="viveiro">Viveiro</option></select></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Produto *</label><input class="fi" id="cp-prod" type="text" placeholder="Nome do produto" list="cp-prod-list" oninput="onCpProdChange()"><datalist id="cp-prod-list"></datalist></div><div class="fg"><label class="fl">Fornecedor</label><input class="fi" id="cp-forn" type="text" placeholder="Ex: Ceagesp"></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Quantidade *</label><input class="fi" id="cp-qtd" type="number" min="1" placeholder="0" oninput="calcCpMargem()"></div><div class="fg"><label class="fl">Valor unitário (R$) *</label><input class="fi" id="cp-vu" type="number" min="0" step="0.01" placeholder="0,00" oninput="calcCpMargem()"></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Valor total</label><input class="fi" id="cp-vt" type="text" disabled style="background:var(--cream);"></div><div class="fg"><label class="fl">NF / Ref.</label><input class="fi" id="cp-nf" type="text" placeholder="Opcional"></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Forma de pagamento</label><select class="fsl" id="cp-pag"><option>Dinheiro</option><option>Pix</option><option>Crédito</option><option>Débito</option><option>Boleto</option><option>Transferência</option></select></div><div class="fg"><label class="fl">Observação</label><input class="fi" id="cp-obs" type="text" placeholder="Opcional"></div></div>
+<div id="cp-marg-box" style="display:none;margin-bottom:12px;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.5;"></div>
+<div class="fmsg" id="fm-compra"></div><div class="mft"><button class="btn-cn" onclick="fM('compra')">Cancelar</button><button class="btn-sb" id="btn-fcp" onclick="subCompra()"><div class="msp" id="sp-cp"></div>Registrar compra</button></div></div></div>
 
 <div class="mov" id="m-ajuste" onclick="cMov(event,'m-ajuste')"><div class="mo" style="max-width:380px;"><button class="mc" onclick="fM('ajuste')">×</button><div class="mt">Ajustar quantidade</div><div class="mst" id="aj-sb"></div><label class="fl" style="margin-bottom:6px;">Nova quantidade</label><div class="qa"><button class="qab" onclick="adjAj(-1)">−</button><span class="qav" id="aj-val">0</span><button class="qab" onclick="adjAj(1)">+</button></div><div class="fg"><label class="fl">Motivo (opcional)</label><input class="fi" id="aj-mot" type="text" placeholder="Ex: contagem física…"></div><div class="mft"><button class="btn-cn" onclick="fM('ajuste')">Cancelar</button><button class="btn-sb" onclick="subAj()">Salvar</button></div></div></div>
 
@@ -632,7 +659,7 @@ function togSB(){document.getElementById('sb').classList.toggle('col');document.
 function openMSB(){document.getElementById('sb').classList.add('mob');document.getElementById('sb-ov').classList.add('show');}
 function closeMSB(){document.getElementById('sb').classList.remove('mob');document.getElementById('sb-ov').classList.remove('show');}
 
-var SEC_TITLES={visao:'Visão geral',financeiro:'Financeiro',entradas:'Entradas',saidas:'Saídas',clientes:'Clientes',encomendas:'Encomendas',estoque:'Estoque',config:'Configurações'};
+var SEC_TITLES={visao:'Visão geral',financeiro:'Financeiro',entradas:'Entradas',saidas:'Saídas',clientes:'Clientes',encomendas:'Encomendas',estoque:'Estoque',compras:'Compras',config:'Configurações'};
 function goSec(id,btn){
   document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
   document.querySelectorAll('.si').forEach(function(b){b.classList.remove('active');});
@@ -648,6 +675,7 @@ function goSec(id,btn){
     if(id==='entradas')renEntradas();
     if(id==='saidas')renSai();
     if(id==='financeiro')renderFinanceiro();
+    if(id==='compras')renCompras();
   }
 }
 
@@ -788,7 +816,7 @@ async function loadData(){
   document.getElementById('btn-lbl').textContent='Carregar';document.getElementById('btn-sp').style.display='none';
   document.getElementById('lov').classList.remove('show');
 }
-function renAll(){renVisao();if(secAtiva==='entradas')renEntradas();if(secAtiva==='saidas')renSai();if(secAtiva==='clientes')renCli();if(secAtiva==='encomendas')renEnc();if(secAtiva==='estoque')renEst();if(secAtiva==='financeiro')renderFinanceiro();}
+function renAll(){renVisao();if(secAtiva==='entradas')renEntradas();if(secAtiva==='saidas')renSai();if(secAtiva==='clientes')renCli();if(secAtiva==='encomendas')renEnc();if(secAtiva==='estoque')renEst();if(secAtiva==='financeiro')renderFinanceiro();if(secAtiva==='compras')renCompras();}
 
 /* ── VISÃO GERAL ── */
 function renVisao(){
@@ -979,6 +1007,100 @@ function filSaiRen(){
 function filSai(f,b){saiFil=f;document.querySelectorAll('#sai-tipo-btns .fbtn').forEach(function(x){x.classList.remove('active');});b.classList.add('active');filSaiRen();}
 function filSaiSt(f,b){saiStFil=f;document.querySelectorAll('#sai-st-btns .fbtn').forEach(function(x){x.classList.remove('active');});b.classList.add('active');filSaiRen();}
 function marcarPago(i){if(!_saiL[i])return;_saiL[i].st='Pago';_saiL[i].raw.Status='Pago';filSaiRen();apiPost({tipo:'pagamento_update',linha:(_saiL[i]._pi||0)+2,status:'Pago'});showToast('Marcado como pago');}
+
+/* ── COMPRAS ── */
+var cpIdealPreco=null;
+function estComprado(p){return String(p.Fornecedor||'').trim()!=='';}
+function estBaixo(p){var q=parseInt(p.Qtd||0),m=parseInt(p.Alerta_Minimo||5);return q<=m;}
+function margemAtual(precoVenda,custo){custo=parseFloat(custo||0);if(!custo)return null;return parseFloat(precoVenda||0)/custo;}
+function renCompras(){
+  var est=gDL(D.estoque);
+  var sug=est.filter(function(p){return estComprado(p)&&estBaixo(p);});
+  sug.sort(function(a,b){return(parseInt(a.Qtd||0)-parseInt(a.Alerta_Minimo||5))-(parseInt(b.Qtd||0)-parseInt(b.Alerta_Minimo||5));});
+  sEl('cp-sug-n',sug.length);
+  document.getElementById('cp-sug-lst').innerHTML=sug.length?sug.map(function(p){
+    var q=parseInt(p.Qtd||0),m=parseInt(p.Alerta_Minimo||5),zero=q===0,lj=lSlug(p.Loja||'');
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">'+
+      '<div><div style="font-weight:600;font-size:13px;">'+(p.Emoji||'🌷')+' '+esc(p.Nome||'')+'</div>'+
+      '<div style="font-size:11px;color:var(--light);">'+(LNOMES[lj]||p.Loja)+' · '+esc(p.Fornecedor||'—')+'</div></div>'+
+      '<div style="text-align:right;">'+
+      '<div style="font-size:12px;font-weight:700;color:'+(zero?'var(--red)':'var(--gold)')+';">'+q+' / mín. '+m+'</div>'+
+      '<button style="margin-top:4px;font-size:10px;padding:3px 10px;border-radius:8px;border:1px solid var(--vj);color:var(--vf);background:var(--vj-pale);cursor:pointer;font-family:Sora,sans-serif;" onclick=\'abMCompra('+JSON.stringify(p.Nome||'')+','+JSON.stringify(lj)+')\'>Registrar compra</button>'+
+      '</div></div>';
+  }).join('') : '<div class="empty">Nenhum produto comprado abaixo do mínimo 🎉</div>';
+
+  var cmp=gDL(D.compras);
+  sEl('cp-tot',fmt(cmp.reduce(function(s,c){return s+parseFloat(c.Valor_Total||0);},0)));
+  var s2=cmp.slice().sort(function(a,b){var da=parsePtD(a.Data),db=parsePtD(b.Data);return(db?db.getTime():0)-(da?da.getTime():0);});
+  var margBaixa=0;
+  var rows=s2.map(function(c){
+    var lj=lSlug(c.Loja||'');
+    var prod=D.estoque.find(function(p){return p.Nome===c.Produto&&lSlug(p.Loja||'')===lj;});
+    var pv=prod?parseFloat(prod.Preco_Venda||0):null;
+    var custo=parseFloat(c.Valor_Unit||0);
+    var marg=margemAtual(pv,custo);
+    var margTxt='—',margCor='var(--light)';
+    if(marg!==null){margTxt=marg.toFixed(1)+'x';margCor=marg>=3?'var(--vf)':'var(--red)';if(marg<3)margBaixa++;}
+    return '<tr><td>'+esc(c.Data||'—')+'</td><td title="'+esc(c.Produto||'')+'">'+esc(c.Produto||'—')+'</td><td>'+esc(c.Fornecedor||'—')+'</td><td><span class="lb '+LPILL[lj]+'">'+esc(LNOMES[lj]||c.Loja)+'</span></td><td>'+esc(c.Qtd||'—')+'</td><td>'+fmt(custo)+'</td><td style="font-weight:600;">'+fmt(c.Valor_Total)+'</td><td style="font-weight:700;color:'+margCor+';">'+margTxt+'</td></tr>';
+  });
+  sEl('cp-marg-n',margBaixa);
+  document.getElementById('tb-compras').innerHTML=rows.join('')||'<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--light);">Nenhuma compra no período</td></tr>';
+  var dl=document.getElementById('cp-prod-list');
+  if(dl){var nomes=[...new Set(D.estoque.filter(estComprado).map(function(p){return p.Nome;}))];dl.innerHTML=nomes.map(function(n){return '<option value="'+esc(n)+'">';}).join('');}
+}
+function abMCompra(nome,loja){
+  document.getElementById('fm-compra').className='fmsg';
+  document.getElementById('cp-dt').value=new Date().toISOString().split('T')[0];
+  document.getElementById('cp-lj').value=loja||'juquia';
+  document.getElementById('cp-prod').value=nome||'';
+  document.getElementById('cp-forn').value='';document.getElementById('cp-qtd').value='';document.getElementById('cp-vu').value='';document.getElementById('cp-vt').value='';document.getElementById('cp-nf').value='';document.getElementById('cp-obs').value='';
+  document.getElementById('cp-marg-box').style.display='none';cpIdealPreco=null;
+  if(nome)onCpProdChange();
+  document.getElementById('m-compra').classList.add('open');
+}
+function onCpProdChange(){
+  var nome=document.getElementById('cp-prod').value.trim(),loja=document.getElementById('cp-lj').value;
+  var p=D.estoque.find(function(x){return x.Nome===nome&&lSlug(x.Loja||'')===loja;})||D.estoque.find(function(x){return x.Nome===nome;});
+  if(p&&!document.getElementById('cp-forn').value)document.getElementById('cp-forn').value=p.Fornecedor||'';
+  calcCpMargem();
+}
+function calcCpMargem(){
+  var qtd=parseFloat(document.getElementById('cp-qtd').value)||0,vu=parseFloat(document.getElementById('cp-vu').value)||0;
+  var vt=qtd*vu;
+  document.getElementById('cp-vt').value=vt?fmt(vt):'';
+  var nome=document.getElementById('cp-prod').value.trim(),loja=document.getElementById('cp-lj').value;
+  var box=document.getElementById('cp-marg-box');
+  cpIdealPreco=null;
+  if(!vu||!nome){box.style.display='none';return;}
+  var p=D.estoque.find(function(x){return x.Nome===nome&&lSlug(x.Loja||'')===loja;});
+  if(!p){box.style.display='none';return;}
+  var pvAtual=parseFloat(p.Preco_Venda||0),ideal=vu*3;
+  if(pvAtual>=ideal){
+    box.style.display='block';box.style.background='var(--vj-pale)';box.style.color='var(--vf)';
+    box.innerHTML='✅ Margem saudável: preço de venda atual (R$ '+fmt(pvAtual)+') cobre 3x o novo custo (R$ '+fmt(ideal)+').';
+  }else{
+    box.style.display='block';box.style.background='#fff5e6';box.style.color='#a15c00';
+    cpIdealPreco=ideal;
+    box.innerHTML='⚠️ Margem abaixo do ideal: com esse custo, o preço de venda deveria ser <b>R$ '+fmt(ideal)+'</b> (atual: R$ '+fmt(pvAtual)+').<br><label style="display:flex;align-items:center;gap:6px;margin-top:6px;cursor:pointer;"><input type="checkbox" id="cp-aceitar-novo" checked> Atualizar preço de venda para R$ '+fmt(ideal)+'</label>';
+  }
+}
+async function subCompra(){
+  var dt=document.getElementById('cp-dt').value,lj=document.getElementById('cp-lj').value,prod=document.getElementById('cp-prod').value.trim();
+  var qtd=parseFloat(document.getElementById('cp-qtd').value)||0,vu=parseFloat(document.getElementById('cp-vu').value)||0;
+  if(!dt||!prod||!qtd||!vu){sFMsg('fm-compra','Preencha data, produto, quantidade e valor unitário','err');return;}
+  var vt=qtd*vu,forn=document.getElementById('cp-forn').value.trim();
+  var chk=document.getElementById('cp-aceitar-novo');
+  var novoPreco=(chk&&chk.checked&&cpIdealPreco)?cpIdealPreco:null;
+  var pl={tipo:'compra',loja:lj,data:isoToDateBR(dt),fornecedor:forn,produto:prod,qtd:qtd,valorUnit:vu,valorTotal:vt,formaPagamento:document.getElementById('cp-pag').value,nf:document.getElementById('cp-nf').value,observacao:document.getElementById('cp-obs').value,operador:'Dashboard'};
+  if(novoPreco)pl.novoPrecoVenda=novoPreco;
+  setML('btn-fcp','sp-cp',true);var ok=await apiPost(pl);setML('btn-fcp','sp-cp',false);
+  if(ok){
+    D.compras.push({Data:pl.data,Loja:lj,Fornecedor:forn,Produto:prod,Qtd:qtd,Valor_Unit:vu,Valor_Total:vt,Forma_Pagamento:pl.formaPagamento,NF_Ref:pl.nf,Gera_Estoque:'Sim',Observacao:pl.observacao,Operador:'Dashboard'});
+    var p=D.estoque.find(function(x){return x.Nome===prod&&lSlug(x.Loja||'')===lj;});
+    if(p){p.Qtd=(parseInt(p.Qtd||0)+qtd);p.Preco_Custo=vu;if(novoPreco)p.Preco_Venda=novoPreco;}
+    showToast('Compra registrada!');fM('compra');renCompras();if(secAtiva==='estoque')renEst();
+  }else sFMsg('fm-compra','Erro ao salvar','err');
+}
 
 /* ── CLIENTES ── */
 function renCli(){
