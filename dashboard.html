@@ -344,6 +344,10 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
         <div style="height:200px;"><canvas id="c-fluxo"></canvas></div>
       </div>
       <div class="g2" style="margin-bottom:20px;">
+        <div class="cc"><div class="ch"><div><div class="ct">Despesas por Loja</div></div></div><div class="bc" id="ch-desp-loja"><div class="empty">Carregue os dados</div></div></div>
+        <div class="cc"><div class="ch"><div><div class="ct">Despesas por Grupo</div><div class="csb">Fixas x Variáveis</div></div></div><div class="bc" id="ch-desp-grp"><div class="empty">Carregue os dados</div></div></div>
+      </div>
+      <div class="g2" style="margin-bottom:20px;">
         <div class="cc"><div class="ch"><div><div class="ct">Despesas por categoria</div></div></div><div class="bc" id="ch-desp-cat"><div class="empty">Carregue os dados</div></div></div>
         <div class="cc"><div class="ch"><div><div class="ct">Detalhe por subcategoria</div></div>
           <select class="fi-sm" id="fin-cat-sel" onchange="renderSubcatChart()" style="width:140px;font-size:11px;padding:5px 8px;">
@@ -544,13 +548,13 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 <div class="mov" id="m-saida" onclick="cMov(event,'m-saida')"><div class="mo"><button class="mc" onclick="fM('saida')">×</button>
 <div class="mt">Lançar saída</div><div class="mst">Gasto, compra ou pagamento.</div>
 <div class="fg"><label class="fl">Tipo *</label><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="fbtn active" id="st-g" onclick="setST('gasto',this)">Gasto</button><button class="fbtn" id="st-c" onclick="setST('compra',this)">Compra</button><button class="fbtn" id="st-p" onclick="setST('pagamento',this)">Pagamento</button></div></div>
-<div class="fg2"><div class="fg"><label class="fl">Data *</label><input class="fi" id="fs-dt" type="date"></div><div class="fg"><label class="fl">Loja *</label><select class="fsl" id="fs-lj"><option value="juquia">Juquiá</option><option value="cambuci">Cambuci</option><option value="pessoal">Pessoal</option></select></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Data *</label><input class="fi" id="fs-dt" type="date"></div><div class="fg"><label class="fl">Loja *</label><select class="fsl" id="fs-lj" onchange="popularGrupos()"><option value="juquia">Juquiá</option><option value="cambuci">Cambuci</option><option value="pessoal">Pessoal</option></select></div></div>
 <div class="fg"><label class="fl">Descrição *</label><input class="fi" id="fs-desc" type="text" placeholder="Ex: Almoço, fornecedor, aluguel…"></div>
-<div class="fg2"><div class="fg"><label class="fl">Valor (R$) *</label><input class="fi" id="fs-val" type="number" min="0" step="0.01" placeholder="0,00"></div><div class="fg"><label class="fl">Categoria</label><select class="fsl" id="fs-cat"><option>Alimentação</option><option>Combustível</option><option>Material</option><option>Fornecedor</option><option>Aluguel</option><option>Utilities</option><option>Transporte</option><option>Funcionários</option><option>Marketing</option><option>Impostos</option><option>Outro</option></select></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Valor (R$) *</label><input class="fi" id="fs-val" type="number" min="0" step="0.01" placeholder="0,00"></div><div class="fg" id="fs-cat-wrap"><label class="fl">Categoria</label><select class="fsl" id="fs-cat"><option>Alimentação</option><option>Combustível</option><option>Material</option><option>Fornecedor</option><option>Aluguel</option><option>Utilities</option><option>Transporte</option><option>Funcionários</option><option>Marketing</option><option>Impostos</option><option>Outro</option></select></div></div>
 <div class="fg2"><div class="fg"><label class="fl">Pagamento</label><select class="fsl" id="fs-pag"><option>Dinheiro</option><option>Pix</option><option>Crédito</option><option>Débito</option><option>Boleto</option><option>Transferência</option></select></div><div class="fg" id="fs-st-w"><label class="fl">Status</label><select class="fsl" id="fs-st"><option value="Pago">Pago</option><option value="Pendente">Pendente</option></select></div></div>
 <div id="fs-pag-ex" style="display:none;"><div class="fg2"><div class="fg"><label class="fl">Vencimento *</label><input class="fi" id="fs-venc" type="date"></div><div class="fg"><label class="fl">Subcategoria</label><input class="fi" id="fs-subcat" type="text" placeholder="Ex: Aluguel, Salário…"></div></div></div>
 <div id="fs-cmp-x" style="display:none;"><div class="fg2"><div class="fg"><label class="fl">Fornecedor</label><input class="fi" id="fs-forn" type="text" placeholder="Fornecedor"></div><div class="fg"><label class="fl">Produto</label><input class="fi" id="fs-prod" type="text" placeholder="Nome do produto"></div></div><div class="fg2"><div class="fg"><label class="fl">Qtd</label><input class="fi" id="fs-qtd" type="number" min="1" placeholder="0"></div><div class="fg"><label class="fl">NF / Ref.</label><input class="fi" id="fs-nf" type="text" placeholder="NF-001"></div></div></div>
-<div id="fs-gst-x"><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--cream);border-radius:8px;margin-bottom:10px;"><div><div style="font-size:13px;">Entra no estoque?</div><div style="font-size:11px;color:var(--light);">Para compras de insumos</div></div><button class="tog" id="tog-se" onclick="togSE()" aria-label="toggle estoque saída"></button></div><div id="fs-se-x" style="display:none;" class="fg2"><div class="fg"><label class="fl">Produto</label><input class="fi" id="fs-se-p" type="text" placeholder="Nome"></div><div class="fg"><label class="fl">Quantidade</label><input class="fi" id="fs-se-q" type="number" min="1" placeholder="0"></div></div></div>
+<div id="fs-gst-x"><div class="fg2"><div class="fg"><label class="fl">Grupo</label><select class="fsl" id="fs-grp" onchange="popularCategoriasGrupo()"></select></div><div class="fg"><label class="fl">Categoria</label><select class="fsl" id="fs-catg" onchange="popularSubcatGrupo()"></select></div></div><div class="fg"><label class="fl">Sub categoria</label><select class="fsl" id="fs-subcatg"></select></div><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--cream);border-radius:8px;margin-bottom:10px;"><div><div style="font-size:13px;">Entra no estoque?</div><div style="font-size:11px;color:var(--light);">Para compras de insumos</div></div><button class="tog" id="tog-se" onclick="togSE()" aria-label="toggle estoque saída"></button></div><div id="fs-se-x" style="display:none;" class="fg2"><div class="fg"><label class="fl">Produto</label><input class="fi" id="fs-se-p" type="text" placeholder="Nome"></div><div class="fg"><label class="fl">Quantidade</label><input class="fi" id="fs-se-q" type="number" min="1" placeholder="0"></div></div></div>
 <div class="fg"><label class="fl">Observação</label><input class="fi" id="fs-obs" type="text" placeholder="Opcional"></div>
 <div class="fmsg" id="fm-sai"></div><div class="mft"><button class="btn-cn" onclick="fM('saida')">Cancelar</button><button class="btn-sb" id="btn-fsai" onclick="subSai()"><div class="msp" id="sp-sai"></div>Registrar</button></div></div></div>
 
@@ -604,13 +608,19 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 
 <div class="mov" id="m-pdv-c" onclick="cMov(event,'m-pdv-c')"><div class="mo" style="max-width:380px;"><button class="mc" onclick="fM('pdv-c')">×</button><div class="mt" id="pdvc-ttl">Desativar PDV?</div><div class="mst" id="pdvc-sb"></div><div class="mft"><button class="btn-cn" onclick="fM('pdv-c')">Cancelar</button><button class="btn-dn" id="btn-pdvc" onclick="confPdv()">Confirmar</button></div></div></div>
 
+<div class="mov" id="m-projeto" onclick="cMov(event,'m-projeto')"><div class="mo"><button class="mc" onclick="fM('projeto')">×</button><div class="mt">📁 Novo projeto</div><div class="mst">Defina prioridade e prazo para aparecer corretamente na lista.</div>
+<div class="fg2"><div class="fg"><label class="fl">Emoji</label><input class="fi" id="fpj-em" maxlength="2" placeholder="📁"></div><div class="fg"><label class="fl">Nome *</label><input class="fi" id="fpj-nm" type="text" placeholder="Ex: Cultivo indoor"></div></div>
+<div class="fg"><label class="fl">Descrição</label><textarea class="fta" id="fpj-desc" placeholder="Do que se trata este projeto…"></textarea></div>
+<div class="fg2"><div class="fg"><label class="fl">Prioridade</label><select class="fsl" id="fpj-prior"><option value="Alta">🔴 Alta</option><option value="Media" selected>🟡 Média</option><option value="Baixa">🟢 Baixa</option></select></div><div class="fg"><label class="fl">Prazo</label><input class="fi" id="fpj-prazo" type="date"></div></div>
+<div class="fmsg" id="fm-proj"></div><div class="mft"><button class="btn-cn" onclick="fM('projeto')">Cancelar</button><button class="btn-sb" id="btn-fproj" onclick="subProjeto()"><div class="msp" id="sp-proj"></div>Criar projeto</button></div></div></div>
+
 <div class="lov" id="lov"><div class="lsp"></div><div style="font-size:13px;color:var(--mid);" id="lov-txt">Carregando…</div></div>
 <div class="toast" id="toast"></div>
 
 <script>
 var SENHA='mayseJuquia2026Sistema';
-var URL_ATUAL='https://script.google.com/macros/s/AKfycbz_qJdFuu4C4kHStR4ohjDZcB1dfwqLP5hHh4jI985Vmt7H8xgWc7qwCgCTPebwVN8Zbg/exec';
-var URL_VERSAO=2;
+var URL_ATUAL='https://script.google.com/macros/s/AKfycbwTr3OPmBX_YwOgw7UNsy8rMaU4aVqD6k-uGp_hcT-24zaMhvPVux_PWXRnRWX1XBsWeQ/exec';
+var URL_VERSAO=3;
 if(parseInt(localStorage.getItem('mayse_dash_urlver')||'0',10)<URL_VERSAO){
   localStorage.setItem('mayse_dash_url',URL_ATUAL);
   localStorage.setItem('mayse_dash_urlver',String(URL_VERSAO));
@@ -965,6 +975,8 @@ function renderFinanceiro(){
   var me=document.getElementById('fin-margem');if(me)me.style.color=margem>=0?'var(--gold)':'var(--red)';
   renderFluxoCaixa(vendas,despesas);
   renderDespesasCat(despesas);
+  renderDespesasLoja(despesas);
+  renderDespesasGrupo(despesas);
   renderSubcatChart();
   renderDRE(vendas,despesas);
 }
@@ -1191,15 +1203,26 @@ function renProjetos(){
   });
   var ordem=projs.map(function(p){return p.Nome;});
   Object.keys(porNome).forEach(function(n){if(ordem.indexOf(n)<0)ordem.push(n);});
+  var PRIOR_ORD={Alta:0,Media:1,Baixa:2};
+  ordem.sort(function(na,nb){
+    var pa=porNome[na].proj,pb=porNome[nb].proj;
+    var oa=PRIOR_ORD[pa.Prioridade]!==undefined?PRIOR_ORD[pa.Prioridade]:1,ob=PRIOR_ORD[pb.Prioridade]!==undefined?PRIOR_ORD[pb.Prioridade]:1;
+    if(oa!==ob)return oa-ob;
+    var da=parsePtD(pa.Prazo),db=parsePtD(pb.Prazo);
+    return(da?da.getTime():Infinity)-(db?db.getTime():Infinity);
+  });
   _projOrdem=ordem;
   var el=document.getElementById('proj-lst');
   if(!ordem.length){el.innerHTML='<div class="empty">Nenhum projeto ainda — clique em "+ Novo projeto"</div>';return;}
   var hoje=new Date();hoje.setHours(0,0,0,0);
+  var PRIOR_BDG={Alta:'🔴 Alta',Media:'🟡 Média',Baixa:'🟢 Baixa'};
   el.innerHTML=ordem.map(function(nome,idx){
     var g=porNome[nome],p=g.proj,tarefas=g.tarefas;
     var feitas=tarefas.filter(function(t){return t.Status==='Feito';}).length;
     var pct=tarefas.length?Math.round(feitas/tarefas.length*100):0;
     var aberto=projAbertos.has(nome);
+    var dPrazoProj=parsePtD(p.Prazo);
+    var vencProj=dPrazoProj&&dPrazoProj.getTime()<hoje.getTime()&&pct<100;
     var linhasTarefas=tarefas.slice().sort(function(a,b){
       if((a.Status==='Feito')!==(b.Status==='Feito'))return a.Status==='Feito'?1:-1;
       var da=parsePtD(a.Data_Prazo),db=parsePtD(b.Data_Prazo);
@@ -1211,9 +1234,9 @@ function renProjetos(){
       return '<div class="tarefa-row"><button class="tarefa-status '+stCls+'" onclick="cicloStatus('+t._ti+')">'+esc(t.Status||'A fazer')+'</button><span class="tarefa-nome'+(t.Status==='Feito'?' done':'')+'">'+esc(t.Tarefa||'')+'</span>'+(t.Responsavel?'<span class="tarefa-resp">'+esc(t.Responsavel)+'</span>':'')+(t.Data_Prazo?'<span class="tarefa-prazo'+(venc?' venc':'')+'">'+esc(t.Data_Prazo)+(venc?' · atrasada':'')+'</span>':'')+'</div>';
     }).join('')||'<div class="empty" style="padding:8px 0;">Nenhuma tarefa ainda</div>';
     return '<div class="proj-card"><div class="proj-head" onclick="toggleProj('+idx+')">'
-      +'<div class="proj-head-l"><span class="proj-chev'+(aberto?' open':'')+'">▸</span><span class="proj-emoji">'+(p.Emoji||'📁')+'</span><span class="proj-nome">'+esc(nome)+'</span></div>'
+      +'<div class="proj-head-l"><span class="proj-chev'+(aberto?' open':'')+'">▸</span><span class="proj-emoji">'+(p.Emoji||'📁')+'</span><span class="proj-nome">'+esc(nome)+'</span>'+(p.Prioridade?'<span class="bdg" style="background:var(--cream);color:var(--mid);margin-left:4px;">'+(PRIOR_BDG[p.Prioridade]||p.Prioridade)+'</span>':'')+(p.Prazo?'<span style="font-size:11px;color:'+(vencProj?'var(--red)':'var(--light)')+';font-weight:'+(vencProj?'700':'400')+';margin-left:6px;white-space:nowrap;">📅 '+esc(p.Prazo)+(vencProj?' · atrasado':'')+'</span>':'')+'</div>'
       +'<div class="proj-head-r"><div class="proj-bar"><div class="proj-bar-f" style="width:'+pct+'%"></div></div><span class="proj-pct">'+pct+'%</span><span class="proj-cnt">'+feitas+'/'+tarefas.length+'</span></div></div>'
-      +'<div class="proj-body" style="display:'+(aberto?'block':'none')+';">'+linhasTarefas
+      +'<div class="proj-body" style="display:'+(aberto?'block':'none')+';">'+(p.Descricao?'<div style="font-size:12px;color:var(--mid);margin-bottom:10px;">'+esc(p.Descricao)+'</div>':'')+linhasTarefas
       +'<div class="proj-add"><input type="text" placeholder="Nova tarefa…" id="pt-nova-'+idx+'"><input type="text" placeholder="Responsável" style="max-width:120px;" id="pt-resp-'+idx+'"><input type="date" id="pt-prazo-'+idx+'" style="max-width:140px;"><button class="btn-l" style="padding:6px 12px;" onclick="addTarefa('+idx+')">+ Tarefa</button></div></div></div>';
   }).join('');
 }
@@ -1239,16 +1262,29 @@ function cicloStatus(idx){
   renProjetos();renResumoProjetos();
   apiPost({tipo:'atualizar_tarefa',linha:idx+2,status:t.Status});
 }
-async function abMProjeto(){
-  var nome=prompt('Nome do novo projeto:');
-  if(!nome||!nome.trim())return;
-  nome=nome.trim();
-  var emoji=prompt('Emoji (opcional):','📁')||'📁';
-  D.projetos.push({Nome:nome,Emoji:emoji,Ativo:'Sim'});
-  projAbertos.add(nome);
-  renProjetos();
-  await apiPost({tipo:'novo_projeto',nome:nome,emoji:emoji,operador:'Dashboard'});
-  showToast('Projeto criado!');
+function abMProjeto(){
+  ['fpj-em','fpj-nm','fpj-desc','fpj-prazo'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('fpj-prior').value='Media';
+  document.getElementById('fm-proj').className='fmsg';
+  document.getElementById('m-projeto').classList.add('open');
+}
+async function subProjeto(){
+  var nome=document.getElementById('fpj-nm').value.trim();
+  if(!nome){sFMsg('fm-proj','Informe o nome do projeto','err');return;}
+  var emoji=document.getElementById('fpj-em').value.trim()||'📁';
+  var desc=document.getElementById('fpj-desc').value.trim();
+  var prior=document.getElementById('fpj-prior').value;
+  var prazoIso=document.getElementById('fpj-prazo').value;
+  var prazoBr=prazoIso?isoToDateBR(prazoIso):'';
+  setML('btn-fproj','sp-proj',true);
+  var ok=await apiPost({tipo:'novo_projeto',nome:nome,emoji:emoji,descricao:desc,prioridade:prior,prazo:prazoBr,operador:'Dashboard'});
+  setML('btn-fproj','sp-proj',false);
+  if(ok){
+    D.projetos.push({Nome:nome,Emoji:emoji,Descricao:desc,Prioridade:prior,Prazo:prazoBr,Ativo:'Sim'});
+    projAbertos.add(nome);
+    renProjetos();renResumoProjetos();
+    fM('projeto');showToast('Projeto criado!');
+  }else sFMsg('fm-proj','Erro ao salvar','err');
 }
 function renResumoProjetos(){
   var el=document.getElementById('vg-proj-resumo');
@@ -1382,14 +1418,42 @@ async function subEnt(){
 }
 
 /* ── MODAL SAÍDA ── */
-function abMSai(){saiTipo='gasto';document.getElementById('fs-dt').value=new Date().toISOString().split('T')[0];['fs-desc','fs-val','fs-obs','fs-forn','fs-prod','fs-qtd','fs-nf','fs-se-p','fs-se-q','fs-subcat','fs-venc'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fm-sai').className='fmsg';document.getElementById('fs-cmp-x').style.display='none';document.getElementById('fs-gst-x').style.display='block';document.getElementById('fs-pag-ex').style.display='none';document.getElementById('fs-se-x').style.display='none';document.getElementById('tog-se').classList.remove('on');document.querySelectorAll('#m-saida .fbtn').forEach(function(b){b.classList.remove('active');});document.getElementById('st-g').classList.add('active');document.getElementById('m-saida').classList.add('open');}
-function setST(t,b){saiTipo=t;document.querySelectorAll('#m-saida .fbtn').forEach(function(x){x.classList.remove('active');});b.classList.add('active');document.getElementById('fs-cmp-x').style.display=t==='compra'?'block':'none';document.getElementById('fs-gst-x').style.display=t==='gasto'?'block':'none';document.getElementById('fs-pag-ex').style.display=t==='pagamento'?'block':'none';}
+function abMSai(){saiTipo='gasto';document.getElementById('fs-dt').value=new Date().toISOString().split('T')[0];['fs-desc','fs-val','fs-obs','fs-forn','fs-prod','fs-qtd','fs-nf','fs-se-p','fs-se-q','fs-subcat','fs-venc'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fm-sai').className='fmsg';document.getElementById('fs-cmp-x').style.display='none';document.getElementById('fs-gst-x').style.display='block';document.getElementById('fs-pag-ex').style.display='none';document.getElementById('fs-cat-wrap').style.display='none';document.getElementById('fs-se-x').style.display='none';document.getElementById('tog-se').classList.remove('on');document.querySelectorAll('#m-saida .fbtn').forEach(function(b){b.classList.remove('active');});document.getElementById('st-g').classList.add('active');popularGrupos();document.getElementById('m-saida').classList.add('open');}
+function setST(t,b){saiTipo=t;document.querySelectorAll('#m-saida .fbtn').forEach(function(x){x.classList.remove('active');});b.classList.add('active');document.getElementById('fs-cmp-x').style.display=t==='compra'?'block':'none';document.getElementById('fs-gst-x').style.display=t==='gasto'?'block':'none';document.getElementById('fs-pag-ex').style.display=t==='pagamento'?'block':'none';document.getElementById('fs-cat-wrap').style.display=t==='gasto'?'none':'block';if(t==='gasto')popularGrupos();}
+/* ── Taxonomia de despesas: Loja > Grupo > Categoria > Subcategoria ── */
+var TAXONOMIA_DESPESAS={
+  pessoal:{
+    'Despesas Fixas':{'Moradia':['Aluguel','Água','Luz','Internet'],'Educação':['Inglês']},
+    'Despesas Variáveis':{'Transporte':['Combustível','Bilhete Único','Pedágio'],'Alimentação':['Mercado','Açougue','Feira'],'Saúde':['Farmácia'],'Lazer':['Zoológico'],'Impostos e taxas':['Juros Cartão']}
+  },
+  juquia:{
+    'Despesas Variáveis':{'Matéria prima':['Compras flores'],'Embalagens':['Papel']},
+    'Despesas Fixas':{'Funcionários':['Pagamento Salário'],'Administrativa':['Contabilidade','Aluguel']}
+  }
+};
+function taxLoja(lj){return TAXONOMIA_DESPESAS[lj]||TAXONOMIA_DESPESAS.juquia;}
+function popularGrupos(){
+  var lj=document.getElementById('fs-lj').value,tax=taxLoja(lj),sel=document.getElementById('fs-grp');
+  sel.innerHTML=Object.keys(tax).map(function(g){return'<option>'+esc(g)+'</option>';}).join('');
+  popularCategoriasGrupo();
+}
+function popularCategoriasGrupo(){
+  var lj=document.getElementById('fs-lj').value,tax=taxLoja(lj),grp=document.getElementById('fs-grp').value;
+  var cats=tax[grp]||{};
+  document.getElementById('fs-catg').innerHTML=Object.keys(cats).map(function(c){return'<option>'+esc(c)+'</option>';}).join('');
+  popularSubcatGrupo();
+}
+function popularSubcatGrupo(){
+  var lj=document.getElementById('fs-lj').value,tax=taxLoja(lj),grp=document.getElementById('fs-grp').value,cat=document.getElementById('fs-catg').value;
+  var subs=(tax[grp]||{})[cat]||[];
+  document.getElementById('fs-subcatg').innerHTML=subs.map(function(s2){return'<option>'+esc(s2)+'</option>';}).join('');
+}
 function togSE(){var t=document.getElementById('tog-se');t.classList.toggle('on');document.getElementById('fs-se-x').style.display=t.classList.contains('on')?'grid':'none';}
 async function subSai(){
   var dt=document.getElementById('fs-dt').value,lj=document.getElementById('fs-lj').value,ds=document.getElementById('fs-desc').value.trim(),vl=parseFloat(document.getElementById('fs-val').value)||0;
   if(!dt||!ds||!vl){sFMsg('fm-sai','Preencha data, descrição e valor','err');return;}
   var ct=document.getElementById('fs-cat').value,pg=document.getElementById('fs-pag').value,st=document.getElementById('fs-st').value,seOn=document.getElementById('tog-se').classList.contains('on'),pl;
-  if(saiTipo==='gasto'){pl={tipo:'gasto',loja:lj,data:isoToDateBR(dt),descricao:ds,categoria:ct,valor:vl,formaPagamento:pg,entraEstoque:seOn?'Sim':'Nao',produto:seOn?document.getElementById('fs-se-p').value:'',qtdEstoque:seOn?parseInt(document.getElementById('fs-se-q').value)||0:0,operador:'Dashboard'};}
+  if(saiTipo==='gasto'){pl={tipo:'gasto',loja:lj,data:isoToDateBR(dt),descricao:ds,grupo:document.getElementById('fs-grp').value,categoria:document.getElementById('fs-catg').value,subcategoria:document.getElementById('fs-subcatg').value,valor:vl,formaPagamento:pg,entraEstoque:seOn?'Sim':'Nao',produto:seOn?document.getElementById('fs-se-p').value:'',qtdEstoque:seOn?parseInt(document.getElementById('fs-se-q').value)||0:0,operador:'Dashboard'};}
   else if(saiTipo==='compra'){pl={tipo:'compra',loja:lj,data:isoToDateBR(dt),fornecedor:document.getElementById('fs-forn').value,produto:document.getElementById('fs-prod').value||ds,qtd:parseInt(document.getElementById('fs-qtd').value)||1,valorUnit:vl,valorTotal:vl,formaPagamento:pg,nf:document.getElementById('fs-nf').value,observacao:document.getElementById('fs-obs').value,operador:'Dashboard'};}
   else{pl={tipo:'pagamento',loja:lj,vencimento:isoToDateBR(document.getElementById('fs-venc').value||dt),descricao:ds,categoria:ct,subcategoria:document.getElementById('fs-subcat').value,valor:vl,status:st,observacao:document.getElementById('fs-obs').value};}
   setML('btn-fsai','sp-sai',true);var ok=await apiPost(pl);setML('btn-fsai','sp-sai',false);
@@ -1495,6 +1559,16 @@ function renderDespesasCat(despesas){
   const byCat={};
   despesas.forEach(r=>{const c=r.Categoria||'Outros';byCat[c]=(byCat[c]||0)+parseFloat(r.Valor||0);});
   renderBarChart('ch-desp-cat',Object.entries(byCat).map(([label,val])=>({label,val})).sort((a,b)=>b.val-a.val),'#e53935');
+}
+function renderDespesasLoja(despesas){
+  const byLoja={};
+  despesas.forEach(r=>{const l=LNOMES[lSlug(r.Loja||'')]||r.Loja||'Outros';byLoja[l]=(byLoja[l]||0)+parseFloat(r.Valor||0);});
+  renderBarChart('ch-desp-loja',Object.entries(byLoja).map(([label,val])=>({label,val})).sort((a,b)=>b.val-a.val),'#3B5BC9');
+}
+function renderDespesasGrupo(despesas){
+  const byGrp={};
+  despesas.forEach(r=>{const g=r.Grupo||'Não classificado';byGrp[g]=(byGrp[g]||0)+parseFloat(r.Valor||0);});
+  renderBarChart('ch-desp-grp',Object.entries(byGrp).map(([label,val])=>({label,val})).sort((a,b)=>b.val-a.val),'#C97A1A');
 }
 function renderSubcatChart(){
   const cat=document.getElementById('fin-cat-sel')?.value||'';
