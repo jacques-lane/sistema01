@@ -619,8 +619,8 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 
 <script>
 var SENHA='mayseJuquia2026Sistema';
-var URL_ATUAL='https://script.google.com/macros/s/AKfycbwTr3OPmBX_YwOgw7UNsy8rMaU4aVqD6k-uGp_hcT-24zaMhvPVux_PWXRnRWX1XBsWeQ/exec';
-var URL_VERSAO=3;
+var URL_ATUAL='https://script.google.com/macros/s/AKfycbwqKg_R3f_ZQg7n3FkdI2l8ABjXijTxC6OLnPedZptKLI-HZfWLayYRHCo2TJSHOPyREA/exec';
+var URL_VERSAO=4;
 if(parseInt(localStorage.getItem('mayse_dash_urlver')||'0',10)<URL_VERSAO){
   localStorage.setItem('mayse_dash_url',URL_ATUAL);
   localStorage.setItem('mayse_dash_urlver',String(URL_VERSAO));
@@ -866,7 +866,7 @@ async function loadData(){
   document.getElementById('btn-lbl').textContent='Carregando…';document.getElementById('btn-sp').style.display='block';
   document.getElementById('lov').classList.add('show');
   try{
-    var rs=await Promise.all([apiGet('Vendas'),apiGet('Encomendas'),apiGet('Estoque'),apiGet('Compras'),apiGet('Gastos'),apiGet('Pagamentos'),apiGet('Clientes'),apiGet('PDVs'),apiGet('Projetos'),apiGet('Tarefas')]);
+    var rs=await Promise.all([apiGet('Vendas'),apiGet('Encomendas'),apiGet('Estoque'),apiGet('Compras'),apiGet('Gastos'),apiGet('Pagamentos'),apiGet('Clientes'),apiGet('PDVs'),apiGet('Projetos'),apiGet('ProjetoTarefas')]);
     D.vendas=rs[0].data||[];D.encomendas=rs[1].data||[];D.estoque=rs[2].data||[];
     D.compras=rs[3].data||[];D.gastos=rs[4].data||[];D.pagamentos=rs[5].data||[];
     D.clientes=rs[6].data||[];D.pdvs=rs[7].data||[];
