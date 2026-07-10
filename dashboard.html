@@ -609,7 +609,13 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 
 <script>
 var SENHA='mayseJuquia2026Sistema';
-var cfg={url:localStorage.getItem('mayse_dash_url')||'',token:localStorage.getItem('mayse_dash_token')||''};
+var URL_ATUAL='https://script.google.com/macros/s/AKfycbz_qJdFuu4C4kHStR4ohjDZcB1dfwqLP5hHh4jI985Vmt7H8xgWc7qwCgCTPebwVN8Zbg/exec';
+var URL_VERSAO=2;
+if(parseInt(localStorage.getItem('mayse_dash_urlver')||'0',10)<URL_VERSAO){
+  localStorage.setItem('mayse_dash_url',URL_ATUAL);
+  localStorage.setItem('mayse_dash_urlver',String(URL_VERSAO));
+}
+var cfg={url:localStorage.getItem('mayse_dash_url')||URL_ATUAL,token:localStorage.getItem('mayse_dash_token')||SENHA};
 var D={vendas:[],encomendas:[],estoque:[],compras:[],gastos:[],pagamentos:[],clientes:[],pdvs:[],projetos:[],tarefas:[]};
 var lojasAtivas=new Set(['juquia','cambuci']);
 var secAtiva='visao',saiTipo='gasto',encTipoM='Futura',estFil='todos',saiFil='todos',saiStFil='todos';

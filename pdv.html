@@ -702,8 +702,16 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 'use strict';
 
 // ── CONFIG ─────────────────────────────────────────────────
-var webhookUrl    = localStorage.getItem('mayse_v3_url')   || '';
-var tokenSecreto  = localStorage.getItem('mayse_v3_token') || '';
+var URL_ATUAL='https://script.google.com/macros/s/AKfycbz_qJdFuu4C4kHStR4ohjDZcB1dfwqLP5hHh4jI985Vmt7H8xgWc7qwCgCTPebwVN8Zbg/exec';
+var TOKEN_ATUAL='mayseJuquia2026Sistema';
+var URL_VERSAO=2;
+if(parseInt(localStorage.getItem('mayse_v3_urlver')||'0',10)<URL_VERSAO){
+  localStorage.setItem('mayse_v3_url',URL_ATUAL);
+  localStorage.setItem('mayse_v3_token',TOKEN_ATUAL);
+  localStorage.setItem('mayse_v3_urlver',String(URL_VERSAO));
+}
+var webhookUrl    = localStorage.getItem('mayse_v3_url')   || URL_ATUAL;
+var tokenSecreto  = localStorage.getItem('mayse_v3_token') || TOKEN_ATUAL;
 var pdvNome       = localStorage.getItem('mayse_v3_nome')  || '';
 var pdvLoja       = localStorage.getItem('mayse_v3_loja')  || 'juquia';
 var operador      = localStorage.getItem('mayse_v3_op')    || '';
