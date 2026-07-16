@@ -883,7 +883,7 @@ function renAll(){renVisao();if(secAtiva==='entradas')renEntradas();if(secAtiva=
 
 /* ── VISÃO GERAL ── */
 function renVisao(){
-  var vnd=gDL(D.vendas),pag=gLojaOnly(D.pagamentos);
+  var vnd=gDL(D.vendas),pag=gDL(D.pagamentos);
   var fat=vnd.reduce(function(s,v){return s+parseFloat(v.Total||0);},0),qtd=vnd.length;
   sEl('kv-fat',fmt(fat));sEl('kv-vnd',qtd);sEl('kv-tkt',fmt(qtd?fat/qtd:0));
   var ap=pag.filter(function(p){return (p.Status||'').toLowerCase()!=='pago';});
