@@ -1049,7 +1049,7 @@ function renSai(){
     if((p.Status||'').toLowerCase()==='pago')st='Pago';
     else if(d&&d.getTime()<hoje.getTime())st='Vencido';
     else st='A vencer';
-    _saiL.push({venc:p.Vencimento,tp:'pagamento',desc:p.Descricao,lj:lSlug(p.Loja||''),cat:p.Categoria,sub:p.Subcategoria||'—',val:parseFloat(p.Valor||0),st:st,_pi:i,raw:p});
+    _saiL.push({venc:p.Vencimento,tp:'pagamento',desc:p.Descricao,lj:lSlug(p.Loja||''),cat:p.Categoria,sub:p.Subcategoria||'—',val:parseFloat(p.Valor||0),st:st,_pi:D.pagamentos.indexOf(p),raw:p});
   });
   _saiL.sort(function(a,b){var da=parsePtD(a.venc),db=parsePtD(b.venc);return(da?da.getTime():0)-(db?db.getTime():0);});
   filSaiRen();
