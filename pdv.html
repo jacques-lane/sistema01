@@ -44,6 +44,10 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 .blocked-nome{font-size:14px;font-weight:600;color:rgba(255,255,255,.8);}
 .blocked-meta{font-size:12px;color:rgba(255,255,255,.35);margin-top:4px;}
 
+/* ── PONTO / CAIXA (gates antes de liberar o app) ── */
+#ponto-screen,#caixa-screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:var(--vf);padding:32px 24px;text-align:center;}
+.cx-info{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px;font-size:12px;color:rgba(255,255,255,.6);line-height:1.7;text-align:left;}
+
 /* ── APP ── */
 #app{display:none;}
 .header{background:var(--vf);padding:44px 20px 16px;position:relative;overflow:hidden;}
@@ -323,6 +327,38 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
   <div class="blocked-info">
     <div class="blocked-nome" id="bl-nome">—</div>
     <div class="blocked-meta" id="bl-meta">—</div>
+  </div>
+</div>
+
+<!-- ══ PONTO (bater ponto de entrada, obrigatório pra liberar o app) ══ -->
+<div id="ponto-screen">
+  <div class="lock-logo">Mayse</div>
+  <div class="lock-ico">🕐</div>
+  <div class="lock-title">Bater ponto</div>
+  <div class="lock-desc">Identifique-se para começar a usar o PDV.</div>
+  <div class="lock-form">
+    <label class="lf-label">Funcionário</label>
+    <select class="lf-input" id="pt-func" onchange="checkPontoForm()">
+      <option value="">Selecione…</option>
+    </select>
+    <label class="lf-label">PIN</label>
+    <input class="lf-input" id="pt-pin" type="password" inputmode="numeric" maxlength="6" placeholder="••••" oninput="checkPontoForm()">
+    <button class="lf-btn" id="pt-btn" disabled onclick="baterPontoEntrada()">Bater ponto de entrada</button>
+    <div class="lock-err" id="pt-err">Funcionário ou PIN incorretos. Confira e tente de novo.</div>
+  </div>
+</div>
+
+<!-- ══ CAIXA (abertura, obrigatória pra liberar o app) ══ -->
+<div id="caixa-screen">
+  <div class="lock-logo">Mayse</div>
+  <div class="lock-ico">💰</div>
+  <div class="lock-title">Abrir caixa</div>
+  <div class="lock-desc">Informe o valor em dinheiro no caixa para começar o dia.</div>
+  <div class="cx-info" id="cx-quem"></div>
+  <div class="lock-form">
+    <label class="lf-label">Valor inicial em dinheiro</label>
+    <input class="lf-input" id="cx-val" type="number" inputmode="decimal" placeholder="0,00">
+    <button class="lf-btn" onclick="abrirCaixaGate()">Abrir caixa</button>
   </div>
 </div>
 
@@ -630,7 +666,27 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
       <input class="form-input" id="cfg-token" type="password" placeholder="Token configurado no script">
     </div>
     <button class="btn btn-primary" onclick="salvarConfigModal()">Salvar</button>
+    <button class="btn btn-outline" onclick="abrirFecharCaixa()">🔒 Fechar caixa e bater saída</button>
     <button class="btn btn-outline" onclick="document.getElementById('modal-config').classList.remove('open')">Fechar</button>
+  </div>
+</div>
+
+<!-- Modal fechar caixa -->
+<div class="modal-overlay" id="modal-fechar-caixa" onclick="closeModal(event,'modal-fechar-caixa')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🔒 Fechar caixa</div>
+    <div class="recibo-meta" style="margin-bottom:14px;">
+      <div class="recibo-row"><span class="recibo-label">Abertura</span><span id="fc-abertura">R$ 0,00</span></div>
+      <div class="recibo-row"><span class="recibo-label">Vendas em dinheiro hoje</span><span id="fc-vendas">R$ 0,00</span></div>
+      <div class="recibo-row"><span class="recibo-label">Esperado no caixa</span><span id="fc-esperado">R$ 0,00</span></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Valor contado no caixa</label>
+      <input class="form-input" id="fc-val" type="number" inputmode="decimal" placeholder="0,00">
+    </div>
+    <button class="btn btn-primary" onclick="confirmarFecharCaixa()">Confirmar fechamento e bater saída</button>
+    <button class="btn btn-outline" onclick="document.getElementById('modal-fechar-caixa').classList.remove('open')">Cancelar</button>
   </div>
 </div>
 
@@ -774,12 +830,126 @@ function mostrarBloqueado() {
 function iniciarApp() {
   document.getElementById('lock-screen').style.display = 'none';
   document.getElementById('blocked-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
   atualizarHeaderLoja();
+  verificarPonto();
+}
+
+// ── PONTO / CAIXA ──────────────────────────────────────────
+// O app só libera a tela principal depois que o funcionário bate o ponto
+// (nome + PIN) e, em seguida, confere que o caixa da loja já está aberto hoje
+// (ou abre um novo). Ver CLAUDE.md > "Módulo Ponto/Caixa".
+var funcionariosCache = [];
+
+function verificarPonto() {
+  var hoje = new Date().toLocaleDateString('pt-BR');
+  if (operador && localStorage.getItem('mayse_v3_pontodata') === hoje) {
+    verificarCaixa();
+    return;
+  }
+  document.getElementById('ponto-screen').style.display = 'flex';
+  carregarFuncionarios();
+}
+
+function carregarFuncionarios() {
+  apiGet('Funcionarios').then(function(d) {
+    var lista = (d.data || []).filter(function(f) { return f.Ativo === 'Sim'; });
+    funcionariosCache = lista;
+    var sel = document.getElementById('pt-func');
+    var opts = '<option value="">Selecione…</option>';
+    lista.forEach(function(f) { opts += '<option value="' + escapeHtml(f.Nome) + '">' + escapeHtml(f.Nome) + '</option>'; });
+    sel.innerHTML = opts;
+    if (operador && lista.some(function(f) { return f.Nome === operador; })) sel.value = operador;
+  });
+}
+
+function checkPontoForm() {
+  var nome = document.getElementById('pt-func').value;
+  var pin = document.getElementById('pt-pin').value.trim();
+  document.getElementById('pt-btn').disabled = !(nome && pin);
+  document.getElementById('pt-err').style.display = 'none';
+}
+
+function baterPontoEntrada() {
+  var nome = document.getElementById('pt-func').value;
+  var pin = document.getElementById('pt-pin').value.trim();
+  var achou = funcionariosCache.filter(function(f) { return f.Nome === nome && String(f.PIN) === pin; })[0];
+  if (!achou) {
+    document.getElementById('pt-err').style.display = 'block';
+    return;
+  }
+  operador = nome;
+  localStorage.setItem('mayse_v3_op', nome);
+  localStorage.setItem('mayse_v3_pontodata', new Date().toLocaleDateString('pt-BR'));
+  enviarParaSheets({ tipo: 'bater_ponto', funcionario: nome, loja: pdvLoja, tipoPonto: 'Entrada', dispositivo: pdvNome });
+  document.getElementById('ponto-screen').style.display = 'none';
+  showToast('Ponto batido: ' + nome);
+  verificarCaixa();
+}
+
+function verificarCaixa() {
+  var hoje = new Date().toLocaleDateString('pt-BR');
+  apiGet('Caixa', 'loja=' + pdvLoja).then(function(d) {
+    var aberto = (d.data || []).some(function(c) { return c.Data === hoje && !c.Hora_Fechamento; });
+    if (aberto) {
+      mostrarApp();
+    } else {
+      document.getElementById('cx-quem').textContent = operador + ' · ' + (LOJA_NOMES[pdvLoja] || pdvLoja) + ' · ' + hoje;
+      document.getElementById('caixa-screen').style.display = 'flex';
+    }
+  });
+}
+
+function abrirCaixaGate() {
+  var val = parseFloat(document.getElementById('cx-val').value || 0);
+  if (isNaN(val) || val < 0) { showToast('Informe um valor válido', true); return; }
+  enviarParaSheets({ tipo: 'abrir_caixa', funcionario: operador, loja: pdvLoja, valorAbertura: val });
+  document.getElementById('caixa-screen').style.display = 'none';
+  showToast('Caixa aberto');
+  mostrarApp();
+}
+
+function mostrarApp() {
+  document.getElementById('ponto-screen').style.display = 'none';
+  document.getElementById('caixa-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
   if (operador) document.getElementById('op-label').textContent = operador;
   adicionarProduto();
   carregarEstoque();
   carregarClientes();
+}
+
+function abrirFecharCaixa() {
+  document.getElementById('modal-config').classList.remove('open');
+  var hoje = new Date().toLocaleDateString('pt-BR');
+  apiGet('Caixa', 'loja=' + pdvLoja).then(function(d) {
+    var linha = (d.data || []).filter(function(c) { return c.Data === hoje && !c.Hora_Fechamento; })[0];
+    if (!linha) { showToast('Nenhum caixa aberto hoje', true); return; }
+    apiGet('Vendas', 'loja=' + pdvLoja).then(function(dv) {
+      var totalDinheiro = 0;
+      (dv.data || []).forEach(function(v) { if (v.Data === hoje) totalDinheiro += parseFloat(v.Dinheiro || 0); });
+      var esperado = parseFloat(linha.Valor_Abertura || 0) + totalDinheiro;
+      window._caixaEsperado = esperado;
+      document.getElementById('fc-abertura').textContent = 'R$ ' + fmt(linha.Valor_Abertura);
+      document.getElementById('fc-vendas').textContent = 'R$ ' + fmt(totalDinheiro);
+      document.getElementById('fc-esperado').textContent = 'R$ ' + fmt(esperado);
+      document.getElementById('fc-val').value = '';
+      document.getElementById('modal-fechar-caixa').classList.add('open');
+    });
+  });
+}
+
+function confirmarFecharCaixa() {
+  var contadoStr = document.getElementById('fc-val').value;
+  if (contadoStr === '') { showToast('Informe o valor contado', true); return; }
+  var contado = parseFloat(contadoStr);
+  var esperado = window._caixaEsperado || 0;
+  var dif = contado - esperado;
+  enviarParaSheets({ tipo: 'fechar_caixa', funcionario: operador, loja: pdvLoja, valorFechamento: contado, valorEsperado: esperado, diferenca: dif });
+  enviarParaSheets({ tipo: 'bater_ponto', funcionario: operador, loja: pdvLoja, tipoPonto: 'Saida', dispositivo: pdvNome });
+  document.getElementById('modal-fechar-caixa').classList.remove('open');
+  localStorage.removeItem('mayse_v3_pontodata');
+  showToast('Caixa fechado. Diferença: R$ ' + fmt(dif));
+  setTimeout(function() { location.reload(); }, 1500);
 }
 
 function atualizarHeaderLoja() {

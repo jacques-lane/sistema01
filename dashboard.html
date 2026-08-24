@@ -276,6 +276,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <div class="sb-sec">Gestão</div>
     <button class="si" onclick="goSec('orcamentos',this)" title="Orçamentos"><span class="ico">🧾</span><span class="si-lbl">Orçamentos</span></button>
     <button class="si" id="nav-projetos" onclick="goSec('projetos',this)" title="Projetos"><span class="ico">🗂️</span><span class="si-lbl">Projetos</span></button>
+    <button class="si" onclick="goSec('equipe',this)" title="Equipe"><span class="ico">🪪</span><span class="si-lbl">Equipe</span></button>
   </nav>
   <div class="sb-footer"><div class="sb-cfg" onclick="goSec('config',null)"><span style="font-size:15px">⚙️</span><span class="sb-cfg-lbl">Configurações</span></div></div>
 </div>
@@ -358,6 +359,13 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
             <option value="">Todas</option><option>Fixo</option><option>Variável</option><option>Funcionários</option><option>Marketing</option><option>Transporte</option><option>Fornecedor</option><option>Impostos</option><option>Outros</option>
           </select>
         </div><div class="bc" id="ch-desp-sub"><div class="empty">Selecione uma categoria</div></div></div>
+      </div>
+      <div class="cc" style="margin-bottom:20px;">
+        <div class="ch"><div><div class="ct">DRE — Visão mensal</div><div class="csb">Receita (Vendas) e despesas por categoria (Pagamentos) · respeita a loja selecionada, mas sempre mostra todos os meses com dado (ignora o filtro de período)</div></div></div>
+        <div class="tw"><table class="dt">
+          <thead><tr id="tb-dremensal-head"><th>Categoria</th></tr></thead>
+          <tbody id="tb-dremensal"></tbody>
+        </table></div>
       </div>
       <div class="cc">
         <div class="ch"><div><div class="ct">DRE — Resultado dia a dia</div><div class="csb">Entradas, saídas e saldo acumulado</div></div>
@@ -535,6 +543,22 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
       </div>
     </div>
 
+    <!-- EQUIPE -->
+    <div id="sec-equipe" class="section">
+      <div class="cc" style="margin-bottom:16px;">
+        <div class="ch"><div><div class="ct">Funcionários</div><div class="csb">Nome + PIN usados para bater o ponto no PDV</div></div><button class="btn-l" onclick="abMFunc()">+ Novo funcionário</button></div>
+        <div id="func-lst"><div class="empty">Carregue os dados</div></div>
+      </div>
+      <div class="cc" style="margin-bottom:16px;">
+        <div class="ch"><div><div class="ct">Ponto</div><div class="csb">Entradas e saídas registradas no PDV · respeita loja e período selecionados</div></div></div>
+        <div id="ponto-lst"><div class="empty">Carregue os dados</div></div>
+      </div>
+      <div class="cc">
+        <div class="ch"><div><div class="ct">Caixa</div><div class="csb">Abertura e fechamento por dia/loja · respeita loja e período selecionados</div></div></div>
+        <div id="caixa-lst"><div class="empty">Carregue os dados</div></div>
+      </div>
+    </div>
+
     <!-- CONFIG -->
     <div id="sec-config" class="section">
       <div class="cc" style="margin-bottom:16px;"><div class="ct" style="margin-bottom:16px;">Conexão com Google Sheets</div>
@@ -555,6 +579,8 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 
 <div class="mov" id="m-cliente" onclick="cMov(event,'m-cliente')"><div class="mo"><button class="mc" onclick="fM('cliente')">×</button><div class="mt" id="m-cli-ttl">Cadastrar cliente</div><div class="mst">Salvo na aba Clientes.</div><div class="fg2"><div class="fg"><label class="fl">Nome *</label><input class="fi" id="fcn" type="text" placeholder="Nome completo"></div><div class="fg"><label class="fl">Telefone *</label><input class="fi" id="fct" type="tel" placeholder="(XX) XXXXX-XXXX"></div></div><div class="fg"><label class="fl">Loja</label><select class="fsl" id="fcl"><option value="juquia">Juquiá</option><option value="cambuci">Cambuci</option><option value="pessoal">Pessoal</option></select></div><div class="fmsg" id="fm-cli"></div><div class="mft"><button class="btn-cn" onclick="fM('cliente')">Cancelar</button><button class="btn-sb" id="btn-fcli" onclick="subCli()"><div class="msp" id="sp-cli"></div>Salvar</button></div></div></div>
 
+<div class="mov" id="m-funcionario" onclick="cMov(event,'m-funcionario')"><div class="mo"><button class="mc" onclick="fM('funcionario')">×</button><div class="mt">Novo funcionário</div><div class="mst">Nome e PIN usados para bater o ponto no PDV.</div><div class="fg2"><div class="fg"><label class="fl">Nome *</label><input class="fi" id="ffn" type="text" placeholder="Nome completo"></div><div class="fg"><label class="fl">PIN (4 a 6 números) *</label><input class="fi" id="ffp" type="text" inputmode="numeric" maxlength="6" placeholder="0000"></div></div><div class="fmsg" id="fm-func"></div><div class="mft"><button class="btn-cn" onclick="fM('funcionario')">Cancelar</button><button class="btn-sb" id="btn-ffunc" onclick="subFuncionario()"><div class="msp" id="sp-func"></div>Salvar</button></div></div></div>
+
 <div class="mov" id="m-entrada" onclick="cMov(event,'m-entrada')"><div class="mo"><button class="mc" onclick="fM('entrada')">×</button>
 <div class="mt">Lançar recebimento</div><div class="mst">Lançamento manual — pessoal, dívidas, outros.</div>
 <div class="fg2"><div class="fg"><label class="fl">Loja / Origem *</label><select class="fsl" id="fe-lj"><option value="juquia">Juquiá</option><option value="cambuci">Cambuci</option><option value="pessoal">Pessoal</option><option value="viveiro">Viveiro</option></select></div><div class="fg"><label class="fl">Data *</label><input class="fi" id="fe-dt" type="date"></div></div>
@@ -568,7 +594,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 <div class="fg"><label class="fl">Tipo *</label><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="fbtn active" id="st-g" onclick="setST('gasto',this)">Gasto</button><button class="fbtn" id="st-c" onclick="setST('compra',this)">Compra</button><button class="fbtn" id="st-p" onclick="setST('pagamento',this)">Pagamento</button></div></div>
 <div class="fg2"><div class="fg"><label class="fl">Data *</label><input class="fi" id="fs-dt" type="date"></div><div class="fg"><label class="fl">Loja *</label><select class="fsl" id="fs-lj" onchange="popularGrupos()"><option value="juquia">Juquiá</option><option value="cambuci">Cambuci</option><option value="pessoal">Pessoal</option></select></div></div>
 <div class="fg"><label class="fl">Descrição *</label><input class="fi" id="fs-desc" type="text" placeholder="Ex: Almoço, fornecedor, aluguel…"></div>
-<div class="fg2"><div class="fg"><label class="fl">Valor (R$) *</label><input class="fi" id="fs-val" type="number" min="0" step="0.01" placeholder="0,00"></div><div class="fg" id="fs-cat-wrap"><label class="fl">Categoria</label><select class="fsl" id="fs-cat"><option>Alimentação</option><option>Combustível</option><option>Material</option><option>Fornecedor</option><option>Aluguel</option><option>Utilities</option><option>Transporte</option><option>Funcionários</option><option>Marketing</option><option>Impostos</option><option>Outro</option></select></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Valor (R$) *</label><input class="fi" id="fs-val" type="number" min="0" step="0.01" placeholder="0,00"></div><div class="fg" id="fs-cat-wrap"><label class="fl">Categoria</label><select class="fsl" id="fs-cat"><option>Compra de Mercadorias</option><option>Funcionario</option><option>Transporte</option><option>Sistemas</option><option>Aluguel</option><option>Agua, Luz, Internet</option><option>Contabilidade</option><option>Impostos e Taxas</option><option>Pro Labore</option></select></div></div>
 <div class="fg2"><div class="fg"><label class="fl">Pagamento</label><select class="fsl" id="fs-pag"><option>Dinheiro</option><option>Pix</option><option>Crédito</option><option>Débito</option><option>Boleto</option><option>Transferência</option></select></div><div class="fg" id="fs-st-w"><label class="fl">Status</label><select class="fsl" id="fs-st"><option value="Pago">Pago</option><option value="Pendente">Pendente</option></select></div></div>
 <div id="fs-pag-ex" style="display:none;"><div class="fg2"><div class="fg"><label class="fl">Vencimento *</label><input class="fi" id="fs-venc" type="date"></div><div class="fg"><label class="fl">Subcategoria</label><input class="fi" id="fs-subcat" type="text" placeholder="Ex: Aluguel, Salário…"></div></div></div>
 <div id="fs-cmp-x" style="display:none;"><div class="fg2"><div class="fg"><label class="fl">Fornecedor</label><input class="fi" id="fs-forn" type="text" placeholder="Fornecedor"></div><div class="fg"><label class="fl">Produto</label><input class="fi" id="fs-prod" type="text" placeholder="Nome do produto"></div></div><div class="fg2"><div class="fg"><label class="fl">Qtd</label><input class="fi" id="fs-qtd" type="number" min="1" placeholder="0"></div><div class="fg"><label class="fl">NF / Ref.</label><input class="fi" id="fs-nf" type="text" placeholder="NF-001"></div></div></div>
@@ -666,7 +692,7 @@ if(parseInt(localStorage.getItem('mayse_dash_urlver')||'0',10)<URL_VERSAO){
   localStorage.setItem('mayse_dash_urlver',String(URL_VERSAO));
 }
 var cfg={url:localStorage.getItem('mayse_dash_url')||URL_ATUAL,token:localStorage.getItem('mayse_dash_token')||SENHA};
-var D={vendas:[],encomendas:[],estoque:[],compras:[],gastos:[],pagamentos:[],clientes:[],pdvs:[],projetos:[],tarefas:[],caminhadas:[],orcamentos:[],orcamentoItens:[]};
+var D={vendas:[],encomendas:[],estoque:[],compras:[],gastos:[],pagamentos:[],clientes:[],pdvs:[],projetos:[],tarefas:[],caminhadas:[],orcamentos:[],orcamentoItens:[],funcionarios:[],ponto:[],caixa:[]};
 var projTipoFil='todos';
 var lojasAtivas=new Set(['juquia','cambuci']);
 var secAtiva='visao',saiTipo='gasto',encTipoM='Futura',estFil='todos',saiFil='todos',saiStFil='todos';
@@ -761,7 +787,7 @@ function togSB(){document.getElementById('sb').classList.toggle('col');document.
 function openMSB(){document.getElementById('sb').classList.add('mob');document.getElementById('sb-ov').classList.add('show');}
 function closeMSB(){document.getElementById('sb').classList.remove('mob');document.getElementById('sb-ov').classList.remove('show');}
 
-var SEC_TITLES={visao:'Visão geral',financeiro:'Financeiro',entradas:'Entradas',saidas:'Saídas',clientes:'Clientes',encomendas:'Encomendas',estoque:'Estoque',compras:'Compras',projetos:'Projetos',orcamentos:'Orçamentos',config:'Configurações'};
+var SEC_TITLES={visao:'Visão geral',financeiro:'Financeiro',entradas:'Entradas',saidas:'Saídas',clientes:'Clientes',encomendas:'Encomendas',estoque:'Estoque',compras:'Compras',projetos:'Projetos',orcamentos:'Orçamentos',equipe:'Equipe',config:'Configurações'};
 function goSec(id,btn){
   document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
   document.querySelectorAll('.si').forEach(function(b){b.classList.remove('active');});
@@ -780,6 +806,7 @@ function goSec(id,btn){
     if(id==='compras')renCompras();
     if(id==='projetos')renProjetos();
     if(id==='orcamentos')renOrc();
+    if(id==='equipe')renEquipe();
   }
 }
 
@@ -908,12 +935,13 @@ async function loadData(){
   document.getElementById('btn-lbl').textContent='Carregando…';document.getElementById('btn-sp').style.display='block';
   document.getElementById('lov').classList.add('show');
   try{
-    var rs=await Promise.all([apiGet('Vendas'),apiGet('Encomendas'),apiGet('Estoque'),apiGet('Compras'),apiGet('Gastos'),apiGet('Pagamentos'),apiGet('Clientes'),apiGet('PDVs'),apiGet('Projetos'),apiGet('ProjetoTarefas'),apiGet('Caminhadas'),apiGet('Orcamentos'),apiGet('OrcamentoItens')]);
+    var rs=await Promise.all([apiGet('Vendas'),apiGet('Encomendas'),apiGet('Estoque'),apiGet('Compras'),apiGet('Gastos'),apiGet('Pagamentos'),apiGet('Clientes'),apiGet('PDVs'),apiGet('Projetos'),apiGet('ProjetoTarefas'),apiGet('Caminhadas'),apiGet('Orcamentos'),apiGet('OrcamentoItens'),apiGet('Funcionarios'),apiGet('Ponto'),apiGet('Caixa')]);
     D.vendas=rs[0].data||[];D.encomendas=rs[1].data||[];D.estoque=rs[2].data||[];
     D.compras=rs[3].data||[];D.gastos=rs[4].data||[];D.pagamentos=rs[5].data||[];
     D.clientes=rs[6].data||[];D.pdvs=rs[7].data||[];
     D.projetos=rs[8].data||[];D.tarefas=rs[9].data||[];D.caminhadas=rs[10].data||[];
     D.orcamentos=rs[11].data||[];D.orcamentoItens=rs[12].data||[];
+    D.funcionarios=rs[13].data||[];D.ponto=rs[14].data||[];D.caixa=rs[15].data||[];
     var ops={};D.vendas.forEach(function(v){if(v.Operador)ops[v.Operador]=1;});
     var sel=document.getElementById('filt-op');
     if(sel)sel.innerHTML='<option value="">Todos</option>'+Object.keys(ops).map(function(o){return'<option>'+esc(o)+'</option>';}).join('');
@@ -922,7 +950,7 @@ async function loadData(){
   document.getElementById('btn-lbl').textContent='Carregar';document.getElementById('btn-sp').style.display='none';
   document.getElementById('lov').classList.remove('show');
 }
-function renAll(){renVisao();if(secAtiva==='entradas')renEntradas();if(secAtiva==='saidas')renSai();if(secAtiva==='clientes')renCli();if(secAtiva==='encomendas')renEnc();if(secAtiva==='estoque')renEst();if(secAtiva==='financeiro')renderFinanceiro();if(secAtiva==='compras')renCompras();if(secAtiva==='projetos')renProjetos();if(secAtiva==='orcamentos')renOrc();}
+function renAll(){renVisao();if(secAtiva==='entradas')renEntradas();if(secAtiva==='saidas')renSai();if(secAtiva==='clientes')renCli();if(secAtiva==='encomendas')renEnc();if(secAtiva==='estoque')renEst();if(secAtiva==='financeiro')renderFinanceiro();if(secAtiva==='compras')renCompras();if(secAtiva==='projetos')renProjetos();if(secAtiva==='orcamentos')renOrc();if(secAtiva==='equipe')renEquipe();}
 
 /* ── VISÃO GERAL ── */
 function renVisao(){
@@ -1022,6 +1050,63 @@ function renderFinanceiro(){
   renderDespesasGrupo(despesas);
   renderSubcatChart();
   renderDRE(vendas,despesas);
+  renderDREMensal();
+}
+
+/* ── DRE MENSAL (Receita de Vendas x Despesas por Categoria da aba Pagamentos) ──
+   Categorias fixas, pra padronizar o lançamento (ver também o <select id="fs-cat">
+   e a validação de dados na planilha, coluna Categoria da aba Pagamentos).
+   Ignora o filtro de período (mostra todos os meses com dado), mas respeita a loja
+   selecionada — mesmo padrão do gLojaOnly() usado em "Próximos vencimentos". */
+var CATEGORIAS_DRE=['Compra de Mercadorias','Funcionario','Transporte','Sistemas','Aluguel','Agua, Luz, Internet','Contabilidade','Impostos e Taxas','Pro Labore'];
+function renderDREMensal(){
+  var thead=document.getElementById('tb-dremensal-head'),tbody=document.getElementById('tb-dremensal');
+  if(!tbody)return;
+  var vendas=gLojaOnly(D.vendas),pagtos=gLojaOnly(D.pagamentos);
+  var mesesSet={};
+  function chaveMes(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+  vendas.forEach(function(v){var d=parsePtD(v.Data);if(d)mesesSet[chaveMes(d)]=true;});
+  pagtos.forEach(function(p){var d=parsePtD(p.Vencimento);if(d)mesesSet[chaveMes(d)]=true;});
+  var meses=Object.keys(mesesSet).sort();
+  if(!meses.length){
+    if(thead)thead.innerHTML='<th>Categoria</th>';
+    tbody.innerHTML='<tr><td><div class="empty">Sem dados</div></td></tr>';
+    return;
+  }
+  function nomeMes(k){var m=parseInt(k.split('-')[1],10)-1;var n=MESES_PT[m]||'';return n.charAt(0).toUpperCase()+n.slice(1);}
+  if(thead)thead.innerHTML='<th>Categoria</th>'+meses.map(function(k){return '<th style="text-align:right">'+nomeMes(k)+'</th>';}).join('');
+
+  var receitaPorMes={};meses.forEach(function(k){receitaPorMes[k]=0;});
+  vendas.forEach(function(v){var d=parsePtD(v.Data);if(!d)return;var k=chaveMes(d);if(k in receitaPorMes)receitaPorMes[k]+=parseFloat(v.Total||0);});
+
+  var TODAS_CAT=CATEGORIAS_DRE.concat(['Não categorizado']);
+  var despPorCatMes={};
+  TODAS_CAT.forEach(function(c){despPorCatMes[c]={};meses.forEach(function(k){despPorCatMes[c][k]=0;});});
+  pagtos.forEach(function(p){
+    var d=parsePtD(p.Vencimento);if(!d)return;var k=chaveMes(d);if(!(k in receitaPorMes))return;
+    var catRaw=String(p.Categoria||'').trim();
+    var cat=CATEGORIAS_DRE.indexOf(catRaw)>=0?catRaw:'Não categorizado';
+    despPorCatMes[cat][k]+=parseFloat(p.Valor||0);
+  });
+
+  var linhas='<tr><td style="font-weight:600;">Receita com Vendas</td>'+meses.map(function(k){return '<td style="text-align:right;color:var(--vj);font-weight:500;">'+fmt(receitaPorMes[k])+'</td>';}).join('')+'</tr>';
+  TODAS_CAT.forEach(function(cat){
+    linhas+='<tr><td>'+esc(cat)+'</td>'+meses.map(function(k){
+      var v=despPorCatMes[cat][k]||0;
+      return '<td style="text-align:right;color:'+(v>0?'var(--red)':'var(--light)')+';">'+(v>0?'-'+fmt(v):'—')+'</td>';
+    }).join('')+'</tr>';
+  });
+
+  var acumulado=0,resLinha='<tr style="border-top:2px solid var(--border);"><td style="font-weight:700;">Resultado</td>',acLinha='<tr><td style="font-weight:700;">Resultado Acumulado</td>';
+  meses.forEach(function(k){
+    var totalDesp=0;TODAS_CAT.forEach(function(cat){totalDesp+=despPorCatMes[cat][k]||0;});
+    var res=(receitaPorMes[k]||0)-totalDesp;acumulado+=res;
+    resLinha+='<td style="text-align:right;font-weight:700;color:'+(res>=0?'var(--vf)':'var(--red)')+';">'+fmt(res)+'</td>';
+    acLinha+='<td style="text-align:right;font-weight:700;color:'+(acumulado>=0?'var(--vf)':'var(--red)')+';">'+fmt(acumulado)+'</td>';
+  });
+  resLinha+='</tr>';acLinha+='</tr>';
+
+  tbody.innerHTML=linhas+resLinha+acLinha;
 }
 
 
@@ -1880,6 +1965,67 @@ function atualizarStatusOrc(idx,status){
   o.Status=status;
   apiPost({tipo:'atualizar_status_orcamento',linha:idx+2,status:status});
   showToast('Status atualizado');
+}
+
+/* ── EQUIPE (funcionários / ponto / caixa) ── */
+function renEquipe(){renFuncLst();renPontoLst();renCaixaLst();}
+function renFuncLst(){
+  var lst=document.getElementById('func-lst');if(!lst)return;
+  if(!D.funcionarios.length){lst.innerHTML='<div class="empty">Nenhum funcionário cadastrado</div>';return;}
+  lst.innerHTML=D.funcionarios.map(function(f){
+    var ativo=(f.Ativo||'Sim')==='Sim';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">'+
+      '<div><div style="font-weight:600;font-size:13px;">'+esc(f.Nome)+(ativo?'':' <span style="font-weight:400;color:var(--light);">(inativo)</span>')+'</div>'+
+      '<div style="font-size:11px;color:var(--light);">PIN '+esc(String(f.PIN||''))+' · desde '+esc(f.Criado_Em||'—')+'</div></div>'+
+      '<button style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid '+(ativo?'#e53935':'var(--vj)')+';color:'+(ativo?'#e53935':'var(--vf)')+';background:'+(ativo?'#ffebee':'var(--vj-pale)')+';cursor:pointer;font-family:Sora,sans-serif;" onclick="toggleFuncionario('+JSON.stringify(f.Nome)+','+(!ativo)+')">'+(ativo?'Desativar':'Ativar')+'</button>'+
+      '</div>';
+  }).join('');
+}
+function renPontoLst(){
+  var lst=document.getElementById('ponto-lst');if(!lst)return;
+  var rows=gDL(D.ponto).slice().reverse().slice(0,30);
+  if(!rows.length){lst.innerHTML='<div class="empty">Nenhum registro de ponto</div>';return;}
+  lst.innerHTML=rows.map(function(p){
+    var cor=p.Tipo==='Entrada'?'var(--vj)':'#c0516f';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;">'+
+      '<div>'+esc(p.Funcionario)+' <span style="color:var(--light);">· '+lojaNome(lSlug(p.Loja))+'</span></div>'+
+      '<div><span style="color:'+cor+';font-weight:600;">'+esc(p.Tipo)+'</span> · '+esc(p.Data)+' '+fmtHora(p.Hora)+'</div>'+
+      '</div>';
+  }).join('');
+}
+function renCaixaLst(){
+  var lst=document.getElementById('caixa-lst');if(!lst)return;
+  var rows=gDL(D.caixa).slice().reverse().slice(0,30);
+  if(!rows.length){lst.innerHTML='<div class="empty">Nenhum caixa registrado</div>';return;}
+  lst.innerHTML=rows.map(function(c){
+    var aberto=!c.Hora_Fechamento;
+    var dif=parseFloat(c.Diferenca||0);
+    var difCor=dif===0?'var(--light)':(dif>0?'var(--vj)':'#e53935');
+    return '<div style="padding:10px 0;border-bottom:1px solid var(--border);font-size:12px;">'+
+      '<div style="display:flex;justify-content:space-between;"><div style="font-weight:600;">'+esc(c.Data)+' · '+lojaNome(lSlug(c.Loja))+'</div>'+
+      '<div>'+(aberto?'<span style="color:var(--vj);font-weight:600;">Aberto</span>':'<span style="color:var(--light);">Fechado</span>')+'</div></div>'+
+      '<div style="color:var(--light);margin-top:2px;">Abertura '+fmt(c.Valor_Abertura)+' ('+esc(c.Funcionario_Abertura||'—')+' '+fmtHora(c.Hora_Abertura)+')'+
+      (aberto?'':' · Fechamento '+fmt(c.Valor_Fechamento)+' ('+esc(c.Funcionario_Fechamento||'—')+' '+fmtHora(c.Hora_Fechamento)+') · Diferença <span style="color:'+difCor+';font-weight:600;">'+fmt(c.Diferenca)+'</span>')+
+      '</div></div>';
+  }).join('');
+}
+function abMFunc(){document.getElementById('ffn').value='';document.getElementById('ffp').value='';document.getElementById('fm-func').className='fmsg';document.getElementById('m-funcionario').classList.add('open');}
+async function subFuncionario(){
+  var nm=document.getElementById('ffn').value.trim(),pin=document.getElementById('ffp').value.trim();
+  if(!nm||!pin){sFMsg('fm-func','Preencha nome e PIN','err');return;}
+  if(!/^\d{4,6}$/.test(pin)){sFMsg('fm-func','PIN deve ter de 4 a 6 números','err');return;}
+  setML('btn-ffunc','sp-func',true);
+  var ok=await apiPost({tipo:'novo_funcionario',nome:nm,pin:pin});
+  setML('btn-ffunc','sp-func',false);
+  if(ok){showToast('Funcionário cadastrado!');fM('funcionario');D.funcionarios.push({Nome:nm,PIN:pin,Ativo:'Sim',Criado_Em:''});renFuncLst();}
+  else sFMsg('fm-func','Erro ao salvar','err');
+}
+function toggleFuncionario(nome,ativar){
+  apiPost({tipo:'toggle_funcionario',nome:nome,ativo:ativar});
+  var f=D.funcionarios.filter(function(x){return x.Nome===nome;})[0];
+  if(f)f.Ativo=ativar?'Sim':'Não';
+  renFuncLst();
+  showToast(ativar?'Funcionário ativado':'Funcionário desativado');
 }
 function renOrcProdList(){
   var lj=document.getElementById('orc-lj').value;
