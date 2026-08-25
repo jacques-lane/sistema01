@@ -661,7 +661,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 <div class="fmsg" id="fm-proj"></div><div class="mft"><button class="btn-cn" onclick="fM('projeto')">Cancelar</button><button class="btn-sb" id="btn-fproj" onclick="subProjeto()"><div class="msp" id="sp-proj"></div>Criar projeto</button></div></div></div>
 
 <div class="mov" id="m-orcamento" onclick="cMov(event,'m-orcamento')"><div class="mo" style="max-width:640px;"><button class="mc" onclick="fM('orcamento')">×</button>
-<div class="mt" id="morc-ttl">🧾 Novo orçamento</div><div class="mst">Preço de venda sempre vem do Estoque. Ao salvar, dá baixa na quantidade.</div>
+<div class="mt" id="morc-ttl">🧾 Novo orçamento</div><div class="mst">Preço de venda sempre vem do Estoque. O estoque só é baixado quando a venda for gerada (após aprovado/pago).</div>
 <div class="fg2"><div class="fg"><label class="fl">Cliente *</label><input class="fi" id="orc-cli" type="text" placeholder="Nome do cliente" list="orc-cli-list"><datalist id="orc-cli-list"></datalist></div><div class="fg"><label class="fl">Assunto</label><input class="fi" id="orc-assunto" type="text" placeholder="Ex: Buquê para casamento"></div></div>
 <div class="fg2"><div class="fg"><label class="fl">Data *</label><input class="fi" id="orc-dt" type="date"></div><div class="fg"><label class="fl">Loja *</label><select class="fsl" id="orc-lj" onchange="renOrcProdList()"><option value="juquia">Juquiá</option><option value="cambuci">Cambuci</option><option value="pessoal">Pessoal</option></select></div></div>
 <div class="fg"><label class="fl">Itens</label></div>
@@ -678,6 +678,13 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 </div>
 <div class="fmsg" id="fm-orc"></div>
 <div class="mft"><button class="btn-cn" onclick="fM('orcamento')">Cancelar</button><button class="btn-sb" id="btn-forc" onclick="subOrc()"><div class="msp" id="sp-orc"></div>Salvar orçamento</button></div>
+</div></div>
+
+<div class="mov" id="m-gerar-venda" onclick="cMov(event,'m-gerar-venda')"><div class="mo"><button class="mc" onclick="fM('gerar-venda')">×</button><div class="mt">🛒 Gerar venda</div><div class="mst">Cria um lançamento em Vendas com o cliente e os itens deste orçamento, e baixa o estoque agora.</div>
+<div class="fg2"><div class="fg"><label class="fl">Cliente</label><input class="fi" id="gv-cli" type="text" disabled></div><div class="fg"><label class="fl">Total</label><input class="fi" id="gv-total" type="text" disabled></div></div>
+<div class="fg"><label class="fl">Forma de pagamento</label><select class="fsl" id="gv-forma"><option value="Pix">Pix</option><option value="Dinheiro">Dinheiro</option><option value="Credito">Cartão de crédito</option><option value="Debito">Cartão de débito</option></select></div>
+<div class="fmsg" id="fm-gv"></div>
+<div class="mft"><button class="btn-cn" onclick="fM('gerar-venda')">Cancelar</button><button class="btn-sb" id="btn-fgv" onclick="confirmarGerarVenda()"><div class="msp" id="sp-gv"></div>Gerar venda</button></div>
 </div></div>
 
 <div class="lov" id="lov"><div class="lsp"></div><div style="font-size:13px;color:var(--mid);" id="lov-txt">Carregando…</div></div>
@@ -1945,20 +1952,49 @@ function renOrc(){
   var lst=document.getElementById('orc-lst');
   if(!D.orcamentos.length){lst.innerHTML='<div class="empty">Nenhum orçamento ainda</div>';return;}
   var rows=D.orcamentos.map(function(o){return {o:o,i:D.orcamentos.indexOf(o)};}).slice().reverse();
-  var STC={Rascunho:'#999',Enviado:'#3B5BC9',Aprovado:'#83AB33',Recusado:'#e53935'};
+  var STC={Rascunho:'#999',Enviado:'#3B5BC9',Aprovado:'#83AB33',Recusado:'#e53935',Convertido:'#5b8a72'};
   lst.innerHTML=rows.map(function(r){
     var o=r.o,st=o.Status||'Rascunho',cor=STC[st]||'#999';
+    var statusEl = st==='Convertido'
+      ? '<span style="font-size:11px;font-weight:600;color:'+cor+';padding:4px 8px;">✓ Convertido em venda</span>'
+      : '<select class="fsl" style="padding:4px 8px;font-size:11px;width:auto;border-color:'+cor+';color:'+cor+';" onchange="atualizarStatusOrc('+r.i+',this.value)">'+
+          ['Rascunho','Enviado','Aprovado','Recusado'].map(function(s){return '<option value="'+s+'"'+(s===st?' selected':'')+'>'+s+'</option>';}).join('')+
+        '</select>';
+    var gerarVendaBtn = st==='Aprovado'
+      ? '<button style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--vj);color:#fff;background:var(--vj);cursor:pointer;font-family:Sora,sans-serif;" onclick=\'abMGerarVenda('+r.i+')\'>🛒 Gerar venda</button>'
+      : '';
     return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">'+
       '<div><div style="font-weight:600;font-size:13px;">'+esc(o.Cliente||'—')+' <span style="font-weight:400;color:var(--light);">'+esc(o.Assunto||'')+'</span></div>'+
       '<div style="font-size:11px;color:var(--light);">'+esc(o.Data||'—')+' · '+fmt(o.ValorTotal)+'</div></div>'+
       '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'+
-      '<select class="fsl" style="padding:4px 8px;font-size:11px;width:auto;border-color:'+cor+';color:'+cor+';" onchange="atualizarStatusOrc('+r.i+',this.value)">'+
-        ['Rascunho','Enviado','Aprovado','Recusado'].map(function(s){return '<option value="'+s+'"'+(s===st?' selected':'')+'>'+s+'</option>';}).join('')+
-      '</select>'+
+      statusEl+gerarVendaBtn+
       '<button style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:none;cursor:pointer;font-family:Sora,sans-serif;" onclick=\'abMOrc('+JSON.stringify(o.ID)+',true)\'>Duplicar</button>'+
       '<button style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--vj);color:var(--vf);background:var(--vj-pale);cursor:pointer;font-family:Sora,sans-serif;" onclick=\'gerarDocxOrc('+JSON.stringify(o.ID)+')\'>⬇ .docx</button>'+
       '</div></div>';
   }).join('');
+}
+var gvIdx=null;
+function abMGerarVenda(idx){
+  var o=D.orcamentos[idx]; if(!o)return;
+  gvIdx=idx;
+  document.getElementById('gv-cli').value=o.Cliente||'';
+  document.getElementById('gv-total').value='R$ '+fmt(o.ValorTotal);
+  document.getElementById('gv-forma').value='Pix';
+  document.getElementById('fm-gv').className='fmsg';
+  document.getElementById('m-gerar-venda').classList.add('open');
+}
+async function confirmarGerarVenda(){
+  var o=D.orcamentos[gvIdx]; if(!o)return;
+  var forma=document.getElementById('gv-forma').value;
+  setML('btn-fgv','sp-gv',true);
+  var ok=await apiPost({tipo:'gerar_venda_orcamento',linha:gvIdx+2,formaPagamento:forma,operador:'Dashboard'});
+  setML('btn-fgv','sp-gv',false);
+  if(ok){
+    o.Status='Convertido';
+    showToast('Venda gerada a partir do orçamento!');
+    fM('gerar-venda');
+    renOrc();
+  } else sFMsg('fm-gv','Erro ao gerar venda','err');
 }
 function atualizarStatusOrc(idx,status){
   var o=D.orcamentos[idx]; if(!o)return;
@@ -2164,7 +2200,7 @@ async function subOrc(){
   if(semEstoque.length){sFMsg('fm-orc','Cadastre no estoque os produtos pendentes: '+semEstoque.map(function(x){return x.produto;}).join(', '),'err');return;}
   var id='ORC'+Date.now();
   var serv=parseFloat(document.getElementById('orc-serv').value)||0;
-  var payload={tipo:'novo_orcamento',id:id,data:isoToDateBR(dt),cliente:cli,assunto:document.getElementById('orc-assunto').value.trim(),loja:lj,status:document.getElementById('orc-status').value,operador:'Dashboard',valorServico:serv,baixarEstoque:true,
+  var payload={tipo:'novo_orcamento',id:id,data:isoToDateBR(dt),cliente:cli,assunto:document.getElementById('orc-assunto').value.trim(),loja:lj,status:document.getElementById('orc-status').value,operador:'Dashboard',valorServico:serv,
     itens:itensValidos.map(function(x){return{produto:x.produto,qtd:x.qtd,unidade:x.unidade,precoVenda:x.pv,precoCusto:x.pc};})};
   setML('btn-forc','sp-orc',true);
   var ok=await apiPost(payload);
