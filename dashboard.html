@@ -1955,8 +1955,8 @@ function renOrc(){
       '<select class="fsl" style="padding:4px 8px;font-size:11px;width:auto;border-color:'+cor+';color:'+cor+';" onchange="atualizarStatusOrc('+r.i+',this.value)">'+
         ['Rascunho','Enviado','Aprovado','Recusado'].map(function(s){return '<option value="'+s+'"'+(s===st?' selected':'')+'>'+s+'</option>';}).join('')+
       '</select>'+
-      '<button style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:none;cursor:pointer;font-family:Sora,sans-serif;" onclick="abMOrc('+JSON.stringify(o.ID)+',true)">Duplicar</button>'+
-      '<button style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--vj);color:var(--vf);background:var(--vj-pale);cursor:pointer;font-family:Sora,sans-serif;" onclick="gerarDocxOrc('+JSON.stringify(o.ID)+')">⬇ .docx</button>'+
+      '<button style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:none;cursor:pointer;font-family:Sora,sans-serif;" onclick=\'abMOrc('+JSON.stringify(o.ID)+',true)\'>Duplicar</button>'+
+      '<button style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--vj);color:var(--vf);background:var(--vj-pale);cursor:pointer;font-family:Sora,sans-serif;" onclick=\'gerarDocxOrc('+JSON.stringify(o.ID)+')\'>⬇ .docx</button>'+
       '</div></div>';
   }).join('');
 }
@@ -1977,7 +1977,7 @@ function renFuncLst(){
     return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">'+
       '<div><div style="font-weight:600;font-size:13px;">'+esc(f.Nome)+(ativo?'':' <span style="font-weight:400;color:var(--light);">(inativo)</span>')+'</div>'+
       '<div style="font-size:11px;color:var(--light);">'+(f.PIN?'PIN definido':'Aguardando 1º acesso (funcionário define o PIN no PDV)')+' · desde '+esc(f.Criado_Em||'—')+'</div></div>'+
-      '<button style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid '+(ativo?'#e53935':'var(--vj)')+';color:'+(ativo?'#e53935':'var(--vf)')+';background:'+(ativo?'#ffebee':'var(--vj-pale)')+';cursor:pointer;font-family:Sora,sans-serif;" onclick="toggleFuncionario('+JSON.stringify(f.Nome)+','+(!ativo)+')">'+(ativo?'Desativar':'Ativar')+'</button>'+
+      '<button style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid '+(ativo?'#e53935':'var(--vj)')+';color:'+(ativo?'#e53935':'var(--vf)')+';background:'+(ativo?'#ffebee':'var(--vj-pale)')+';cursor:pointer;font-family:Sora,sans-serif;" onclick=\'toggleFuncionario('+JSON.stringify(f.Nome)+','+(!ativo)+')\'>'+(ativo?'Desativar':'Ativar')+'</button>'+
       '</div>';
   }).join('');
 }
@@ -2103,7 +2103,7 @@ function updOrcItemProduto(id,val){
     if(warn){
       if(val.trim()){
         warn.style.display='block';
-        warn.innerHTML='⚠️ Produto não encontrado no estoque ('+esc(LNOMES[loja]||loja)+'). <a href="javascript:void(0)" onclick="abMProd(undefined,'+JSON.stringify(val)+')" style="color:var(--vj);font-weight:600;">Cadastrar produto</a>';
+        warn.innerHTML='⚠️ Produto não encontrado no estoque ('+esc(LNOMES[loja]||loja)+'). <a href="javascript:void(0)" onclick=\'abMProd(undefined,'+JSON.stringify(val)+')\' style="color:var(--vj);font-weight:600;">Cadastrar produto</a>';
       } else { warn.style.display='none'; warn.innerHTML=''; }
     }
   }
