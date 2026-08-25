@@ -36,6 +36,8 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 .lf-btn{width:100%;background:var(--vj);border:none;border-radius:var(--radius-sm);padding:13px;font-size:14px;font-weight:600;color:var(--vf);cursor:pointer;font-family:'Sora',sans-serif;}
 .lf-btn:disabled{opacity:.4;cursor:not-allowed;}
 .lock-err{font-size:12px;color:#F09595;margin-top:10px;text-align:center;display:none;}
+.lf-link{font-size:12px;color:rgba(255,255,255,.5);text-align:center;margin-top:14px;cursor:pointer;text-decoration:underline;}
+.lf-link:hover{color:#fff;}
 
 /* ── BLOCKED ── */
 #blocked-screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:var(--vf);padding:32px 24px;text-align:center;}
@@ -338,13 +340,28 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
   <div class="lock-desc">Identifique-se para começar a usar o PDV.</div>
   <div class="lock-form">
     <label class="lf-label">Funcionário</label>
-    <select class="lf-input" id="pt-func" onchange="checkPontoForm()">
+    <select class="lf-input" id="pt-func" onchange="onSelectFuncionario()">
       <option value="">Selecione…</option>
     </select>
-    <label class="lf-label">PIN</label>
-    <input class="lf-input" id="pt-pin" type="password" inputmode="numeric" maxlength="6" placeholder="••••" oninput="checkPontoForm()">
-    <button class="lf-btn" id="pt-btn" disabled onclick="baterPontoEntrada()">Bater ponto de entrada</button>
-    <div class="lock-err" id="pt-err">Funcionário ou PIN incorretos. Confira e tente de novo.</div>
+
+    <div id="pt-pin-normal">
+      <label class="lf-label">PIN</label>
+      <input class="lf-input" id="pt-pin" type="password" inputmode="numeric" maxlength="6" placeholder="••••" oninput="checkPontoForm()">
+      <button class="lf-btn" id="pt-btn" disabled onclick="baterPontoEntrada()">Bater ponto de entrada</button>
+      <div class="lock-err" id="pt-err">Funcionário ou PIN incorretos. Confira e tente de novo.</div>
+      <div class="lf-link" id="pt-esqueci" onclick="iniciarResetPin()">Esqueci meu PIN</div>
+    </div>
+
+    <div id="pt-pin-criar" style="display:none">
+      <div class="lock-desc" id="pt-criar-msg" style="margin:0 0 12px;max-width:none;">Primeiro acesso: crie um PIN de 4 a 6 dígitos.</div>
+      <label class="lf-label">Novo PIN</label>
+      <input class="lf-input" id="pt-pin-novo" type="password" inputmode="numeric" maxlength="6" placeholder="••••" oninput="checkPinCriarForm()">
+      <label class="lf-label">Confirmar PIN</label>
+      <input class="lf-input" id="pt-pin-confirma" type="password" inputmode="numeric" maxlength="6" placeholder="••••" oninput="checkPinCriarForm()">
+      <button class="lf-btn" id="pt-btn-criar" disabled onclick="salvarNovoPin()">Salvar PIN e bater ponto</button>
+      <div class="lock-err" id="pt-criar-err">PINs não coincidem ou são inválidos (4 a 6 dígitos).</div>
+      <div class="lf-link" id="pt-cancelar-criar" onclick="cancelarResetPin()" style="display:none">Cancelar</div>
+    </div>
   </div>
 </div>
 
@@ -859,7 +876,84 @@ function carregarFuncionarios() {
     lista.forEach(function(f) { opts += '<option value="' + escapeHtml(f.Nome) + '">' + escapeHtml(f.Nome) + '</option>'; });
     sel.innerHTML = opts;
     if (operador && lista.some(function(f) { return f.Nome === operador; })) sel.value = operador;
+    onSelectFuncionario();
   });
+}
+
+// Ao trocar o funcionário selecionado: se ele ainda não tem PIN cadastrado
+// (primeiro acesso), abre o modo "criar PIN" em vez do modo normal.
+function onSelectFuncionario() {
+  var nome = document.getElementById('pt-func').value;
+  document.getElementById('pt-pin').value = '';
+  document.getElementById('pt-err').style.display = 'none';
+  if (!nome) { voltarModoNormal(); checkPontoForm(); return; }
+  var f = funcionariosCache.filter(function(x) { return x.Nome === nome; })[0];
+  if (f && !f.PIN) {
+    abrirModoCriarPin('Primeiro acesso: crie um PIN de 4 a 6 dígitos para ' + nome + '.', false);
+  } else {
+    voltarModoNormal();
+  }
+  checkPontoForm();
+}
+
+function voltarModoNormal() {
+  document.getElementById('pt-pin-criar').style.display = 'none';
+  document.getElementById('pt-pin-normal').style.display = 'block';
+  document.getElementById('pt-pin-novo').value = '';
+  document.getElementById('pt-pin-confirma').value = '';
+  document.getElementById('pt-criar-err').style.display = 'none';
+}
+
+function abrirModoCriarPin(msg, permitirCancelar) {
+  document.getElementById('pt-pin-normal').style.display = 'none';
+  document.getElementById('pt-pin-criar').style.display = 'block';
+  document.getElementById('pt-criar-msg').textContent = msg;
+  document.getElementById('pt-cancelar-criar').style.display = permitirCancelar ? 'block' : 'none';
+  document.getElementById('pt-pin-novo').value = '';
+  document.getElementById('pt-pin-confirma').value = '';
+  document.getElementById('pt-criar-err').style.display = 'none';
+  document.getElementById('pt-btn-criar').disabled = true;
+}
+
+// "Esqueci meu PIN": só disponível com um funcionário já selecionado.
+function iniciarResetPin() {
+  var nome = document.getElementById('pt-func').value;
+  if (!nome) { showToast('Selecione o funcionário primeiro', true); return; }
+  abrirModoCriarPin('Esqueci meu PIN: crie um novo PIN para ' + nome + '.', true);
+}
+
+function cancelarResetPin() {
+  voltarModoNormal();
+}
+
+function checkPinCriarForm() {
+  var p1 = document.getElementById('pt-pin-novo').value.trim();
+  var p2 = document.getElementById('pt-pin-confirma').value.trim();
+  var valido = /^\d{4,6}$/.test(p1) && p1 === p2;
+  document.getElementById('pt-btn-criar').disabled = !valido;
+  document.getElementById('pt-criar-err').style.display = 'none';
+}
+
+// Grava o novo PIN no backend (definir_pin serve tanto pro primeiro
+// cadastro quanto pro reset — é um "set" incondicional, sem checar o PIN antigo).
+function salvarNovoPin() {
+  var nome = document.getElementById('pt-func').value;
+  var p1 = document.getElementById('pt-pin-novo').value.trim();
+  var p2 = document.getElementById('pt-pin-confirma').value.trim();
+  if (!/^\d{4,6}$/.test(p1) || p1 !== p2) {
+    document.getElementById('pt-criar-err').style.display = 'block';
+    return;
+  }
+  enviarParaSheets({ tipo: 'definir_pin', nome: nome, pin: p1 });
+  var f = funcionariosCache.filter(function(x) { return x.Nome === nome; })[0];
+  if (f) f.PIN = p1;
+  operador = nome;
+  localStorage.setItem('mayse_v3_op', nome);
+  localStorage.setItem('mayse_v3_pontodata', new Date().toLocaleDateString('pt-BR'));
+  enviarParaSheets({ tipo: 'bater_ponto', funcionario: nome, loja: pdvLoja, tipoPonto: 'Entrada', dispositivo: pdvNome });
+  document.getElementById('ponto-screen').style.display = 'none';
+  showToast('PIN criado. Ponto batido: ' + nome);
+  verificarCaixa();
 }
 
 function checkPontoForm() {

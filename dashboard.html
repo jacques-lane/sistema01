@@ -579,7 +579,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 
 <div class="mov" id="m-cliente" onclick="cMov(event,'m-cliente')"><div class="mo"><button class="mc" onclick="fM('cliente')">×</button><div class="mt" id="m-cli-ttl">Cadastrar cliente</div><div class="mst">Salvo na aba Clientes.</div><div class="fg2"><div class="fg"><label class="fl">Nome *</label><input class="fi" id="fcn" type="text" placeholder="Nome completo"></div><div class="fg"><label class="fl">Telefone *</label><input class="fi" id="fct" type="tel" placeholder="(XX) XXXXX-XXXX"></div></div><div class="fg"><label class="fl">Loja</label><select class="fsl" id="fcl"><option value="juquia">Juquiá</option><option value="cambuci">Cambuci</option><option value="pessoal">Pessoal</option></select></div><div class="fmsg" id="fm-cli"></div><div class="mft"><button class="btn-cn" onclick="fM('cliente')">Cancelar</button><button class="btn-sb" id="btn-fcli" onclick="subCli()"><div class="msp" id="sp-cli"></div>Salvar</button></div></div></div>
 
-<div class="mov" id="m-funcionario" onclick="cMov(event,'m-funcionario')"><div class="mo"><button class="mc" onclick="fM('funcionario')">×</button><div class="mt">Novo funcionário</div><div class="mst">Nome e PIN usados para bater o ponto no PDV.</div><div class="fg2"><div class="fg"><label class="fl">Nome *</label><input class="fi" id="ffn" type="text" placeholder="Nome completo"></div><div class="fg"><label class="fl">PIN (4 a 6 números) *</label><input class="fi" id="ffp" type="text" inputmode="numeric" maxlength="6" placeholder="0000"></div></div><div class="fmsg" id="fm-func"></div><div class="mft"><button class="btn-cn" onclick="fM('funcionario')">Cancelar</button><button class="btn-sb" id="btn-ffunc" onclick="subFuncionario()"><div class="msp" id="sp-func"></div>Salvar</button></div></div></div>
+<div class="mov" id="m-funcionario" onclick="cMov(event,'m-funcionario')"><div class="mo"><button class="mc" onclick="fM('funcionario')">×</button><div class="mt">Novo funcionário</div><div class="mst">O funcionário cria o próprio PIN no primeiro acesso do PDV.</div><div class="fg"><label class="fl">Nome *</label><input class="fi" id="ffn" type="text" placeholder="Nome completo"></div><div class="fmsg" id="fm-func"></div><div class="mft"><button class="btn-cn" onclick="fM('funcionario')">Cancelar</button><button class="btn-sb" id="btn-ffunc" onclick="subFuncionario()"><div class="msp" id="sp-func"></div>Salvar</button></div></div></div>
 
 <div class="mov" id="m-entrada" onclick="cMov(event,'m-entrada')"><div class="mo"><button class="mc" onclick="fM('entrada')">×</button>
 <div class="mt">Lançar recebimento</div><div class="mst">Lançamento manual — pessoal, dívidas, outros.</div>
@@ -1976,7 +1976,7 @@ function renFuncLst(){
     var ativo=(f.Ativo||'Sim')==='Sim';
     return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">'+
       '<div><div style="font-weight:600;font-size:13px;">'+esc(f.Nome)+(ativo?'':' <span style="font-weight:400;color:var(--light);">(inativo)</span>')+'</div>'+
-      '<div style="font-size:11px;color:var(--light);">PIN '+esc(String(f.PIN||''))+' · desde '+esc(f.Criado_Em||'—')+'</div></div>'+
+      '<div style="font-size:11px;color:var(--light);">'+(f.PIN?'PIN definido':'Aguardando 1º acesso (funcionário define o PIN no PDV)')+' · desde '+esc(f.Criado_Em||'—')+'</div></div>'+
       '<button style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid '+(ativo?'#e53935':'var(--vj)')+';color:'+(ativo?'#e53935':'var(--vf)')+';background:'+(ativo?'#ffebee':'var(--vj-pale)')+';cursor:pointer;font-family:Sora,sans-serif;" onclick="toggleFuncionario('+JSON.stringify(f.Nome)+','+(!ativo)+')">'+(ativo?'Desativar':'Ativar')+'</button>'+
       '</div>';
   }).join('');
@@ -2009,15 +2009,14 @@ function renCaixaLst(){
       '</div></div>';
   }).join('');
 }
-function abMFunc(){document.getElementById('ffn').value='';document.getElementById('ffp').value='';document.getElementById('fm-func').className='fmsg';document.getElementById('m-funcionario').classList.add('open');}
+function abMFunc(){document.getElementById('ffn').value='';document.getElementById('fm-func').className='fmsg';document.getElementById('m-funcionario').classList.add('open');}
 async function subFuncionario(){
-  var nm=document.getElementById('ffn').value.trim(),pin=document.getElementById('ffp').value.trim();
-  if(!nm||!pin){sFMsg('fm-func','Preencha nome e PIN','err');return;}
-  if(!/^\d{4,6}$/.test(pin)){sFMsg('fm-func','PIN deve ter de 4 a 6 números','err');return;}
+  var nm=document.getElementById('ffn').value.trim();
+  if(!nm){sFMsg('fm-func','Preencha o nome','err');return;}
   setML('btn-ffunc','sp-func',true);
-  var ok=await apiPost({tipo:'novo_funcionario',nome:nm,pin:pin});
+  var ok=await apiPost({tipo:'novo_funcionario',nome:nm});
   setML('btn-ffunc','sp-func',false);
-  if(ok){showToast('Funcionário cadastrado!');fM('funcionario');D.funcionarios.push({Nome:nm,PIN:pin,Ativo:'Sim',Criado_Em:''});renFuncLst();}
+  if(ok){showToast('Funcionário cadastrado! Ele cria o PIN no primeiro acesso do PDV.');fM('funcionario');D.funcionarios.push({Nome:nm,PIN:'',Ativo:'Sim',Criado_Em:''});renFuncLst();}
   else sFMsg('fm-func','Erro ao salvar','err');
 }
 function toggleFuncionario(nome,ativar){
