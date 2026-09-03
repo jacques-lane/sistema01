@@ -298,13 +298,9 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
   <div class="lock-logo">Mayse</div>
   <div class="lock-tagline">Floricultura & Garden · PDV v3</div>
   <div class="lock-ico">🔒</div>
-  <div class="lock-title">PDV não configurado</div>
-  <div class="lock-desc">Insira a URL do Apps Script, o token de acesso e identifique este dispositivo.</div>
+  <div class="lock-title">Identifique este dispositivo</div>
+  <div class="lock-desc">Só na primeira vez neste aparelho.</div>
   <div class="lock-form">
-    <label class="lf-label">URL do Apps Script</label>
-    <input class="lf-input" id="lf-url" type="url" placeholder="https://script.google.com/macros/s/..." oninput="checkLockForm()">
-    <label class="lf-label">Token secreto</label>
-    <input class="lf-input" id="lf-token" type="password" placeholder="Token configurado no script" oninput="checkLockForm()">
     <label class="lf-label">Nome deste PDV</label>
     <input class="lf-input" id="lf-nome" type="text" placeholder="Ex: Galaxy Ana — Juquiá" oninput="checkLockForm()">
     <label class="lf-label">Loja</label>
@@ -388,6 +384,8 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
   <div class="header-meta">
     <button class="header-chip" id="chip-op" onclick="abrirOperador()">👤 <span id="op-label">—</span></button>
     <button class="header-chip loja" id="chip-loja">—</button>
+    <button class="header-chip" id="chip-almoco" onclick="toggleAlmoco()">🍽️</button>
+    <button class="header-chip" onclick="abrirFecharCaixa()">🔒 Caixa</button>
     <button class="header-chip" onclick="abrirConfig()">⚙️</button>
   </div>
 </div>
@@ -402,6 +400,11 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 
 <!-- PAGE: VENDA -->
 <div id="page-venda" class="page active">
+  <div class="form-group prod-search-wrap" id="wrap-busca-cli">
+    <label class="form-label">Buscar cliente por nome</label>
+    <input class="prod-search-input" id="busca-cli" type="text" placeholder="🔍 Digite o nome…" autocomplete="off" oninput="filtrarClienteNome(this.value)" onfocus="filtrarClienteNome(this.value)" onblur="fecharDropdownCliDelay()">
+    <div id="dd-cli" style="display:none;position:absolute;left:0;right:0;top:100%;background:#fff;border:1.5px solid var(--border);border-radius:var(--radius-sm);max-height:220px;overflow-y:auto;z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.12);"></div>
+  </div>
   <div class="form-group">
     <label class="form-label">Telefone do cliente</label>
     <input class="form-input" id="telefone" type="tel" inputmode="tel" placeholder="(11) 99999-9999" oninput="maskPhone(this);checkCliente(this.value)" onblur="validarTel('telefone','tel-error')">
@@ -683,6 +686,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
       <input class="form-input" id="cfg-token" type="password" placeholder="Token configurado no script">
     </div>
     <button class="btn btn-primary" onclick="salvarConfigModal()">Salvar</button>
+    <button class="btn btn-outline" id="btn-almoco" onclick="toggleAlmoco()">🍽️ Saída para almoço</button>
     <button class="btn btn-outline" onclick="abrirFecharCaixa()">🔒 Fechar caixa e bater saída</button>
     <button class="btn btn-outline" onclick="document.getElementById('modal-config').classList.remove('open')">Fechar</button>
   </div>
@@ -696,6 +700,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <div class="recibo-meta" style="margin-bottom:14px;">
       <div class="recibo-row"><span class="recibo-label">Abertura</span><span id="fc-abertura">R$ 0,00</span></div>
       <div class="recibo-row"><span class="recibo-label">Vendas em dinheiro hoje</span><span id="fc-vendas">R$ 0,00</span></div>
+      <div class="recibo-row"><span class="recibo-label">Gastos em dinheiro hoje</span><span id="fc-gastos" style="color:#c0516f;">- R$ 0,00</span></div>
       <div class="recibo-row"><span class="recibo-label">Esperado no caixa</span><span id="fc-esperado">R$ 0,00</span></div>
     </div>
     <div class="form-group">
@@ -1010,6 +1015,7 @@ function mostrarApp() {
   adicionarProduto();
   carregarEstoque();
   carregarClientes();
+  atualizarBtnAlmoco();
 }
 
 function abrirFecharCaixa() {
@@ -1018,13 +1024,20 @@ function abrirFecharCaixa() {
   apiGet('Caixa', 'loja=' + pdvLoja).then(function(d) {
     var linha = (d.data || []).filter(function(c) { return c.Data === hoje && !c.Hora_Fechamento; })[0];
     if (!linha) { showToast('Nenhum caixa aberto hoje', true); return; }
-    apiGet('Vendas', 'loja=' + pdvLoja).then(function(dv) {
+    Promise.all([
+      apiGet('Vendas', 'loja=' + pdvLoja),
+      apiGet('Gastos', 'loja=' + pdvLoja)
+    ]).then(function(res) {
+      var dv = res[0], dg = res[1];
       var totalDinheiro = 0;
       (dv.data || []).forEach(function(v) { if (v.Data === hoje) totalDinheiro += parseFloat(v.Dinheiro || 0); });
-      var esperado = parseFloat(linha.Valor_Abertura || 0) + totalDinheiro;
+      var totalGastos = 0;
+      (dg.data || []).forEach(function(g) { if (g.Data === hoje && g.Forma_Pagamento === 'Dinheiro') totalGastos += parseFloat(g.Valor || 0); });
+      var esperado = parseFloat(linha.Valor_Abertura || 0) + totalDinheiro - totalGastos;
       window._caixaEsperado = esperado;
       document.getElementById('fc-abertura').textContent = 'R$ ' + fmt(linha.Valor_Abertura);
       document.getElementById('fc-vendas').textContent = 'R$ ' + fmt(totalDinheiro);
+      document.getElementById('fc-gastos').textContent = '- R$ ' + fmt(totalGastos);
       document.getElementById('fc-esperado').textContent = 'R$ ' + fmt(esperado);
       document.getElementById('fc-val').value = '';
       document.getElementById('modal-fechar-caixa').classList.add('open');
@@ -1054,15 +1067,13 @@ function atualizarHeaderLoja() {
 
 // ── LOCK FORM ──────────────────────────────────────────────
 function checkLockForm() {
-  var u = document.getElementById('lf-url').value.trim();
-  var t = document.getElementById('lf-token').value.trim();
   var n = document.getElementById('lf-nome').value.trim();
-  document.getElementById('lf-btn').disabled = !(u && t && n);
+  document.getElementById('lf-btn').disabled = !n;
 }
 
 function salvarConfigLock() {
-  var url   = document.getElementById('lf-url').value.trim();
-  var token = document.getElementById('lf-token').value.trim();
+  var url   = URL_ATUAL;
+  var token = TOKEN_ATUAL;
   var nome  = document.getElementById('lf-nome').value.trim();
   var loja  = document.getElementById('lf-loja').value;
   var btn   = document.getElementById('lf-btn');
@@ -1174,6 +1185,27 @@ function toggleSw(togId, extraId) {
 }
 
 // ── VENDA: CLIENTE ─────────────────────────────────────────
+function filtrarClienteNome(v) {
+  var dd = document.getElementById('dd-cli');
+  var q = String(v||'').trim().toLowerCase();
+  if (q.length < 2) { dd.style.display = 'none'; dd.innerHTML=''; return; }
+  var m = clientes.filter(function(c){ return String(c.Nome||'').toLowerCase().indexOf(q) > -1; }).slice(0, 8);
+  if (!m.length) { dd.innerHTML = '<div style="padding:10px;font-size:12px;color:var(--light);">Nenhum cliente encontrado</div>'; dd.style.display='block'; return; }
+  dd.innerHTML = m.map(function(c){
+    return '<div style="padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;" onmousedown="selecionarClienteBusca('+JSON.stringify(String(c.Telefone||''))+')">'+
+      '<div style="font-weight:600;font-size:13px;">'+String(c.Nome||'').replace(/</g,'&lt;')+'</div>'+
+      '<div style="font-size:11px;color:var(--light);">'+String(c.Telefone||'—')+'</div></div>';
+  }).join('');
+  dd.style.display = 'block';
+}
+function fecharDropdownCliDelay(){ setTimeout(function(){ document.getElementById('dd-cli').style.display='none'; }, 200); }
+function selecionarClienteBusca(tel) {
+  document.getElementById('telefone').value = tel;
+  maskPhone(document.getElementById('telefone'));
+  checkCliente(document.getElementById('telefone').value);
+  document.getElementById('busca-cli').value = '';
+  document.getElementById('dd-cli').style.display = 'none';
+}
 function checkCliente(val) {
   var tel   = val.replace(/\D/g,'');
   var wrap  = document.getElementById('nome-wrap');
@@ -1622,10 +1654,7 @@ async function ajustarQtd(nome, delta) {
   var novaQtd = Math.max(0,parseInt(p.Qtd||0)+delta);
   p.Qtd = novaQtd;
   renderEstoque(); atualizarAlertas();
-  if(webhookUrl) {
-    try{await fetch(webhookUrl,{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({tipo:'ajuste_estoque',token:tokenSecreto,loja:pdvLoja,nome:nome,novaQtd:novaQtd,operador:operador||'PDV'})});}catch(e){}
-  }
+  await enviarParaSheets({tipo:'ajuste_estoque',loja:pdvLoja,nome:nome,novaQtd:novaQtd,operador:operador||'PDV'});
   showToast(nome+': '+novaQtd+' unidades');
 }
 
@@ -2047,7 +2076,36 @@ function salvarOperador(){
   document.getElementById('modal-operador').classList.remove('open');
   showToast('Nome salvo: '+op);
 }
-function abrirConfig(){document.getElementById('cfg-url').value=webhookUrl;document.getElementById('cfg-token').value=tokenSecreto;document.getElementById('modal-config').classList.add('open');}
+function abrirConfig(){document.getElementById('cfg-url').value=webhookUrl;document.getElementById('cfg-token').value=tokenSecreto;atualizarBtnAlmoco();document.getElementById('modal-config').classList.add('open');}
+
+// ── ALMOÇO (ponto separado, sem fechar caixa) ─────────────
+function statusAlmocoHoje() {
+  var hoje = new Date().toLocaleDateString('pt-BR');
+  return localStorage.getItem('mayse_v3_almoco') === hoje;
+}
+function atualizarBtnAlmoco() {
+  var fora = statusAlmocoHoje();
+  var btn = document.getElementById('btn-almoco');
+  if (btn) btn.textContent = fora ? '🍽️ Registrar retorno do almoço' : '🍽️ Saída para almoço';
+  var chip = document.getElementById('chip-almoco');
+  if (chip) { chip.textContent = fora ? '🍽️ Voltar' : '🍽️'; chip.title = fora ? 'Registrar retorno do almoço' : 'Saída para almoço'; }
+}
+function toggleAlmoco() {
+  if (!operador) { showToast('Identifique-se primeiro', true); document.getElementById('modal-config').classList.remove('open'); abrirOperador(); return; }
+  var hoje = new Date().toLocaleDateString('pt-BR');
+  var fora = statusAlmocoHoje();
+  if (!fora) {
+    enviarParaSheets({ tipo: 'bater_ponto', funcionario: operador, loja: pdvLoja, tipoPonto: 'Saida Almoco', dispositivo: pdvNome });
+    localStorage.setItem('mayse_v3_almoco', hoje);
+    showToast('Saída para almoço registrada');
+  } else {
+    enviarParaSheets({ tipo: 'bater_ponto', funcionario: operador, loja: pdvLoja, tipoPonto: 'Retorno Almoco', dispositivo: pdvNome });
+    localStorage.removeItem('mayse_v3_almoco');
+    showToast('Retorno do almoço registrado');
+  }
+  atualizarBtnAlmoco();
+  document.getElementById('modal-config').classList.remove('open');
+}
 function salvarConfigModal(){
   var url=document.getElementById('cfg-url').value.trim();
   var tok=document.getElementById('cfg-token').value.trim();

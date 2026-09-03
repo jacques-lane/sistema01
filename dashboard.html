@@ -243,6 +243,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 .qav{font-size:26px;font-weight:700;color:var(--vf);min-width:40px;text-align:center;}
 #lsc{display:none;position:fixed;inset:0;background:var(--vf);z-index:500;align-items:center;justify-content:center;}
 @media(max-width:900px){.sb{transform:translateX(-100%);width:220px!important;}.sb.mob{transform:translateX(0);}.main{margin-left:0!important;}.kgrid,.kgrid-3{grid-template-columns:1fr 1fr;}.g2,.g3{grid-template-columns:1fr;}.fg2,.fg3{grid-template-columns:1fr;}.content{padding:14px;}.topbar{padding:10px 14px;}.hamburger{display:flex!important;align-items:center;}}
+@media print{body *{visibility:hidden;}#folha-ponto-print,#folha-ponto-print *{visibility:visible;}#folha-ponto-print{position:absolute;left:0;top:0;width:100%;}}
 </style>
 </head>
 <body>
@@ -328,11 +329,14 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
       </div>
       <div class="g2">
         <div class="cc"><div class="ch"><div><div class="ct">🕐 Horários de pico</div><div class="csb">8h–19h · fora agrupadas nas extremidades</div></div></div><div class="bc" id="ch-pico"><div class="empty">Carregue os dados</div></div></div>
-        <div class="cc"><div class="ch"><div><div class="ct">Vendas por operador</div></div></div><div class="bc" id="ch-op"><div class="empty">Carregue os dados</div></div></div>
+        <div class="cc"><div class="ch"><div><div class="ct">📦 Estoque prioritário</div><div class="csb">Produtos marcados como prioridade · verde ok, amarelo baixo, vermelho crítico/zerado</div></div></div><div class="bc" id="ch-est-prior"><div class="empty">Carregue os dados</div></div></div>
       </div>
-      <div class="cc" style="margin-top:20px;">
-        <div class="ch"><div><div class="ct">🗂️ Projetos</div><div class="csb">Progresso por projeto e tarefas mais urgentes</div></div><button class="btn-l" onclick="goSec('projetos',document.getElementById('nav-projetos'))">Ver todos</button></div>
-        <div id="vg-proj-resumo"><div class="empty">Carregue os dados</div></div>
+      <div class="g2" style="margin-top:20px;">
+        <div class="cc"><div class="ch"><div><div class="ct">🕓 Linha do tempo de hoje</div><div class="csb">Caixa e ponto da equipe</div></div></div><div class="tl" id="tl-hoje" style="max-height:280px;overflow-y:auto;"><div class="empty">Carregue os dados</div></div></div>
+        <div class="cc">
+          <div class="ch"><div><div class="ct">🗂️ Projetos</div><div class="csb">Progresso por projeto e tarefas mais urgentes</div></div><button class="btn-l" onclick="goSec('projetos',document.getElementById('nav-projetos'))">Ver todos</button></div>
+          <div id="vg-proj-resumo"><div class="empty">Carregue os dados</div></div>
+        </div>
       </div>
     </div>
 
@@ -515,6 +519,10 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
         <div class="ch"><div><div class="ct">Produtos com margem abaixo do ideal</div><div class="csb">Todo o estoque, não só compras recentes — preço de venda não cobre 3x o custo atual</div></div></div>
         <div id="cp-marg-lst"><div class="empty">Carregue os dados</div></div>
       </div>
+      <div class="cc" style="margin-bottom:20px;">
+        <div class="ch"><div><div class="ct">📦 Giro desde a última compra</div><div class="csb">O que já vendeu do que comprou por último, e o que veio de compras anteriores</div></div></div>
+        <div id="cp-giro-lst"><div class="empty">Carregue os dados</div></div>
+      </div>
       <div class="cc">
         <div class="ch"><div><div class="ct">Histórico de compras</div><div class="csb">Uma linha por compra, com a margem resultante sobre o preço de venda atual</div></div></div>
         <table class="dt dt-compact"><thead><tr><th>Data</th><th>Produto</th><th>Fornecedor</th><th>Loja</th><th>Qtd</th><th>Valor unit.</th><th>Valor total</th><th>Margem</th></tr></thead><tbody id="tb-compras"><tr><td colspan="8" style="text-align:center;padding:24px;color:var(--light);">Carregue os dados</td></tr></tbody></table>
@@ -550,7 +558,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
         <div id="func-lst"><div class="empty">Carregue os dados</div></div>
       </div>
       <div class="cc" style="margin-bottom:16px;">
-        <div class="ch"><div><div class="ct">Ponto</div><div class="csb">Entradas e saídas registradas no PDV · respeita loja e período selecionados</div></div></div>
+        <div class="ch"><div><div class="ct">Folha de ponto</div><div class="csb">Entrada, saída para almoço, retorno e saída do dia · horas trabalhadas e diferença vs. 44h semanais (sábado só o período da manhã conta) · respeita loja e período selecionados</div></div></div>
         <div id="ponto-lst"><div class="empty">Carregue os dados</div></div>
       </div>
       <div class="cc">
@@ -662,8 +670,9 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 
 <div class="mov" id="m-orcamento" onclick="cMov(event,'m-orcamento')"><div class="mo" style="max-width:640px;"><button class="mc" onclick="fM('orcamento')">×</button>
 <div class="mt" id="morc-ttl">🧾 Novo orçamento</div><div class="mst">Preço de venda sempre vem do Estoque. O estoque só é baixado quando a venda for gerada (após aprovado/pago).</div>
-<div class="fg2"><div class="fg"><label class="fl">Cliente *</label><input class="fi" id="orc-cli" type="text" placeholder="Nome do cliente" list="orc-cli-list"><datalist id="orc-cli-list"></datalist></div><div class="fg"><label class="fl">Assunto</label><input class="fi" id="orc-assunto" type="text" placeholder="Ex: Buquê para casamento"></div></div>
-<div class="fg2"><div class="fg"><label class="fl">Data *</label><input class="fi" id="orc-dt" type="date"></div><div class="fg"><label class="fl">Loja *</label><select class="fsl" id="orc-lj" onchange="renOrcProdList()"><option value="juquia">Juquiá</option><option value="cambuci">Cambuci</option><option value="pessoal">Pessoal</option></select></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Cliente *</label><input class="fi" id="orc-cli" type="text" placeholder="Nome do cliente" list="orc-cli-list"><datalist id="orc-cli-list"></datalist></div><div class="fg"><label class="fl">Telefone</label><input class="fi" id="orc-tel" type="tel" placeholder="(11) 99999-9999"></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Assunto</label><input class="fi" id="orc-assunto" type="text" placeholder="Ex: Buquê para casamento"></div><div class="fg"><label class="fl">Data *</label><input class="fi" id="orc-dt" type="date"></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Loja *</label><select class="fsl" id="orc-lj" onchange="renOrcProdList()"><option value="juquia">Juquiá</option><option value="cambuci">Cambuci</option><option value="pessoal">Pessoal</option></select></div><div class="fg"></div></div>
 <div class="fg"><label class="fl">Itens</label></div>
 <datalist id="orc-prod-list"></datalist>
 <div id="orc-it-hdr" style="display:grid;grid-template-columns:1.6fr 55px 70px 80px 80px 80px 24px;gap:6px;font-size:10px;color:var(--light);padding:0 2px 4px;">
@@ -972,8 +981,48 @@ function renVisao(){
     document.getElementById('kv-fat-sp').innerHTML=arr.map(function(id){var v=D.vendas.filter(function(r){return lSlug(r.Loja||'')===id;});var f=v.reduce(function(s,r){return s+parseFloat(r.Total||0);},0);return'<span class="kp p'+id.substring(0,2)+'">'+LNOMES[id].substring(0,3)+' '+fmt(f)+'</span>';}).join('');
     document.getElementById('kv-vnd-sp').innerHTML=arr.map(function(id){var c=D.vendas.filter(function(r){return lSlug(r.Loja||'')===id;}).length;return'<span class="kp p'+id.substring(0,2)+'">'+LNOMES[id].substring(0,3)+' '+c+'</span>';}).join('');
   }else{document.getElementById('kv-fat-sp').innerHTML='';document.getElementById('kv-vnd-sp').innerHTML='';}
-  renChFat(vnd);renChPico(vnd,'ch-pico');renTimeline(ap);renOp(vnd);
+  renChFat(vnd);renChPico(vnd,'ch-pico');renTimeline(ap);renEstoquePrioritario();renTimelineHoje();
   renResumoProjetos();
+}
+
+function renEstoquePrioritario(){
+  var el=document.getElementById('ch-est-prior');
+  var est=gDL(D.estoque).filter(ehPrioritario);
+  if(!est.length){el.innerHTML='<div class="empty">Nenhum produto marcado como prioridade na aba Estoque</div>';return;}
+  est.forEach(function(p){
+    p._q=parseInt(p.Qtd||0);p._m=parseInt(p.Alerta_Minimo||5)||1;
+    p._status=p._q===0?'zero':p._q<=p._m?'baixo':p._q<=p._m*2?'pouco':'ok';
+  });
+  var ORD={zero:0,baixo:1,pouco:2,ok:3};
+  est.sort(function(a,b){return ORD[a._status]-ORD[b._status]||b._q-a._q;});
+  var COR={zero:'#B33A3A',baixo:'#B33A3A',pouco:'#D9A22D',ok:'#3B6D11'};
+  el.innerHTML=est.map(function(p){
+    var alvo=p._m*2,pct=Math.max(4,Math.min(100,Math.round(p._q/alvo*100)));
+    var tag=p._status==='zero'?' · ZERADO':p._status==='baixo'?' · abaixo do mínimo':'';
+    return'<div class="br"><span class="bl" style="width:130px" title="'+esc(p.Nome)+'">'+esc(p.Nome)+'</span><div class="bt"><div class="bf" style="width:'+pct+'%;background:'+COR[p._status]+'"></div></div><span class="bv" style="color:'+COR[p._status]+'">'+p._q+' un'+tag+'</span></div>';
+  }).join('');
+}
+
+function renTimelineHoje(){
+  var el=document.getElementById('tl-hoje');
+  var hoje=new Date().toLocaleDateString('pt-BR');
+  var ev=[];
+  gDL(D.caixa).filter(function(c){return c.Data===hoje;}).forEach(function(c){
+    var lj=LNOMES[lSlug(c.Loja||'')]||c.Loja||'';
+    if(c.Hora_Abertura)ev.push({h:c.Hora_Abertura,t:'🔓 Abertura de caixa',q:(c.Funcionario_Abertura||'—')+' · '+lj,c:'var(--vj)'});
+    if(c.Hora_Fechamento)ev.push({h:c.Hora_Fechamento,t:'🔒 Fechamento de caixa',q:(c.Funcionario_Fechamento||'—')+' · '+lj,c:'var(--mid)'});
+  });
+  gDL(D.ponto).filter(function(p){return p.Data===hoje;}).forEach(function(p){
+    if(p.Hora_Entrada)ev.push({h:p.Hora_Entrada,t:'▶️ Entrada',q:p.Funcionario,c:'#3B6D11'});
+    if(p.Hora_Saida_Almoco)ev.push({h:p.Hora_Saida_Almoco,t:'🍽️ Saída almoço',q:p.Funcionario,c:'#D9A22D'});
+    if(p.Hora_Retorno_Almoco)ev.push({h:p.Hora_Retorno_Almoco,t:'🍽️ Retorno almoço',q:p.Funcionario,c:'#D9A22D'});
+    if(p.Hora_Saida)ev.push({h:p.Hora_Saida,t:'⏹️ Saída',q:p.Funcionario,c:'var(--red)'});
+  });
+  if(!ev.length){el.innerHTML='<div class="empty">Nada registrado hoje ainda</div>';return;}
+  ev.sort(function(a,b){return String(a.h).localeCompare(String(b.h));});
+  el.innerHTML=ev.map(function(e){
+    return'<div class="tli"><div class="tld" style="background:'+e.c+'"></div><div class="tlb"><div class="tldt">'+esc(String(e.h))+'</div><div class="tlt">'+e.t+'</div><div class="tlc">'+esc(e.q)+'</div></div></div>';
+  }).join('');
 }
 
 function renChFat(vnd){
@@ -1269,6 +1318,54 @@ function renCompras(){
         '</div></div>';
     }).join('') : '<div class="empty">Todos os produtos estão com margem saudável 🎉</div>';
   }
+  renGiroCompras();
+}
+function parseProdutosVenda(v){
+  var out=[];
+  String(v.Produtos||'').split('|').forEach(function(p){
+    var m=p.match(/(.+?)\s*\((\d+)x/);
+    if(m)out.push({nome:m[1].trim(),qtd:parseInt(m[2])});
+    else if(p.trim())out.push({nome:p.trim(),qtd:1});
+  });
+  return out;
+}
+function renGiroCompras(){
+  var el=document.getElementById('cp-giro-lst');
+  if(!el)return;
+  var cmp=gDL(D.compras);
+  if(!cmp.length){el.innerHTML='<div class="empty">Nenhuma compra registrada</div>';return;}
+  var porProd={};
+  cmp.forEach(function(c){
+    var nome=String(c.Produto||'').trim();if(!nome)return;
+    var d=parsePtD(c.Data);
+    if(!porProd[nome]||(d&&(!porProd[nome].data||d.getTime()>porProd[nome].data.getTime()))){
+      porProd[nome]={data:d,dataTxt:c.Data,qtd:parseInt(c.Qtd||0)};
+    }
+  });
+  var vendAntes={},vendDepois={};
+  gDL(D.vendas).forEach(function(v){
+    var dv=parsePtD(v.Data);
+    parseProdutosVenda(v).forEach(function(it){
+      var ref=porProd[it.nome];
+      if(!ref)return;
+      if(ref.data&&dv&&dv.getTime()>=ref.data.getTime())vendDepois[it.nome]=(vendDepois[it.nome]||0)+it.qtd;
+      else vendAntes[it.nome]=(vendAntes[it.nome]||0)+it.qtd;
+    });
+  });
+  var linhas=Object.keys(porProd).map(function(nome){
+    return{nome:nome,ref:porProd[nome],depois:vendDepois[nome]||0,antes:vendAntes[nome]||0};
+  });
+  linhas.sort(function(a,b){return a.depois-b.depois;});
+  el.innerHTML=linhas.map(function(l){
+    var parado=l.depois===0;
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);'+(parado?'background:var(--gold-pale);margin:0 -4px;padding-left:4px;padding-right:4px;border-radius:6px;':'')+'">'+
+      '<div><div style="font-weight:600;font-size:13px;">'+esc(l.nome)+'</div>'+
+      '<div style="font-size:11px;color:var(--light);">Última compra '+esc(l.ref.dataTxt||'—')+' · '+l.ref.qtd+' un</div></div>'+
+      '<div style="text-align:right;">'+
+      '<div style="font-size:12px;font-weight:700;color:'+(parado?'var(--red)':'var(--vf)')+';">'+l.depois+' vendido'+(parado?' — PARADO':'')+'</div>'+
+      '<div style="font-size:11px;color:var(--light);">'+l.antes+' vendido de compras anteriores</div>'+
+      '</div></div>';
+  }).join('')||'<div class="empty">Sem dados suficientes</div>';
 }
 function abMCompra(nome,loja){
   document.getElementById('fm-compra').className='fmsg';
@@ -1963,11 +2060,14 @@ function renOrc(){
     var gerarVendaBtn = st==='Aprovado'
       ? '<button style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--vj);color:#fff;background:var(--vj);cursor:pointer;font-family:Sora,sans-serif;" onclick=\'abMGerarVenda('+r.i+')\'>🛒 Gerar venda</button>'
       : '';
+    var editarBtn = st!=='Convertido'
+      ? '<button style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:none;cursor:pointer;font-family:Sora,sans-serif;" onclick=\'abMOrc('+JSON.stringify(o.ID)+',false,true)\'>✏️ Editar</button>'
+      : '';
     return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">'+
       '<div><div style="font-weight:600;font-size:13px;">'+esc(o.Cliente||'—')+' <span style="font-weight:400;color:var(--light);">'+esc(o.Assunto||'')+'</span></div>'+
       '<div style="font-size:11px;color:var(--light);">'+esc(o.Data||'—')+' · '+fmt(o.ValorTotal)+'</div></div>'+
       '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'+
-      statusEl+gerarVendaBtn+
+      statusEl+gerarVendaBtn+editarBtn+
       '<button style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:none;cursor:pointer;font-family:Sora,sans-serif;" onclick=\'abMOrc('+JSON.stringify(o.ID)+',true)\'>Duplicar</button>'+
       '<button style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid var(--vj);color:var(--vf);background:var(--vj-pale);cursor:pointer;font-family:Sora,sans-serif;" onclick=\'gerarDocxOrc('+JSON.stringify(o.ID)+')\'>⬇ .docx</button>'+
       '</div></div>';
@@ -2017,17 +2117,69 @@ function renFuncLst(){
       '</div>';
   }).join('');
 }
+function isoWeekKey(d){
+  var date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+  var dayNum=date.getUTCDay()||7;
+  date.setUTCDate(date.getUTCDate()+4-dayNum);
+  var yearStart=new Date(Date.UTC(date.getUTCFullYear(),0,1));
+  var weekNo=Math.ceil((((date-yearStart)/86400000)+1)/7);
+  return date.getUTCFullYear()+'-S'+String(weekNo).padStart(2,'0');
+}
+function metaHorasDiaJS(dataStr){
+  var d=parsePtD(dataStr);
+  if(!d)return 8;
+  var dow=d.getDay();
+  if(dow===0)return 0;
+  if(dow===6)return 4;
+  return 8;
+}
+function imprimirFolhaPonto(){ window.print(); }
 function renPontoLst(){
   var lst=document.getElementById('ponto-lst');if(!lst)return;
-  var rows=gDL(D.ponto).slice().reverse().slice(0,30);
+  var rows=gDL(D.ponto).slice().sort(function(a,b){
+    var da=parsePtD(a.Data),db=parsePtD(b.Data);
+    var ta=da?da.getTime():0, tb=db?db.getTime():0;
+    if(ta!==tb)return tb-ta;
+    return String(a.Funcionario||'').localeCompare(String(b.Funcionario||''));
+  });
   if(!rows.length){lst.innerHTML='<div class="empty">Nenhum registro de ponto</div>';return;}
-  lst.innerHTML=rows.map(function(p){
-    var cor=p.Tipo==='Entrada'?'var(--vj)':'#c0516f';
-    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;">'+
-      '<div>'+esc(p.Funcionario)+' <span style="color:var(--light);">· '+lojaNome(lSlug(p.Loja))+'</span></div>'+
-      '<div><span style="color:'+cor+';font-weight:600;">'+esc(p.Tipo)+'</span> · '+esc(p.Data)+' '+fmtHora(p.Hora)+'</div>'+
+  var porSemana={};
+  rows.forEach(function(p){
+    var d=parsePtD(p.Data);
+    if(!d)return;
+    var wk=isoWeekKey(d)+'|'+p.Funcionario;
+    if(!porSemana[wk])porSemana[wk]={semana:isoWeekKey(d),funcionario:p.Funcionario,horas:0,meta:0};
+    porSemana[wk].horas+=parseFloat(p.Horas_Trabalhadas||0);
+    porSemana[wk].meta+=metaHorasDiaJS(p.Data);
+  });
+  var resumoHtml=Object.keys(porSemana).sort().reverse().map(function(k){
+    var s=porSemana[k];
+    var diff=s.horas-s.meta;
+    var difCor=diff>=0?'var(--vj)':'#e53935';
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:var(--vj-pale);border-radius:8px;margin-bottom:6px;font-size:12px;">'+
+      '<div><b>'+esc(s.funcionario)+'</b> <span style="color:var(--light);">· semana '+esc(s.semana)+'</span></div>'+
+      '<div>'+s.horas.toFixed(2)+'h de '+s.meta.toFixed(2)+'h · <span style="color:'+difCor+';font-weight:600;">'+(diff>=0?'+':'')+diff.toFixed(2)+'h</span></div>'+
       '</div>';
   }).join('');
+  var linhasHtml=rows.map(function(p){
+    var temDif=p.Diferenca!==undefined&&p.Diferenca!=='' &&p.Diferenca!==null;
+    var dif=temDif?parseFloat(p.Diferenca):null;
+    var difCor=dif===null?'var(--light)':(dif>=0?'var(--vj)':'#e53935');
+    var difTxt=dif===null?'—':(dif>=0?'+':'')+dif.toFixed(2)+'h';
+    var horasTxt=(p.Horas_Trabalhadas!==undefined&&p.Horas_Trabalhadas!=='' &&p.Horas_Trabalhadas!==null)?parseFloat(p.Horas_Trabalhadas).toFixed(2)+'h':'—';
+    return '<tr><td>'+esc(p.Data)+'</td><td>'+esc(p.Funcionario)+'</td><td>'+esc(lojaNome(lSlug(p.Loja||'')))+'</td>'+
+      '<td>'+fmtHora(p.Hora_Entrada)+'</td><td>'+fmtHora(p.Hora_Saida_Almoco)+'</td><td>'+fmtHora(p.Hora_Retorno_Almoco)+'</td><td>'+fmtHora(p.Hora_Saida)+'</td>'+
+      '<td>'+horasTxt+'</td><td style="color:'+difCor+';font-weight:600;">'+difTxt+'</td></tr>';
+  }).join('');
+  lst.innerHTML=
+    '<div style="display:flex;justify-content:flex-end;margin-bottom:10px;">'+
+      '<button class="btn-l" onclick="imprimirFolhaPonto()">🖨️ Imprimir folha de ponto</button>'+
+    '</div>'+
+    '<div id="folha-ponto-print">'+
+    '<div style="margin-bottom:12px;">'+resumoHtml+'</div>'+
+    '<table class="dt dt-compact"><thead><tr><th>Data</th><th>Funcionário</th><th>Loja</th><th>Entrada</th><th>Saída almoço</th><th>Retorno almoço</th><th>Saída</th><th>Horas</th><th>Diferença</th></tr></thead>'+
+    '<tbody>'+linhasHtml+'</tbody></table>'+
+    '</div>';
 }
 function renCaixaLst(){
   var lst=document.getElementById('caixa-lst');if(!lst)return;
@@ -2068,13 +2220,17 @@ function renOrcProdList(){
   var nomes=[...new Set(D.estoque.filter(function(p){return lSlug(p.Loja||'')===lj;}).map(function(p){return p.Nome;}))];
   dl.innerHTML=nomes.map(function(n){return '<option value="'+esc(n)+'">';}).join('');
 }
-function abMOrc(dupId,isDup){
+var editOrcId=null;
+function dateBRToIso(br){if(!br)return'';var p=String(br).split('/');return p.length===3?p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0'):'';}
+function abMOrc(dupId,isDup,isEdit){
+  editOrcId=isEdit?dupId:null;
   document.getElementById('fm-orc').className='fmsg';
   document.getElementById('orc-dt').value=new Date().toISOString().split('T')[0];
   document.getElementById('orc-lj').value='juquia';
   document.getElementById('orc-status').value='Rascunho';
   document.getElementById('orc-serv').value='';
   document.getElementById('orc-cli').value='';
+  document.getElementById('orc-tel').value='';
   document.getElementById('orc-assunto').value='';
   orcItens=[];
   document.getElementById('orc-it-lst').innerHTML='';
@@ -2083,11 +2239,17 @@ function abMOrc(dupId,isDup){
   if(dupId){
     var o=D.orcamentos.find(function(x){return x.ID===dupId;});
     if(o){
-      sEl('morc-ttl', isDup? '🧾 Duplicar orçamento' : '🧾 Orçamento');
+      sEl('morc-ttl', isEdit? '✏️ Editar orçamento' : (isDup? '🧾 Duplicar orçamento' : '🧾 Orçamento'));
       document.getElementById('orc-cli').value=o.Cliente||'';
+      document.getElementById('orc-tel').value=o.Telefone||'';
       document.getElementById('orc-assunto').value=o.Assunto||'';
       document.getElementById('orc-lj').value=lSlug(o.Loja||'juquia');
       document.getElementById('orc-serv').value=o.ValorServico||'';
+      if(isEdit){
+        var iso=dateBRToIso(o.Data);
+        if(iso)document.getElementById('orc-dt').value=iso;
+        document.getElementById('orc-status').value=o.Status||'Rascunho';
+      }
       renOrcProdList();
       var itens=D.orcamentoItens.filter(function(it){return it.OrcamentoID===dupId;});
       itens.forEach(function(it){addOrcItem(it.Produto,it.Qtd,it.Unidade);});
@@ -2192,22 +2354,49 @@ function renOrcTotais(){
 }
 async function subOrc(){
   var cli=document.getElementById('orc-cli').value.trim();
+  var tel=document.getElementById('orc-tel').value.trim();
   var dt=document.getElementById('orc-dt').value;
   var lj=document.getElementById('orc-lj').value;
   var itensValidos=orcItens.filter(function(x){return x.produto && x.qtd>0;});
   if(!cli||!dt||!itensValidos.length){sFMsg('fm-orc','Preencha cliente, data e ao menos um item válido','err');return;}
   var semEstoque=itensValidos.filter(function(x){return !findOrcProd(x.produto,lj);});
   if(semEstoque.length){sFMsg('fm-orc','Cadastre no estoque os produtos pendentes: '+semEstoque.map(function(x){return x.produto;}).join(', '),'err');return;}
-  var id='ORC'+Date.now();
   var serv=parseFloat(document.getElementById('orc-serv').value)||0;
-  var payload={tipo:'novo_orcamento',id:id,data:isoToDateBR(dt),cliente:cli,assunto:document.getElementById('orc-assunto').value.trim(),loja:lj,status:document.getElementById('orc-status').value,operador:'Dashboard',valorServico:serv,
-    itens:itensValidos.map(function(x){return{produto:x.produto,qtd:x.qtd,unidade:x.unidade,precoVenda:x.pv,precoCusto:x.pc};})};
+  var assunto=document.getElementById('orc-assunto').value.trim();
+  var status=document.getElementById('orc-status').value;
+  var valorItens=itensValidos.reduce(function(s,x){return s+x.qtd*x.pv;},0);
+  var itensPayload=itensValidos.map(function(x){return{produto:x.produto,qtd:x.qtd,unidade:x.unidade,precoVenda:x.pv,precoCusto:x.pc};});
+
+  if(editOrcId){
+    var idx=D.orcamentos.findIndex(function(x){return x.ID===editOrcId;});
+    if(idx<0){sFMsg('fm-orc','Orçamento não encontrado','err');return;}
+    var payload={tipo:'atualizar_orcamento',id:editOrcId,linha:idx+2,cliente:cli,telefone:tel,assunto:assunto,loja:lj,status:status,valorServico:serv,itens:itensPayload};
+    setML('btn-forc','sp-orc',true);
+    var ok=await apiPost(payload);
+    setML('btn-forc','sp-orc',false);
+    if(ok){
+      var o=D.orcamentos[idx];
+      o.Cliente=cli;o.Telefone=tel;o.Assunto=assunto;o.Loja=lj;o.ValorServico=serv;o.ValorItens=valorItens;o.ValorTotal=valorItens+serv;o.Status=status;
+      D.orcamentoItens=D.orcamentoItens.filter(function(it){return it.OrcamentoID!==editOrcId;});
+      itensValidos.forEach(function(x){
+        var c=calcOrcRateio(x);
+        D.orcamentoItens.push({OrcamentoID:editOrcId,Produto:x.produto,Qtd:x.qtd,Unidade:x.unidade,PrecoVenda:x.pv,PrecoCusto:x.pc,Total:c.total,CustoRateado:c.rateado,Lucro:c.lucro});
+      });
+      showToast('Orçamento atualizado!');
+      editOrcId=null;
+      fM('orcamento');
+      renOrc();
+    } else sFMsg('fm-orc','Erro ao salvar','err');
+    return;
+  }
+
+  var id='ORC'+Date.now();
+  var payload={tipo:'novo_orcamento',id:id,data:isoToDateBR(dt),cliente:cli,telefone:tel,assunto:assunto,loja:lj,status:status,operador:'Dashboard',valorServico:serv,itens:itensPayload};
   setML('btn-forc','sp-orc',true);
   var ok=await apiPost(payload);
   setML('btn-forc','sp-orc',false);
   if(ok){
-    var valorItens=itensValidos.reduce(function(s,x){return s+x.qtd*x.pv;},0);
-    D.orcamentos.push({ID:id,Data:payload.data,Cliente:cli,Assunto:payload.assunto,Loja:lj,ValorServico:serv,ValorItens:valorItens,ValorTotal:valorItens+serv,Status:payload.status,Criado_Em:'',Operador:'Dashboard'});
+    D.orcamentos.push({ID:id,Data:payload.data,Cliente:cli,Telefone:tel,Assunto:assunto,Loja:lj,ValorServico:serv,ValorItens:valorItens,ValorTotal:valorItens+serv,Status:status,Criado_Em:'',Operador:'Dashboard'});
     itensValidos.forEach(function(x){
       var c=calcOrcRateio(x);
       D.orcamentoItens.push({OrcamentoID:id,Produto:x.produto,Qtd:x.qtd,Unidade:x.unidade,PrecoVenda:x.pv,PrecoCusto:x.pc,Total:c.total,CustoRateado:c.rateado,Lucro:c.lucro});
