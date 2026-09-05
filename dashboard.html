@@ -365,7 +365,13 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
         </div><div class="bc" id="ch-desp-sub"><div class="empty">Selecione uma categoria</div></div></div>
       </div>
       <div class="cc" style="margin-bottom:20px;">
-        <div class="ch"><div><div class="ct">DRE — Visão mensal</div><div class="csb">Receita (Vendas) e despesas por categoria (Pagamentos) · respeita a loja selecionada, mas sempre mostra todos os meses com dado (ignora o filtro de período)</div></div></div>
+        <div class="ch"><div><div class="ct">DRE — Visão mensal</div><div class="csb">Receita (Vendas) e despesas por categoria (Pagamentos) · valores esmaecidos = meta de vendas ou contas ainda não pagas (planejado) · respeita a loja selecionada</div></div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input type="month" id="meta-mes" class="fi-sm" style="width:120px;font-size:11px;padding:5px 8px;">
+            <input type="number" id="meta-valor" placeholder="Meta R$" class="fi-sm" style="width:90px;font-size:11px;padding:5px 8px;">
+            <button onclick="salvarMeta()" style="padding:5px 10px;background:var(--vf);color:white;border:none;border-radius:8px;font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;">Salvar meta</button>
+          </div>
+        </div>
         <div class="tw"><table class="dt">
           <thead><tr id="tb-dremensal-head"><th>Categoria</th></tr></thead>
           <tbody id="tb-dremensal"></tbody>
@@ -708,7 +714,7 @@ if(parseInt(localStorage.getItem('mayse_dash_urlver')||'0',10)<URL_VERSAO){
   localStorage.setItem('mayse_dash_urlver',String(URL_VERSAO));
 }
 var cfg={url:localStorage.getItem('mayse_dash_url')||URL_ATUAL,token:localStorage.getItem('mayse_dash_token')||SENHA};
-var D={vendas:[],encomendas:[],estoque:[],compras:[],gastos:[],pagamentos:[],clientes:[],pdvs:[],projetos:[],tarefas:[],caminhadas:[],orcamentos:[],orcamentoItens:[],funcionarios:[],ponto:[],caixa:[]};
+var D={vendas:[],encomendas:[],estoque:[],compras:[],gastos:[],pagamentos:[],clientes:[],pdvs:[],projetos:[],tarefas:[],caminhadas:[],orcamentos:[],orcamentoItens:[],funcionarios:[],ponto:[],caixa:[],metas:[]};
 var projTipoFil='todos';
 var lojasAtivas=new Set(['juquia','cambuci']);
 var secAtiva='visao',saiTipo='gasto',encTipoM='Futura',estFil='todos',saiFil='todos',saiStFil='todos';
@@ -951,13 +957,14 @@ async function loadData(){
   document.getElementById('btn-lbl').textContent='Carregando…';document.getElementById('btn-sp').style.display='block';
   document.getElementById('lov').classList.add('show');
   try{
-    var rs=await Promise.all([apiGet('Vendas'),apiGet('Encomendas'),apiGet('Estoque'),apiGet('Compras'),apiGet('Gastos'),apiGet('Pagamentos'),apiGet('Clientes'),apiGet('PDVs'),apiGet('Projetos'),apiGet('ProjetoTarefas'),apiGet('Caminhadas'),apiGet('Orcamentos'),apiGet('OrcamentoItens'),apiGet('Funcionarios'),apiGet('Ponto'),apiGet('Caixa')]);
+    var rs=await Promise.all([apiGet('Vendas'),apiGet('Encomendas'),apiGet('Estoque'),apiGet('Compras'),apiGet('Gastos'),apiGet('Pagamentos'),apiGet('Clientes'),apiGet('PDVs'),apiGet('Projetos'),apiGet('ProjetoTarefas'),apiGet('Caminhadas'),apiGet('Orcamentos'),apiGet('OrcamentoItens'),apiGet('Funcionarios'),apiGet('Ponto'),apiGet('Caixa'),apiGet('Metas')]);
     D.vendas=rs[0].data||[];D.encomendas=rs[1].data||[];D.estoque=rs[2].data||[];
     D.compras=rs[3].data||[];D.gastos=rs[4].data||[];D.pagamentos=rs[5].data||[];
     D.clientes=rs[6].data||[];D.pdvs=rs[7].data||[];
     D.projetos=rs[8].data||[];D.tarefas=rs[9].data||[];D.caminhadas=rs[10].data||[];
     D.orcamentos=rs[11].data||[];D.orcamentoItens=rs[12].data||[];
     D.funcionarios=rs[13].data||[];D.ponto=rs[14].data||[];D.caixa=rs[15].data||[];
+    D.metas=rs[16].data||[];
     var ops={};D.vendas.forEach(function(v){if(v.Operador)ops[v.Operador]=1;});
     var sel=document.getElementById('filt-op');
     if(sel)sel.innerHTML='<option value="">Todos</option>'+Object.keys(ops).map(function(o){return'<option>'+esc(o)+'</option>';}).join('');
@@ -1118,11 +1125,12 @@ var CATEGORIAS_DRE=['Compra de Mercadorias','Funcionario','Transporte','Sistemas
 function renderDREMensal(){
   var thead=document.getElementById('tb-dremensal-head'),tbody=document.getElementById('tb-dremensal');
   if(!tbody)return;
-  var vendas=gLojaOnly(D.vendas),pagtos=gLojaOnly(D.pagamentos);
+  var vendas=gLojaOnly(D.vendas),pagtos=gLojaOnly(D.pagamentos),metas=gLojaOnly(D.metas);
   var mesesSet={};
   function chaveMes(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
   vendas.forEach(function(v){var d=parsePtD(v.Data);if(d)mesesSet[chaveMes(d)]=true;});
   pagtos.forEach(function(p){var d=parsePtD(p.Vencimento);if(d)mesesSet[chaveMes(d)]=true;});
+  metas.forEach(function(m){if(m.AnoMes)mesesSet[m.AnoMes]=true;});
   var meses=Object.keys(mesesSet).sort();
   if(!meses.length){
     if(thead)thead.innerHTML='<th>Categoria</th>';
@@ -1135,21 +1143,28 @@ function renderDREMensal(){
   var receitaPorMes={};meses.forEach(function(k){receitaPorMes[k]=0;});
   vendas.forEach(function(v){var d=parsePtD(v.Data);if(!d)return;var k=chaveMes(d);if(k in receitaPorMes)receitaPorMes[k]+=parseFloat(v.Total||0);});
 
+  var metaPorMes={};meses.forEach(function(k){metaPorMes[k]=0;});
+  metas.forEach(function(m){if(m.AnoMes in metaPorMes)metaPorMes[m.AnoMes]+=parseFloat(m.ValorMeta||0);});
+
   var TODAS_CAT=CATEGORIAS_DRE.concat(['Não categorizado']);
-  var despPorCatMes={};
-  TODAS_CAT.forEach(function(c){despPorCatMes[c]={};meses.forEach(function(k){despPorCatMes[c][k]=0;});});
+  var despPorCatMes={},despPlanPorCatMes={};
+  TODAS_CAT.forEach(function(c){despPorCatMes[c]={};despPlanPorCatMes[c]={};meses.forEach(function(k){despPorCatMes[c][k]=0;despPlanPorCatMes[c][k]=0;});});
   pagtos.forEach(function(p){
     var d=parsePtD(p.Vencimento);if(!d)return;var k=chaveMes(d);if(!(k in receitaPorMes))return;
     var catRaw=String(p.Categoria||'').trim();
     var cat=CATEGORIAS_DRE.indexOf(catRaw)>=0?catRaw:'Não categorizado';
-    despPorCatMes[cat][k]+=parseFloat(p.Valor||0);
+    if((p.Status||'').toLowerCase()==='pago')despPorCatMes[cat][k]+=parseFloat(p.Valor||0);
+    else despPlanPorCatMes[cat][k]+=parseFloat(p.Valor||0); // ainda não pago = planejado (conta que já sabemos que vem)
   });
 
-  var linhas='<tr><td style="font-weight:600;">Receita com Vendas</td>'+meses.map(function(k){return '<td style="text-align:right;color:var(--vj);font-weight:500;">'+fmt(receitaPorMes[k])+'</td>';}).join('')+'</tr>';
+  var linhas='<tr><td style="font-weight:600;">Receita com Vendas</td>'+meses.map(function(k){
+    var meta=metaPorMes[k];
+    return '<td style="text-align:right;color:var(--vj);font-weight:500;">'+fmt(receitaPorMes[k])+(meta>0?'<div style="opacity:.45;font-size:10px;font-weight:400;">meta '+fmt(meta)+'</div>':'')+'</td>';
+  }).join('')+'</tr>';
   TODAS_CAT.forEach(function(cat){
     linhas+='<tr><td>'+esc(cat)+'</td>'+meses.map(function(k){
-      var v=despPorCatMes[cat][k]||0;
-      return '<td style="text-align:right;color:'+(v>0?'var(--red)':'var(--light)')+';">'+(v>0?'-'+fmt(v):'—')+'</td>';
+      var v=despPorCatMes[cat][k]||0,vp=despPlanPorCatMes[cat][k]||0;
+      return '<td style="text-align:right;color:'+(v>0?'var(--red)':'var(--light)')+';">'+(v>0?'-'+fmt(v):'—')+(vp>0?'<div style="opacity:.45;font-size:10px;">planejado -'+fmt(vp)+'</div>':'')+'</td>';
     }).join('')+'</tr>';
   });
 
@@ -1163,6 +1178,18 @@ function renderDREMensal(){
   resLinha+='</tr>';acLinha+='</tr>';
 
   tbody.innerHTML=linhas+resLinha+acLinha;
+}
+function salvarMeta(){
+  var mes=document.getElementById('meta-mes').value;
+  var valor=parseFloat(document.getElementById('meta-valor').value);
+  if(!mes||!valor){showToast('Preencha mês e valor da meta','warn');return;}
+  var lj=[...lojasAtivas][0]||'juquia';
+  apiPost({tipo:'definir_meta',anoMes:mes,loja:lj,valorMeta:valor,operador:'Dashboard'});
+  var idx=D.metas.findIndex(function(m){return m.AnoMes===mes&&lSlug(m.Loja||'')===lj;});
+  if(idx>-1)D.metas[idx].ValorMeta=valor;else D.metas.push({AnoMes:mes,Loja:lj,ValorMeta:valor});
+  showToast('Meta salva!');
+  document.getElementById('meta-valor').value='';
+  renderDREMensal();
 }
 
 
