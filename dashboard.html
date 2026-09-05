@@ -331,6 +331,14 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
         <div class="cc"><div class="ch"><div><div class="ct">🕐 Horários de pico</div><div class="csb">8h–19h · fora agrupadas nas extremidades</div></div></div><div class="bc" id="ch-pico"><div class="empty">Carregue os dados</div></div></div>
         <div class="cc"><div class="ch"><div><div class="ct">📦 Estoque prioritário</div><div class="csb">Produtos marcados como prioridade · verde ok, amarelo baixo, vermelho crítico/zerado</div></div></div><div class="bc" id="ch-est-prior"><div class="empty">Carregue os dados</div></div></div>
       </div>
+      <div class="cc" style="margin-top:20px;">
+        <div class="ch"><div><div class="ct">🛒 Lista de compras</div><div class="csb">Estoque baixo (automático) + itens adicionados manualmente · some da lista quando comprado no PDV</div></div></div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <input type="text" id="lc-novo-item" placeholder="Adicionar item à lista…" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:8px;">
+          <button onclick="adicionarItemLista()">Adicionar</button>
+        </div>
+        <div id="lc-lista"><div class="empty">Carregue os dados</div></div>
+      </div>
       <div class="g2" style="margin-top:20px;">
         <div class="cc"><div class="ch"><div><div class="ct">🕓 Linha do tempo de hoje</div><div class="csb">Caixa e ponto da equipe</div></div></div><div class="tl" id="tl-hoje" style="max-height:280px;overflow-y:auto;"><div class="empty">Carregue os dados</div></div></div>
         <div class="cc">
@@ -364,8 +372,8 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
           </select>
         </div><div class="bc" id="ch-desp-sub"><div class="empty">Selecione uma categoria</div></div></div>
       </div>
-      <div class="cc" style="margin-bottom:20px;">
-        <div class="ch"><div><div class="ct">DRE — Visão mensal</div><div class="csb">Receita (Vendas) e despesas por categoria (Pagamentos) · valores esmaecidos = meta de vendas ou contas ainda não pagas (planejado) · respeita a loja selecionada</div></div>
+      <div class="cc">
+        <div class="ch"><div><div class="ct">DRE — Visão completa</div><div class="csb">Receita (Vendas) e despesas por categoria (Pagamentos) · clique numa linha com ▸ pra detalhar · valores esmaecidos = meta ou conta ainda não paga (planejado) · respeita a loja selecionada</div></div>
           <div style="display:flex;gap:6px;align-items:center;">
             <input type="month" id="meta-mes" class="fi-sm" style="width:120px;font-size:11px;padding:5px 8px;">
             <input type="number" id="meta-valor" placeholder="Meta R$" class="fi-sm" style="width:90px;font-size:11px;padding:5px 8px;">
@@ -376,9 +384,8 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
           <thead><tr id="tb-dremensal-head"><th>Categoria</th></tr></thead>
           <tbody id="tb-dremensal"></tbody>
         </table></div>
-      </div>
-      <div class="cc">
-        <div class="ch"><div><div class="ct">DRE — Resultado dia a dia</div><div class="csb">Entradas, saídas e saldo acumulado</div></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border);">
+          <div><div class="ct" style="font-size:14px;">Resultado dia a dia</div><div class="csb">Entradas, saídas e saldo acumulado — do primeiro lançamento até o consolidado</div></div>
           <button onclick="exportarDRE()" style="padding:5px 12px;background:var(--vf);color:white;border:none;border-radius:8px;font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;">⬇ CSV</button>
         </div>
         <div class="tw"><table class="dt">
@@ -597,22 +604,24 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 
 <div class="mov" id="m-entrada" onclick="cMov(event,'m-entrada')"><div class="mo"><button class="mc" onclick="fM('entrada')">×</button>
 <div class="mt">Lançar recebimento</div><div class="mst">Lançamento manual — pessoal, dívidas, outros.</div>
-<div class="fg2"><div class="fg"><label class="fl">Loja / Origem *</label><select class="fsl" id="fe-lj"><option value="juquia">Juquiá</option><option value="cambuci">Cambuci</option><option value="pessoal">Pessoal</option><option value="viveiro">Viveiro</option></select></div><div class="fg"><label class="fl">Data *</label><input class="fi" id="fe-dt" type="date"></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Loja / Origem *</label><select class="fsl" id="fe-lj" onchange="toggleFeCat()"><option value="juquia">Juquiá</option><option value="cambuci">Cambuci</option><option value="pessoal">Pessoal</option><option value="viveiro">Viveiro</option></select></div><div class="fg"><label class="fl">Data *</label><input class="fi" id="fe-dt" type="date"></div></div>
 <div class="fg2"><div class="fg"><label class="fl">Hora</label><input class="fi" id="fe-hr" type="time"></div><div class="fg"><label class="fl">Valor (R$) *</label><input class="fi" id="fe-val" type="number" min="0" step="0.01" placeholder="0,00"></div></div>
 <div class="fg"><label class="fl">Descrição / Cliente *</label><input class="fi" id="fe-nm" type="text" placeholder="Ex: Pagamento João, Aluguel recebido…"></div>
+<div class="fg" id="fe-cat-wrap" style="display:none;"><label class="fl">Categoria da receita</label><select class="fsl" id="fe-cat"><option>Salário</option><option>Venda avulsa</option><option>Reembolso</option><option>Outro</option></select></div>
 <div class="fg2"><div class="fg"><label class="fl">Forma de pagamento</label><select class="fsl" id="fe-pag"><option>Pix</option><option>Dinheiro</option><option>Transferência</option><option>Crédito</option><option>Débito</option><option>Outro</option></select></div><div class="fg"><label class="fl">Operador</label><input class="fi" id="fe-op" type="text" placeholder="Seu nome"></div></div>
 <div class="fmsg" id="fm-ent"></div><div class="mft"><button class="btn-cn" onclick="fM('entrada')">Cancelar</button><button class="btn-sb" id="btn-fent" onclick="subEnt()"><div class="msp" id="sp-ent"></div>Salvar recebimento</button></div></div></div>
 
 <div class="mov" id="m-saida" onclick="cMov(event,'m-saida')"><div class="mo"><button class="mc" onclick="fM('saida')">×</button>
 <div class="mt">Lançar saída</div><div class="mst">Gasto, compra ou pagamento.</div>
 <div class="fg"><label class="fl">Tipo *</label><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="fbtn active" id="st-g" onclick="setST('gasto',this)">Gasto</button><button class="fbtn" id="st-c" onclick="setST('compra',this)">Compra</button><button class="fbtn" id="st-p" onclick="setST('pagamento',this)">Pagamento</button></div></div>
-<div class="fg2"><div class="fg"><label class="fl">Data *</label><input class="fi" id="fs-dt" type="date"></div><div class="fg"><label class="fl">Loja *</label><select class="fsl" id="fs-lj" onchange="popularGrupos()"><option value="juquia">Juquiá</option><option value="cambuci">Cambuci</option><option value="pessoal">Pessoal</option></select></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Data *</label><input class="fi" id="fs-dt" type="date"></div><div class="fg"><label class="fl">Loja *</label><select class="fsl" id="fs-lj"><option value="juquia">Juquiá</option><option value="cambuci">Cambuci</option><option value="pessoal">Pessoal</option></select></div></div>
 <div class="fg"><label class="fl">Descrição *</label><input class="fi" id="fs-desc" type="text" placeholder="Ex: Almoço, fornecedor, aluguel…"></div>
-<div class="fg2"><div class="fg"><label class="fl">Valor (R$) *</label><input class="fi" id="fs-val" type="number" min="0" step="0.01" placeholder="0,00"></div><div class="fg" id="fs-cat-wrap"><label class="fl">Categoria</label><select class="fsl" id="fs-cat"><option>Compra de Mercadorias</option><option>Funcionario</option><option>Transporte</option><option>Sistemas</option><option>Aluguel</option><option>Agua, Luz, Internet</option><option>Contabilidade</option><option>Impostos e Taxas</option><option>Pro Labore</option></select></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Valor (R$) *</label><input class="fi" id="fs-val" type="number" min="0" step="0.01" placeholder="0,00"></div><div class="fg" id="fs-cat-wrap"><label class="fl">Categoria</label><select class="fsl" id="fs-cat" onchange="popularSubcatUnificada()"></select></div></div>
+<div class="fg" id="fs-subcat-wrap" style="display:none;"><label class="fl">Subcategoria</label><select class="fsl" id="fs-subcat-sel"></select></div>
 <div class="fg2"><div class="fg"><label class="fl">Pagamento</label><select class="fsl" id="fs-pag"><option>Dinheiro</option><option>Pix</option><option>Crédito</option><option>Débito</option><option>Boleto</option><option>Transferência</option></select></div><div class="fg" id="fs-st-w"><label class="fl">Status</label><select class="fsl" id="fs-st"><option value="Pago">Pago</option><option value="Pendente">Pendente</option></select></div></div>
-<div id="fs-pag-ex" style="display:none;"><div class="fg2"><div class="fg"><label class="fl">Vencimento *</label><input class="fi" id="fs-venc" type="date"></div><div class="fg"><label class="fl">Subcategoria</label><input class="fi" id="fs-subcat" type="text" placeholder="Ex: Aluguel, Salário…"></div></div></div>
+<div id="fs-pag-ex" style="display:none;"><div class="fg"><label class="fl">Vencimento *</label><input class="fi" id="fs-venc" type="date"></div></div>
 <div id="fs-cmp-x" style="display:none;"><div class="fg2"><div class="fg"><label class="fl">Fornecedor</label><input class="fi" id="fs-forn" type="text" placeholder="Fornecedor"></div><div class="fg"><label class="fl">Produto</label><input class="fi" id="fs-prod" type="text" placeholder="Nome do produto"></div></div><div class="fg2"><div class="fg"><label class="fl">Qtd</label><input class="fi" id="fs-qtd" type="number" min="1" placeholder="0"></div><div class="fg"><label class="fl">NF / Ref.</label><input class="fi" id="fs-nf" type="text" placeholder="NF-001"></div></div></div>
-<div id="fs-gst-x"><div class="fg2"><div class="fg"><label class="fl">Grupo</label><select class="fsl" id="fs-grp" onchange="popularCategoriasGrupo()"></select></div><div class="fg"><label class="fl">Categoria</label><select class="fsl" id="fs-catg" onchange="popularSubcatGrupo()"></select></div></div><div class="fg"><label class="fl">Sub categoria</label><select class="fsl" id="fs-subcatg"></select></div><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--cream);border-radius:8px;margin-bottom:10px;"><div><div style="font-size:13px;">Entra no estoque?</div><div style="font-size:11px;color:var(--light);">Para compras de insumos</div></div><button class="tog" id="tog-se" onclick="togSE()" aria-label="toggle estoque saída"></button></div><div id="fs-se-x" style="display:none;" class="fg2"><div class="fg"><label class="fl">Produto</label><input class="fi" id="fs-se-p" type="text" placeholder="Nome"></div><div class="fg"><label class="fl">Quantidade</label><input class="fi" id="fs-se-q" type="number" min="1" placeholder="0"></div></div></div>
+<div id="fs-gst-x"><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--cream);border-radius:8px;margin-bottom:10px;"><div><div style="font-size:13px;">Entra no estoque?</div><div style="font-size:11px;color:var(--light);">Para compras de insumos</div></div><button class="tog" id="tog-se" onclick="togSE()" aria-label="toggle estoque saída"></button></div><div id="fs-se-x" style="display:none;" class="fg2"><div class="fg"><label class="fl">Produto</label><input class="fi" id="fs-se-p" type="text" placeholder="Nome"></div><div class="fg"><label class="fl">Quantidade</label><input class="fi" id="fs-se-q" type="number" min="1" placeholder="0"></div></div></div>
 <div class="fg"><label class="fl">Observação</label><input class="fi" id="fs-obs" type="text" placeholder="Opcional"></div>
 <div class="fmsg" id="fm-sai"></div><div class="mft"><button class="btn-cn" onclick="fM('saida')">Cancelar</button><button class="btn-sb" id="btn-fsai" onclick="subSai()"><div class="msp" id="sp-sai"></div>Registrar</button></div></div></div>
 
@@ -714,7 +723,7 @@ if(parseInt(localStorage.getItem('mayse_dash_urlver')||'0',10)<URL_VERSAO){
   localStorage.setItem('mayse_dash_urlver',String(URL_VERSAO));
 }
 var cfg={url:localStorage.getItem('mayse_dash_url')||URL_ATUAL,token:localStorage.getItem('mayse_dash_token')||SENHA};
-var D={vendas:[],encomendas:[],estoque:[],compras:[],gastos:[],pagamentos:[],clientes:[],pdvs:[],projetos:[],tarefas:[],caminhadas:[],orcamentos:[],orcamentoItens:[],funcionarios:[],ponto:[],caixa:[],metas:[]};
+var D={vendas:[],encomendas:[],estoque:[],compras:[],gastos:[],pagamentos:[],clientes:[],pdvs:[],projetos:[],tarefas:[],caminhadas:[],orcamentos:[],orcamentoItens:[],funcionarios:[],ponto:[],caixa:[],metas:[],listaCompras:[],categorias:[]};
 var projTipoFil='todos';
 var lojasAtivas=new Set(['juquia','cambuci']);
 var secAtiva='visao',saiTipo='gasto',encTipoM='Futura',estFil='todos',saiFil='todos',saiStFil='todos';
@@ -957,14 +966,14 @@ async function loadData(){
   document.getElementById('btn-lbl').textContent='Carregando…';document.getElementById('btn-sp').style.display='block';
   document.getElementById('lov').classList.add('show');
   try{
-    var rs=await Promise.all([apiGet('Vendas'),apiGet('Encomendas'),apiGet('Estoque'),apiGet('Compras'),apiGet('Gastos'),apiGet('Pagamentos'),apiGet('Clientes'),apiGet('PDVs'),apiGet('Projetos'),apiGet('ProjetoTarefas'),apiGet('Caminhadas'),apiGet('Orcamentos'),apiGet('OrcamentoItens'),apiGet('Funcionarios'),apiGet('Ponto'),apiGet('Caixa'),apiGet('Metas')]);
+    var rs=await Promise.all([apiGet('Vendas'),apiGet('Encomendas'),apiGet('Estoque'),apiGet('Compras'),apiGet('Gastos'),apiGet('Pagamentos'),apiGet('Clientes'),apiGet('PDVs'),apiGet('Projetos'),apiGet('ProjetoTarefas'),apiGet('Caminhadas'),apiGet('Orcamentos'),apiGet('OrcamentoItens'),apiGet('Funcionarios'),apiGet('Ponto'),apiGet('Caixa'),apiGet('Metas'),apiGet('ListaCompras'),apiGet('Categorias')]);
     D.vendas=rs[0].data||[];D.encomendas=rs[1].data||[];D.estoque=rs[2].data||[];
     D.compras=rs[3].data||[];D.gastos=rs[4].data||[];D.pagamentos=rs[5].data||[];
     D.clientes=rs[6].data||[];D.pdvs=rs[7].data||[];
     D.projetos=rs[8].data||[];D.tarefas=rs[9].data||[];D.caminhadas=rs[10].data||[];
     D.orcamentos=rs[11].data||[];D.orcamentoItens=rs[12].data||[];
     D.funcionarios=rs[13].data||[];D.ponto=rs[14].data||[];D.caixa=rs[15].data||[];
-    D.metas=rs[16].data||[];
+    D.metas=rs[16].data||[];D.listaCompras=rs[17].data||[];D.categorias=rs[18].data||[];
     var ops={};D.vendas.forEach(function(v){if(v.Operador)ops[v.Operador]=1;});
     var sel=document.getElementById('filt-op');
     if(sel)sel.innerHTML='<option value="">Todos</option>'+Object.keys(ops).map(function(o){return'<option>'+esc(o)+'</option>';}).join('');
@@ -988,7 +997,7 @@ function renVisao(){
     document.getElementById('kv-fat-sp').innerHTML=arr.map(function(id){var v=D.vendas.filter(function(r){return lSlug(r.Loja||'')===id;});var f=v.reduce(function(s,r){return s+parseFloat(r.Total||0);},0);return'<span class="kp p'+id.substring(0,2)+'">'+LNOMES[id].substring(0,3)+' '+fmt(f)+'</span>';}).join('');
     document.getElementById('kv-vnd-sp').innerHTML=arr.map(function(id){var c=D.vendas.filter(function(r){return lSlug(r.Loja||'')===id;}).length;return'<span class="kp p'+id.substring(0,2)+'">'+LNOMES[id].substring(0,3)+' '+c+'</span>';}).join('');
   }else{document.getElementById('kv-fat-sp').innerHTML='';document.getElementById('kv-vnd-sp').innerHTML='';}
-  renChFat(vnd);renChPico(vnd,'ch-pico');renTimeline(ap);renEstoquePrioritario();renTimelineHoje();
+  renChFat(vnd);renChPico(vnd,'ch-pico');renTimeline(ap);renEstoquePrioritario();renTimelineHoje();renListaCompras();
   renResumoProjetos();
 }
 
@@ -1008,6 +1017,35 @@ function renEstoquePrioritario(){
     var tag=p._status==='zero'?' · ZERADO':p._status==='baixo'?' · abaixo do mínimo':'';
     return'<div class="br"><span class="bl" style="width:130px" title="'+esc(p.Nome)+'">'+esc(p.Nome)+'</span><div class="bt"><div class="bf" style="width:'+pct+'%;background:'+COR[p._status]+'"></div></div><span class="bv" style="color:'+COR[p._status]+'">'+p._q+' un'+tag+'</span></div>';
   }).join('');
+}
+
+function renListaCompras(){
+  var el=document.getElementById('lc-lista');
+  if(!el)return;
+  var itens=[];
+  gDL(D.estoque).forEach(function(p){
+    var q=parseInt(p.Qtd||0),m=parseInt(p.Alerta_Minimo||5)||1;
+    if(q<=m)itens.push({nome:p.Nome,origem:'estoque baixo',cor:'#B33A3A'});
+  });
+  (D.encomendas||[]).filter(function(e){return(e.Tipo||'')==='Futura'&&(e.Status||'').toLowerCase()!=='concluido'&&(e.Status||'').toLowerCase()!=='concluído';}).forEach(function(e){
+    itens.push({nome:e.Descricao||e.Cliente||'Encomenda','origem':'encomenda de '+(e.Cliente||'—'),cor:'#3B5BC9'});
+  });
+  (D.listaCompras||[]).filter(function(i){return(i.Status||'')==='Pendente';}).forEach(function(i){
+    itens.push({nome:i.Item,origem:i.Origem||'manual',cor:'#5F5E5A'});
+  });
+  if(!itens.length){el.innerHTML='<div class="empty">Nenhum item na lista de compras</div>';return;}
+  el.innerHTML=itens.map(function(i){
+    return'<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);"><span style="flex:1;">'+esc(i.nome)+'</span><span style="font-size:11px;color:'+i.cor+';">'+esc(i.origem)+'</span></div>';
+  }).join('');
+}
+function adicionarItemLista(){
+  var v=document.getElementById('lc-novo-item').value.trim();
+  if(!v){showToast('Digite o item','warn');return;}
+  D.listaCompras.push({Item:v,Origem:'manual',Status:'Pendente'});
+  apiPost({tipo:'add_lista_compra',item:v,origem:'manual',operador:'Dashboard'});
+  document.getElementById('lc-novo-item').value='';
+  renListaCompras();
+  showToast('Item adicionado à lista!');
 }
 
 function renTimelineHoje(){
@@ -1090,7 +1128,7 @@ function getFinDesp(){
     var r=Object.assign({},g);r.Vencimento=g.Data;r._val=parseFloat(g.Valor||0);r._cat=g.Categoria||'Gastos';desp.push(r);
   });
   gDL(D.compras).forEach(function(c){
-    var r=Object.assign({},c);r.Vencimento=c.Data;r._val=parseFloat(c.Valor_Total||0);r._cat='Fornecedor';desp.push(r);
+    var r=Object.assign({},c);r.Vencimento=c.Data;r._val=parseFloat(c.Valor_Total||0);r._cat='Compra de Mercadorias';desp.push(r);
   });
   return desp;
 }
@@ -1121,7 +1159,9 @@ function renderFinanceiro(){
    e a validação de dados na planilha, coluna Categoria da aba Pagamentos).
    Ignora o filtro de período (mostra todos os meses com dado), mas respeita a loja
    selecionada — mesmo padrão do gLojaOnly() usado em "Próximos vencimentos". */
-var CATEGORIAS_DRE=['Compra de Mercadorias','Funcionario','Transporte','Sistemas','Aluguel','Agua, Luz, Internet','Contabilidade','Impostos e Taxas','Pro Labore'];
+var CATEGORIAS_DRE=['Compra de Mercadorias','Funcionario','Transporte','Sistemas','Aluguel','Agua, Luz, Internet','Contabilidade','Impostos e Taxas','Marketing','Pro Labore'];
+var dreExpand={};
+function toggleDreExpand(key){dreExpand[key]=!dreExpand[key];renderDREMensal();}
 function renderDREMensal(){
   var thead=document.getElementById('tb-dremensal-head'),tbody=document.getElementById('tb-dremensal');
   if(!tbody)return;
@@ -1143,29 +1183,65 @@ function renderDREMensal(){
   var receitaPorMes={};meses.forEach(function(k){receitaPorMes[k]=0;});
   vendas.forEach(function(v){var d=parsePtD(v.Data);if(!d)return;var k=chaveMes(d);if(k in receitaPorMes)receitaPorMes[k]+=parseFloat(v.Total||0);});
 
+  // Receita detalhada por categoria (só existe pra vendas manuais da loja "pessoal", ex: Salário, Venda avulsa, Reembolso)
+  var receitaCatSet={},receitaCatPorMes={};
+  vendas.forEach(function(v){
+    var catRaw=String(v.Categoria||'').trim();
+    if(!catRaw||lSlug(v.Loja||'')!=='pessoal')return;
+    var d=parsePtD(v.Data);if(!d)return;var k=chaveMes(d);if(!(k in receitaPorMes))return;
+    receitaCatSet[catRaw]=true;
+    if(!receitaCatPorMes[catRaw])receitaCatPorMes[catRaw]={};
+    receitaCatPorMes[catRaw][k]=(receitaCatPorMes[catRaw][k]||0)+parseFloat(v.Total||0);
+  });
+  var receitaCats=Object.keys(receitaCatSet);
+
   var metaPorMes={};meses.forEach(function(k){metaPorMes[k]=0;});
   metas.forEach(function(m){if(m.AnoMes in metaPorMes)metaPorMes[m.AnoMes]+=parseFloat(m.ValorMeta||0);});
 
   var TODAS_CAT=CATEGORIAS_DRE.concat(['Não categorizado']);
   var despPorCatMes={},despPlanPorCatMes={};
   TODAS_CAT.forEach(function(c){despPorCatMes[c]={};despPlanPorCatMes[c]={};meses.forEach(function(k){despPorCatMes[c][k]=0;despPlanPorCatMes[c][k]=0;});});
+  var subcatPorCatMes={}; // { categoria: { subcategoria: { mes: valor } } } — total pago+planejado, só pra detalhamento
   pagtos.forEach(function(p){
     var d=parsePtD(p.Vencimento);if(!d)return;var k=chaveMes(d);if(!(k in receitaPorMes))return;
     var catRaw=String(p.Categoria||'').trim();
     var cat=CATEGORIAS_DRE.indexOf(catRaw)>=0?catRaw:'Não categorizado';
     if((p.Status||'').toLowerCase()==='pago')despPorCatMes[cat][k]+=parseFloat(p.Valor||0);
     else despPlanPorCatMes[cat][k]+=parseFloat(p.Valor||0); // ainda não pago = planejado (conta que já sabemos que vem)
+    var subRaw=String(p.Subcategoria||'').trim();
+    if(subRaw){
+      if(!subcatPorCatMes[cat])subcatPorCatMes[cat]={};
+      if(!subcatPorCatMes[cat][subRaw])subcatPorCatMes[cat][subRaw]={};
+      subcatPorCatMes[cat][subRaw][k]=(subcatPorCatMes[cat][subRaw][k]||0)+parseFloat(p.Valor||0);
+    }
   });
 
-  var linhas='<tr><td style="font-weight:600;">Receita com Vendas</td>'+meses.map(function(k){
+  function linhaDetalhe(nome,porMes,cor){
+    return '<tr style="background:var(--cream);"><td style="padding-left:28px;font-size:12px;color:var(--light);">'+esc(nome)+'</td>'+meses.map(function(k){
+      var v=(porMes&&porMes[k])||0;
+      return '<td style="text-align:right;font-size:12px;color:'+(v>0?cor:'var(--light)')+';">'+(v>0?fmt(v):'—')+'</td>';
+    }).join('')+'</tr>';
+  }
+
+  var linhas='';
+  var receitaAberta=!!dreExpand['receita'];
+  linhas+='<tr'+(receitaCats.length?' style="cursor:pointer;" onclick="toggleDreExpand(\'receita\')"':'')+'><td style="font-weight:600;">'+(receitaCats.length?(receitaAberta?'▾ ':'▸ '):'')+'Receita com Vendas</td>'+meses.map(function(k){
     var meta=metaPorMes[k];
     return '<td style="text-align:right;color:var(--vj);font-weight:500;">'+fmt(receitaPorMes[k])+(meta>0?'<div style="opacity:.45;font-size:10px;font-weight:400;">meta '+fmt(meta)+'</div>':'')+'</td>';
   }).join('')+'</tr>';
+  if(receitaAberta){
+    receitaCats.forEach(function(rc){linhas+=linhaDetalhe(rc,receitaCatPorMes[rc],'var(--vj)');});
+  }
   TODAS_CAT.forEach(function(cat){
-    linhas+='<tr><td>'+esc(cat)+'</td>'+meses.map(function(k){
+    var subs=subcatPorCatMes[cat]?Object.keys(subcatPorCatMes[cat]):[];
+    var aberto=!!dreExpand['cat_'+cat];
+    linhas+='<tr'+(subs.length?' style="cursor:pointer;" onclick="toggleDreExpand(\'cat_'+cat+'\')"':'')+'><td>'+(subs.length?(aberto?'▾ ':'▸ '):'')+esc(cat)+'</td>'+meses.map(function(k){
       var v=despPorCatMes[cat][k]||0,vp=despPlanPorCatMes[cat][k]||0;
       return '<td style="text-align:right;color:'+(v>0?'var(--red)':'var(--light)')+';">'+(v>0?'-'+fmt(v):'—')+(vp>0?'<div style="opacity:.45;font-size:10px;">planejado -'+fmt(vp)+'</div>':'')+'</td>';
     }).join('')+'</tr>';
+    if(aberto){
+      subs.forEach(function(sc){linhas+=linhaDetalhe(sc,subcatPorCatMes[cat][sc],'var(--red)');});
+    }
   });
 
   var acumulado=0,resLinha='<tr style="border-top:2px solid var(--border);"><td style="font-weight:700;">Resultado</td>',acLinha='<tr><td style="font-weight:700;">Resultado Acumulado</td>';
@@ -1253,7 +1329,7 @@ function renSai(){
   document.getElementById('ch-sl').innerHTML=al.map(function(e){return'<div class="br"><span class="bl">'+esc(LNOMES[e[0]]||e[0])+'</span><div class="bt"><div class="bf" style="width:'+Math.round(e[1]/ml*100)+'%;background:'+(LCORES[e[0]]||'var(--vj)')+'"></div></div><span class="bv">'+fmt(e[1])+'</span></div>';}).join('');
   _saiL=[];
   gst.forEach(function(g){_saiL.push({venc:g.Data,tp:'gasto',desc:g.Descricao,lj:lSlug(g.Loja||''),cat:g.Categoria,sub:'—',val:parseFloat(g.Valor||0),st:'Pago',raw:g});});
-  cmp.forEach(function(c){_saiL.push({venc:c.Data,tp:'compra',desc:(c.Fornecedor||'—')+' — '+(c.Produto||''),lj:lSlug(c.Loja||''),cat:'Fornecedor',sub:'—',val:parseFloat(c.Valor_Total||0),st:'Pago',raw:c});});
+  cmp.forEach(function(c){_saiL.push({venc:c.Data,tp:'compra',desc:(c.Fornecedor||'—')+' — '+(c.Produto||''),lj:lSlug(c.Loja||''),cat:'Compra de Mercadorias',sub:'—',val:parseFloat(c.Valor_Total||0),st:'Pago',raw:c});});
   pag.forEach(function(p,i){
     var hoje=new Date();hoje.setHours(0,0,0,0);
     var d=parsePtD(p.Vencimento),st;
@@ -1773,6 +1849,7 @@ function pedPdv(idx,ea){var p=(D.pdvs||[])[idx];if(!p)return;_pdvP={idx:idx,ativ
 function confPdv(){var p=(D.pdvs||[])[_pdvP.idx];if(!p)return;p.Ativo=_pdvP.ativo?'Sim':'Não';fM('pdv-c');renPDVs();apiPost({tipo:'pdv_toggle',nome:p.Nome,ativo:_pdvP.ativo});showToast((_pdvP.ativo?'Ativado':'Desativado')+': '+p.Nome);}
 
 /* ── MODAL RECEBIMENTO (Entrada manual) ── */
+function toggleFeCat(){document.getElementById('fe-cat-wrap').style.display=document.getElementById('fe-lj').value==='pessoal'?'block':'none';}
 function abMEnt(){
   document.getElementById('fe-dt').value=new Date().toISOString().split('T')[0];
   document.getElementById('fe-hr').value='';
@@ -1780,58 +1857,53 @@ function abMEnt(){
   document.getElementById('fe-nm').value='';
   document.getElementById('fe-op').value='';
   document.getElementById('fm-ent').className='fmsg';
+  toggleFeCat();
   document.getElementById('m-entrada').classList.add('open');
 }
 async function subEnt(){
-  var lj=document.getElementById('fe-lj').value,dt=document.getElementById('fe-dt').value,vl=parseFloat(document.getElementById('fe-val').value)||0,desc=document.getElementById('fe-nm').value.trim(),pg=document.getElementById('fe-pag').value,op=document.getElementById('fe-op').value.trim(),hr=document.getElementById('fe-hr').value||new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  var lj=document.getElementById('fe-lj').value,dt=document.getElementById('fe-dt').value,vl=parseFloat(document.getElementById('fe-val').value)||0,desc=document.getElementById('fe-nm').value.trim(),pg=document.getElementById('fe-pag').value,op=document.getElementById('fe-op').value.trim(),hr=document.getElementById('fe-hr').value||new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),cat=lj==='pessoal'?document.getElementById('fe-cat').value:'';
   if(!desc||!vl||!dt){sFMsg('fm-ent','Preencha data, descrição e valor','err');return;}
   var pgs={Dinheiro:0,Pix:0,Credito:0,Debito:0,Transferencia:0};
   var chave=pg.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z]/g,'');
   pgs[chave]=vl;
-  var pl={tipo:'venda_manual',loja:lj,data:isoToDateBR(dt),hora:hr,telefone:'',nome:desc,Cliente:desc,produtosTexto:'Lançamento manual',Produtos:'Lançamento manual',total:vl,Total:vl,desconto:0,troco:0,Troco:0,pagamentos:pgs,Dinheiro:pg==='Dinheiro'?vl:0,Pix:pg==='Pix'?vl:0,Credito:pg==='Crédito'?vl:0,Debito:pg==='Débito'?vl:0,operador:op||'Dashboard',cidade:lj,dispositivo:'Dashboard'};
+  var pl={tipo:'venda_manual',loja:lj,data:isoToDateBR(dt),hora:hr,telefone:'',nome:desc,Cliente:desc,produtosTexto:'Lançamento manual',Produtos:'Lançamento manual',total:vl,Total:vl,desconto:0,troco:0,Troco:0,pagamentos:pgs,Dinheiro:pg==='Dinheiro'?vl:0,Pix:pg==='Pix'?vl:0,Credito:pg==='Crédito'?vl:0,Debito:pg==='Débito'?vl:0,operador:op||'Dashboard',cidade:lj,dispositivo:'Dashboard',categoria:cat};
   setML('btn-fent','sp-ent',true);var ok=await apiPost(pl);setML('btn-fent','sp-ent',false);
   if(ok){showToast('Recebimento registrado!');fM('entrada');}else sFMsg('fm-ent','Erro ao salvar','err');
 }
 
 /* ── MODAL SAÍDA ── */
-function abMSai(){saiTipo='gasto';document.getElementById('fs-dt').value=new Date().toISOString().split('T')[0];['fs-desc','fs-val','fs-obs','fs-forn','fs-prod','fs-qtd','fs-nf','fs-se-p','fs-se-q','fs-subcat','fs-venc'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fm-sai').className='fmsg';document.getElementById('fs-cmp-x').style.display='none';document.getElementById('fs-gst-x').style.display='block';document.getElementById('fs-pag-ex').style.display='none';document.getElementById('fs-cat-wrap').style.display='none';document.getElementById('fs-se-x').style.display='none';document.getElementById('tog-se').classList.remove('on');document.querySelectorAll('#m-saida .fbtn').forEach(function(b){b.classList.remove('active');});document.getElementById('st-g').classList.add('active');popularGrupos();document.getElementById('m-saida').classList.add('open');}
-function setST(t,b){saiTipo=t;document.querySelectorAll('#m-saida .fbtn').forEach(function(x){x.classList.remove('active');});b.classList.add('active');document.getElementById('fs-cmp-x').style.display=t==='compra'?'block':'none';document.getElementById('fs-gst-x').style.display=t==='gasto'?'block':'none';document.getElementById('fs-pag-ex').style.display=t==='pagamento'?'block':'none';document.getElementById('fs-cat-wrap').style.display=t==='gasto'?'none':'block';if(t==='gasto')popularGrupos();}
-/* ── Taxonomia de despesas: Loja > Grupo > Categoria > Subcategoria ── */
-var TAXONOMIA_DESPESAS={
-  pessoal:{
-    'Despesas Fixas':{'Moradia':['Aluguel','Água','Luz','Internet'],'Educação':['Inglês']},
-    'Despesas Variáveis':{'Transporte':['Combustível','Bilhete Único','Pedágio'],'Alimentação':['Mercado','Açougue','Feira'],'Saúde':['Farmácia'],'Lazer':['Zoológico'],'Impostos e taxas':['Juros Cartão']}
-  },
-  juquia:{
-    'Despesas Variáveis':{'Matéria prima':['Compras flores'],'Embalagens':['Papel']},
-    'Despesas Fixas':{'Funcionários':['Pagamento Salário'],'Administrativa':['Contabilidade','Aluguel']}
-  }
-};
-function taxLoja(lj){return TAXONOMIA_DESPESAS[lj]||TAXONOMIA_DESPESAS.juquia;}
-function popularGrupos(){
-  var lj=document.getElementById('fs-lj').value,tax=taxLoja(lj),sel=document.getElementById('fs-grp');
-  sel.innerHTML=Object.keys(tax).map(function(g){return'<option>'+esc(g)+'</option>';}).join('');
-  popularCategoriasGrupo();
+function abMSai(){saiTipo='gasto';document.getElementById('fs-dt').value=new Date().toISOString().split('T')[0];['fs-desc','fs-val','fs-obs','fs-forn','fs-prod','fs-qtd','fs-nf','fs-se-p','fs-se-q','fs-venc'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fm-sai').className='fmsg';document.getElementById('fs-cmp-x').style.display='none';document.getElementById('fs-gst-x').style.display='block';document.getElementById('fs-pag-ex').style.display='none';document.getElementById('fs-cat-wrap').style.display='block';document.getElementById('fs-se-x').style.display='none';document.getElementById('tog-se').classList.remove('on');document.querySelectorAll('#m-saida .fbtn').forEach(function(b){b.classList.remove('active');});document.getElementById('st-g').classList.add('active');popularCategoriasUnificada();document.getElementById('m-saida').classList.add('open');}
+function setST(t,b){saiTipo=t;document.querySelectorAll('#m-saida .fbtn').forEach(function(x){x.classList.remove('active');});b.classList.add('active');document.getElementById('fs-cmp-x').style.display=t==='compra'?'block':'none';document.getElementById('fs-gst-x').style.display=t==='gasto'?'block':'none';document.getElementById('fs-pag-ex').style.display=t==='pagamento'?'block':'none';document.getElementById('fs-cat-wrap').style.display=t==='compra'?'none':'block';popularCategoriasUnificada();}
+/* ── Categorias unificadas (Gasto/Pagamento) — vindas da aba Categorias ── */
+function categoriasDespesaUnicas(){
+  var set={},out=[];
+  (D.categorias||[]).forEach(function(c){var cat=c.Categoria;if((c.Tipo||'')==='Despesa'&&cat&&!set[cat]){set[cat]=1;out.push(cat);}});
+  return out;
 }
-function popularCategoriasGrupo(){
-  var lj=document.getElementById('fs-lj').value,tax=taxLoja(lj),grp=document.getElementById('fs-grp').value;
-  var cats=tax[grp]||{};
-  document.getElementById('fs-catg').innerHTML=Object.keys(cats).map(function(c){return'<option>'+esc(c)+'</option>';}).join('');
-  popularSubcatGrupo();
+function popularCategoriasUnificada(){
+  var sel=document.getElementById('fs-cat');
+  var cats=categoriasDespesaUnicas();
+  if(!cats.length)cats=['Compra de Mercadorias','Funcionario','Transporte','Sistemas','Aluguel','Agua, Luz, Internet','Contabilidade','Impostos e Taxas','Marketing','Pro Labore'];
+  var atual=sel.value;
+  sel.innerHTML=cats.map(function(c){return'<option>'+esc(c)+'</option>';}).join('');
+  if(cats.indexOf(atual)>=0)sel.value=atual;
+  popularSubcatUnificada();
 }
-function popularSubcatGrupo(){
-  var lj=document.getElementById('fs-lj').value,tax=taxLoja(lj),grp=document.getElementById('fs-grp').value,cat=document.getElementById('fs-catg').value;
-  var subs=(tax[grp]||{})[cat]||[];
-  document.getElementById('fs-subcatg').innerHTML=subs.map(function(s2){return'<option>'+esc(s2)+'</option>';}).join('');
+function popularSubcatUnificada(){
+  var cat=document.getElementById('fs-cat').value;
+  var subs=(D.categorias||[]).filter(function(c){return(c.Tipo||'')==='Despesa'&&c.Categoria===cat&&c.Subcategoria;}).map(function(c){return c.Subcategoria;});
+  var wrap=document.getElementById('fs-subcat-wrap');
+  if(subs.length){wrap.style.display='block';document.getElementById('fs-subcat-sel').innerHTML=subs.map(function(s2){return'<option>'+esc(s2)+'</option>';}).join('');}
+  else{wrap.style.display='none';document.getElementById('fs-subcat-sel').innerHTML='';}
 }
 function togSE(){var t=document.getElementById('tog-se');t.classList.toggle('on');document.getElementById('fs-se-x').style.display=t.classList.contains('on')?'grid':'none';}
 async function subSai(){
   var dt=document.getElementById('fs-dt').value,lj=document.getElementById('fs-lj').value,ds=document.getElementById('fs-desc').value.trim(),vl=parseFloat(document.getElementById('fs-val').value)||0;
   if(!dt||!ds||!vl){sFMsg('fm-sai','Preencha data, descrição e valor','err');return;}
-  var ct=document.getElementById('fs-cat').value,pg=document.getElementById('fs-pag').value,st=document.getElementById('fs-st').value,seOn=document.getElementById('tog-se').classList.contains('on'),pl;
-  if(saiTipo==='gasto'){pl={tipo:'gasto',loja:lj,data:isoToDateBR(dt),descricao:ds,grupo:document.getElementById('fs-grp').value,categoria:document.getElementById('fs-catg').value,subcategoria:document.getElementById('fs-subcatg').value,valor:vl,formaPagamento:pg,entraEstoque:seOn?'Sim':'Nao',produto:seOn?document.getElementById('fs-se-p').value:'',qtdEstoque:seOn?parseInt(document.getElementById('fs-se-q').value)||0:0,operador:'Dashboard'};}
+  var ct=document.getElementById('fs-cat').value,subc=document.getElementById('fs-subcat-sel').value||'',pg=document.getElementById('fs-pag').value,st=document.getElementById('fs-st').value,seOn=document.getElementById('tog-se').classList.contains('on'),pl;
+  if(saiTipo==='gasto'){pl={tipo:'gasto',loja:lj,data:isoToDateBR(dt),descricao:ds,grupo:'',categoria:ct,subcategoria:subc,valor:vl,formaPagamento:pg,entraEstoque:seOn?'Sim':'Nao',produto:seOn?document.getElementById('fs-se-p').value:'',qtdEstoque:seOn?parseInt(document.getElementById('fs-se-q').value)||0:0,operador:'Dashboard'};}
   else if(saiTipo==='compra'){pl={tipo:'compra',loja:lj,data:isoToDateBR(dt),fornecedor:document.getElementById('fs-forn').value,produto:document.getElementById('fs-prod').value||ds,qtd:parseInt(document.getElementById('fs-qtd').value)||1,valorUnit:vl,valorTotal:vl,formaPagamento:pg,nf:document.getElementById('fs-nf').value,observacao:document.getElementById('fs-obs').value,operador:'Dashboard'};}
-  else{pl={tipo:'pagamento',loja:lj,vencimento:isoToDateBR(document.getElementById('fs-venc').value||dt),descricao:ds,categoria:ct,subcategoria:document.getElementById('fs-subcat').value,valor:vl,status:st,observacao:document.getElementById('fs-obs').value};}
+  else{pl={tipo:'pagamento',loja:lj,vencimento:isoToDateBR(document.getElementById('fs-venc').value||dt),descricao:ds,categoria:ct,subcategoria:subc,valor:vl,status:st,observacao:document.getElementById('fs-obs').value};}
   setML('btn-fsai','sp-sai',true);var ok=await apiPost(pl);setML('btn-fsai','sp-sai',false);
   if(ok){showToast('Saída registrada!');fM('saida');}else sFMsg('fm-sai','Erro ao salvar','err');
 }

@@ -557,6 +557,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
   <div class="estoque-search">
     <input type="text" id="est-busca" placeholder="Buscar produto…" oninput="filtrarEstoque(this.value)">
   </div>
+  <button class="btn btn-primary" style="margin-bottom:10px;padding:11px;" onclick="abrirModalCompra()">🛒 Registrar compra</button>
   <button class="btn btn-outline" style="margin-bottom:14px;padding:11px;" onclick="abrirModalProduto()">+ Cadastrar produto</button>
   <div id="lista-estoque"><div class="loading-state">Carregando estoque…</div></div>
 </div>
@@ -744,6 +745,52 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
       <div class="spinner" id="spinner-prod"></div>
     </button>
     <button class="btn btn-outline" onclick="document.getElementById('modal-produto').classList.remove('open')">Cancelar</button>
+  </div>
+</div>
+
+<!-- Modal registrar compra (Ceagesp) -->
+<div class="modal-overlay" id="modal-compra" onclick="closeModal(event,'modal-compra')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🛒 Registrar compra</div>
+    <div class="form-group">
+      <label class="form-label">Produto</label>
+      <input class="form-input" id="cp-produto" list="cp-produto-list" type="text" placeholder="Buscar da lista ou digitar novo" oninput="calcCompra()">
+      <datalist id="cp-produto-list"></datalist>
+    </div>
+    <div class="form-row" style="margin-bottom:12px;">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Formato</label>
+        <select class="form-input" id="cp-formato"><option>Caixa</option><option>Maço</option><option>Unidade</option><option>Cuia</option></select>
+      </div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Fornecedor</label><input class="form-input" id="cp-fornecedor" type="text" value="Ceagesp"></div>
+    </div>
+    <div class="form-row" style="margin-bottom:12px;">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Quantidade comprada</label><input class="form-input" id="cp-quantidade" type="number" inputmode="numeric" placeholder="Ex: 2" oninput="calcCompra()"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Valor pago (por unidade)</label><input class="form-input" id="cp-valorpago" type="number" inputmode="decimal" placeholder="0,00" oninput="calcCompra()"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Fracionado (quantas unidades de venda saem de 1 comprada)</label>
+      <input class="form-input" id="cp-fracionado" type="number" inputmode="numeric" placeholder="Ex: 8" oninput="calcCompra()">
+    </div>
+    <div class="form-row" style="margin-bottom:12px;background:var(--bg-soft,#f6f6f2);border-radius:var(--radius-sm);padding:10px;">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Custo unitário</label><div id="cp-custo-out" style="font-size:17px;font-weight:600;">R$ 0,00</div></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Venda sugerida (editável)</label><input class="form-input" id="cp-venda" type="number" inputmode="decimal" placeholder="0,00"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Forma de pagamento</label>
+      <select class="form-input" id="cp-pagamento">
+        <option value="Dinheiro">Dinheiro</option>
+        <option value="Debito">Débito</option>
+        <option value="CartaoC6">Cartão C6 (fecha 03, vence 10)</option>
+        <option value="CartaoItau">Cartão Itaú (fecha 02, vence 09)</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">Observação (opcional)</label><input class="form-input" id="cp-obs" type="text" placeholder="Opcional"></div>
+    <button class="btn btn-primary" onclick="salvarCompra()">
+      <span id="btn-cp-text">Registrar compra</span>
+      <div class="spinner" id="spinner-cp"></div>
+    </button>
+    <button class="btn btn-outline" onclick="document.getElementById('modal-compra').classList.remove('open')">Cancelar</button>
   </div>
 </div>
 
@@ -1691,6 +1738,51 @@ async function salvarProduto() {
   var ok = await enviarParaSheets(payload);
   setLoading('btn-prod-text','btn-prod-text','spinner-prod',false,'Cadastrar');
   if(ok){showToast('Produto salvo!');document.getElementById('modal-produto').classList.remove('open');carregarEstoque();}
+  else showToast('Erro ao salvar',true);
+}
+
+// ── MODAL COMPRA (Ceagesp) ───────────────────────────────────
+function abrirModalCompra(nomeSugerido) {
+  ['cp-produto','cp-fracionado','cp-quantidade','cp-valorpago','cp-venda','cp-obs'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('cp-fornecedor').value='Ceagesp';
+  document.getElementById('cp-produto-list').innerHTML = (estoque||[]).map(function(p){return '<option value="'+escapeHtml(p.Nome||'')+'">';}).join('');
+  document.getElementById('cp-custo-out').textContent='R$ 0,00';
+  if(nomeSugerido) document.getElementById('cp-produto').value = nomeSugerido;
+  document.getElementById('modal-compra').classList.add('open');
+}
+function calcCompra() {
+  var qtd = parseFloat(document.getElementById('cp-quantidade').value)||0;
+  var vp = parseFloat(document.getElementById('cp-valorpago').value)||0;
+  var frac = parseFloat(document.getElementById('cp-fracionado').value)||0;
+  var custo = frac>0 ? vp/frac : 0;
+  document.getElementById('cp-custo-out').textContent = 'R$ '+fmt(custo);
+  document.getElementById('cp-venda').value = (custo*2.5).toFixed(2);
+}
+async function salvarCompra() {
+  var produto = document.getElementById('cp-produto').value.trim();
+  var qtd = parseFloat(document.getElementById('cp-quantidade').value)||0;
+  var vp = parseFloat(document.getElementById('cp-valorpago').value)||0;
+  var frac = parseFloat(document.getElementById('cp-fracionado').value)||0;
+  if(!produto){showToast('Informe o produto',false,'warn');return;}
+  if(!qtd||!vp||!frac){showToast('Preencha quantidade, valor pago e fracionado',false,'warn');return;}
+  setLoading('btn-cp-text','btn-cp-text','spinner-cp',true,'Salvando…');
+  var payload = {
+    tipo:'registrar_compra_estoque', loja:pdvLoja,
+    produto: produto,
+    formato: document.getElementById('cp-formato').value,
+    fornecedor: document.getElementById('cp-fornecedor').value.trim()||'Ceagesp',
+    quantidade: qtd,
+    valorPago: vp,
+    fracionado: frac,
+    valorVenda: parseFloat(document.getElementById('cp-venda').value)||0,
+    formaPagamento: document.getElementById('cp-pagamento').value,
+    observacao: document.getElementById('cp-obs').value.trim(),
+    data: new Date().toLocaleDateString('pt-BR'),
+    operador: operador||'PDV'
+  };
+  var ok = await enviarParaSheets(payload);
+  setLoading('btn-cp-text','btn-cp-text','spinner-cp',false,'Registrar compra');
+  if(ok){showToast('Compra registrada, estoque atualizado!');document.getElementById('modal-compra').classList.remove('open');carregarEstoque();}
   else showToast('Erro ao salvar',true);
 }
 
