@@ -269,6 +269,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <button class="si" onclick="goSec('financeiro',this)" title="Financeiro"><span class="ico">💹</span><span class="si-lbl">Financeiro</span></button>
     <button class="si" onclick="goSec('entradas',this)" title="Entradas"><span class="ico">📈</span><span class="si-lbl">Entradas</span></button>
     <button class="si" onclick="goSec('saidas',this)" title="Saídas"><span class="ico">📉</span><span class="si-lbl">Saídas</span></button>
+    <button class="si" onclick="goSec('conciliacao',this)" title="Conciliação"><span class="ico">🏦</span><span class="si-lbl">Conciliação</span></button>
     <div class="sb-sec">Operação</div>
     <button class="si" onclick="goSec('clientes',this)" title="Clientes"><span class="ico">👥</span><span class="si-lbl">Clientes</span></button>
     <button class="si" onclick="goSec('encomendas',this)" title="Encomendas"><span class="ico">📋</span><span class="si-lbl">Encomendas</span></button>
@@ -446,6 +447,24 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
           </div>
         </div>
         <div class="tw"><table class="dt dt-compact"><thead><tr><th>Vencimento</th><th>Descrição</th><th>Loja</th><th>Tipo</th><th>Categoria</th><th>Sub categoria</th><th>Valor</th><th>Status</th><th></th></tr></thead><tbody id="tb-sai"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- CONCILIAÇÃO -->
+    <div id="sec-conciliacao" class="section">
+      <div class="kgrid">
+        <div class="kpi gn"><div class="ki">✅</div><div class="kl">Meses fechados</div><div class="kv" id="cn-fechados">—</div><div class="ks" id="cn-fechados-s"></div></div>
+        <div class="kpi go"><div class="ki">🔎</div><div class="kl">Itens pra revisar</div><div class="kv go" id="cn-revisar">—</div><div class="ks">precisam da sua decisão</div></div>
+        <div class="kpi dk"><div class="ki">🧾</div><div class="kl">Resíduo não explicado</div><div class="kv" id="cn-residuo">—</div><div class="ks">soma de todos os meses</div></div>
+        <div class="kpi ro"><div class="ki">💳</div><div class="kl">Taxa média maquininha</div><div class="kv ro" id="cn-taxa">—</div><div class="ks">PagBank, estimado</div></div>
+      </div>
+      <div class="cc" style="margin-bottom:20px;">
+        <div class="ch"><div><div class="ct">Status por mês</div><div class="csb">Cartão (C6/Itaú/Maga) + Caixa + Itaú + PagBank cruzados contra Vendas/Gastos/Compras/Pagamentos</div></div></div>
+        <div id="cn-meses-lst"><div class="empty">Carregue os dados</div></div>
+      </div>
+      <div class="cc">
+        <div class="ch"><div><div class="ct">Itens pendentes de revisão</div><div class="csb">Marque como confirmado depois de decidir o que fazer com cada um</div></div></div>
+        <div class="tw"><table class="dt dt-compact"><thead><tr><th>Mês</th><th>Conta</th><th>Descrição</th><th>Valor</th><th>Status</th><th>Observação</th><th></th></tr></thead><tbody id="tb-conc"><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--light);">Carregue os dados</td></tr></tbody></table></div>
       </div>
     </div>
 
@@ -723,7 +742,7 @@ if(parseInt(localStorage.getItem('mayse_dash_urlver')||'0',10)<URL_VERSAO){
   localStorage.setItem('mayse_dash_urlver',String(URL_VERSAO));
 }
 var cfg={url:localStorage.getItem('mayse_dash_url')||URL_ATUAL,token:localStorage.getItem('mayse_dash_token')||SENHA};
-var D={vendas:[],encomendas:[],estoque:[],compras:[],gastos:[],pagamentos:[],clientes:[],pdvs:[],projetos:[],tarefas:[],caminhadas:[],orcamentos:[],orcamentoItens:[],funcionarios:[],ponto:[],caixa:[],metas:[],listaCompras:[],categorias:[]};
+var D={vendas:[],encomendas:[],estoque:[],compras:[],gastos:[],pagamentos:[],clientes:[],pdvs:[],projetos:[],tarefas:[],caminhadas:[],orcamentos:[],orcamentoItens:[],funcionarios:[],ponto:[],caixa:[],metas:[],listaCompras:[],categorias:[],conciliacao:[]};
 var projTipoFil='todos';
 var lojasAtivas=new Set(['juquia','cambuci']);
 var secAtiva='visao',saiTipo='gasto',encTipoM='Futura',estFil='todos',saiFil='todos',saiStFil='todos';
@@ -818,7 +837,7 @@ function togSB(){document.getElementById('sb').classList.toggle('col');document.
 function openMSB(){document.getElementById('sb').classList.add('mob');document.getElementById('sb-ov').classList.add('show');}
 function closeMSB(){document.getElementById('sb').classList.remove('mob');document.getElementById('sb-ov').classList.remove('show');}
 
-var SEC_TITLES={visao:'Visão geral',financeiro:'Financeiro',entradas:'Entradas',saidas:'Saídas',clientes:'Clientes',encomendas:'Encomendas',estoque:'Estoque',compras:'Compras',projetos:'Projetos',orcamentos:'Orçamentos',equipe:'Equipe',config:'Configurações'};
+var SEC_TITLES={visao:'Visão geral',financeiro:'Financeiro',entradas:'Entradas',saidas:'Saídas',conciliacao:'Conciliação',clientes:'Clientes',encomendas:'Encomendas',estoque:'Estoque',compras:'Compras',projetos:'Projetos',orcamentos:'Orçamentos',equipe:'Equipe',config:'Configurações'};
 function goSec(id,btn){
   document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
   document.querySelectorAll('.si').forEach(function(b){b.classList.remove('active');});
@@ -833,6 +852,7 @@ function goSec(id,btn){
     if(id==='clientes')renCli();
     if(id==='entradas')renEntradas();
     if(id==='saidas')renSai();
+    if(id==='conciliacao')renConciliacao();
     if(id==='financeiro')renderFinanceiro();
     if(id==='compras')renCompras();
     if(id==='projetos')renProjetos();
@@ -966,7 +986,7 @@ async function loadData(){
   document.getElementById('btn-lbl').textContent='Carregando…';document.getElementById('btn-sp').style.display='block';
   document.getElementById('lov').classList.add('show');
   try{
-    var rs=await Promise.all([apiGet('Vendas'),apiGet('Encomendas'),apiGet('Estoque'),apiGet('Compras'),apiGet('Gastos'),apiGet('Pagamentos'),apiGet('Clientes'),apiGet('PDVs'),apiGet('Projetos'),apiGet('ProjetoTarefas'),apiGet('Caminhadas'),apiGet('Orcamentos'),apiGet('OrcamentoItens'),apiGet('Funcionarios'),apiGet('Ponto'),apiGet('Caixa'),apiGet('Metas'),apiGet('ListaCompras'),apiGet('Categorias')]);
+    var rs=await Promise.all([apiGet('Vendas'),apiGet('Encomendas'),apiGet('Estoque'),apiGet('Compras'),apiGet('Gastos'),apiGet('Pagamentos'),apiGet('Clientes'),apiGet('PDVs'),apiGet('Projetos'),apiGet('ProjetoTarefas'),apiGet('Caminhadas'),apiGet('Orcamentos'),apiGet('OrcamentoItens'),apiGet('Funcionarios'),apiGet('Ponto'),apiGet('Caixa'),apiGet('Metas'),apiGet('ListaCompras'),apiGet('Categorias'),apiGet('Conciliacao')]);
     D.vendas=rs[0].data||[];D.encomendas=rs[1].data||[];D.estoque=rs[2].data||[];
     D.compras=rs[3].data||[];D.gastos=rs[4].data||[];D.pagamentos=rs[5].data||[];
     D.clientes=rs[6].data||[];D.pdvs=rs[7].data||[];
@@ -974,6 +994,7 @@ async function loadData(){
     D.orcamentos=rs[11].data||[];D.orcamentoItens=rs[12].data||[];
     D.funcionarios=rs[13].data||[];D.ponto=rs[14].data||[];D.caixa=rs[15].data||[];
     D.metas=rs[16].data||[];D.listaCompras=rs[17].data||[];D.categorias=rs[18].data||[];
+    D.conciliacao=rs[19].data||[];
     var ops={};D.vendas.forEach(function(v){if(v.Operador)ops[v.Operador]=1;});
     var sel=document.getElementById('filt-op');
     if(sel)sel.innerHTML='<option value="">Todos</option>'+Object.keys(ops).map(function(o){return'<option>'+esc(o)+'</option>';}).join('');
@@ -982,7 +1003,7 @@ async function loadData(){
   document.getElementById('btn-lbl').textContent='Carregar';document.getElementById('btn-sp').style.display='none';
   document.getElementById('lov').classList.remove('show');
 }
-function renAll(){renVisao();if(secAtiva==='entradas')renEntradas();if(secAtiva==='saidas')renSai();if(secAtiva==='clientes')renCli();if(secAtiva==='encomendas')renEnc();if(secAtiva==='estoque')renEst();if(secAtiva==='financeiro')renderFinanceiro();if(secAtiva==='compras')renCompras();if(secAtiva==='projetos')renProjetos();if(secAtiva==='orcamentos')renOrc();if(secAtiva==='equipe')renEquipe();}
+function renAll(){renVisao();if(secAtiva==='entradas')renEntradas();if(secAtiva==='saidas')renSai();if(secAtiva==='conciliacao')renConciliacao();if(secAtiva==='clientes')renCli();if(secAtiva==='encomendas')renEnc();if(secAtiva==='estoque')renEst();if(secAtiva==='financeiro')renderFinanceiro();if(secAtiva==='compras')renCompras();if(secAtiva==='projetos')renProjetos();if(secAtiva==='orcamentos')renOrc();if(secAtiva==='equipe')renEquipe();}
 
 /* ── VISÃO GERAL ── */
 function renVisao(){
@@ -1171,7 +1192,9 @@ function renderDREMensal(){
   vendas.forEach(function(v){var d=parsePtD(v.Data);if(d)mesesSet[chaveMes(d)]=true;});
   pagtos.forEach(function(p){var d=parsePtD(p.Vencimento);if(d)mesesSet[chaveMes(d)]=true;});
   metas.forEach(function(m){if(m.AnoMes)mesesSet[m.AnoMes]=true;});
-  var meses=Object.keys(mesesSet).sort();
+  // Mostra só o semestre atual (Jan-Jun ou Jul-Dez, conforme o mês de hoje) — meses anteriores ficam de fora do DRE.
+  var hoje=new Date(),semestreIni=hoje.getMonth()<6?hoje.getFullYear()+'-01':hoje.getFullYear()+'-07';
+  var meses=Object.keys(mesesSet).filter(function(k){return k>=semestreIni;}).sort();
   if(!meses.length){
     if(thead)thead.innerHTML='<th>Categoria</th>';
     tbody.innerHTML='<tr><td><div class="empty">Sem dados</div></td></tr>';
@@ -1360,6 +1383,55 @@ function filSaiRen(){
 function filSai(f,b){saiFil=f;document.querySelectorAll('#sai-tipo-btns .fbtn').forEach(function(x){x.classList.remove('active');});b.classList.add('active');filSaiRen();}
 function filSaiSt(f,b){saiStFil=f;document.querySelectorAll('#sai-st-btns .fbtn').forEach(function(x){x.classList.remove('active');});b.classList.add('active');filSaiRen();}
 function marcarPago(i){if(!_saiL[i])return;_saiL[i].st='Pago';_saiL[i].raw.Status='Pago';filSaiRen();apiPost({tipo:'pagamento_update',linha:(_saiL[i]._pi||0)+2,status:'Pago'});showToast('Marcado como pago');}
+
+/* ── CONCILIAÇÃO MENSAL ── */
+function mesLbl(m){
+  var NM=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  m=m||'';
+  var pd=m.split('/'); // Sheets costuma converter "AAAA-MM" em data e devolver "DD/MM/AAAA"
+  if(pd.length===3){var mi2=parseInt(pd[1],10)-1;return(NM[mi2]||m)+'/'+pd[2].slice(2);}
+  var p=m.split('-');if(p.length!==2)return m||'—';
+  var mi=parseInt(p[1],10)-1;return(NM[mi]||m)+'/'+p[0].slice(2);
+}
+function renConciliacao(){
+  var rows=D.conciliacao||[];
+  var resumo=rows.filter(function(r){return r.Conta==='Resumo';});
+  var itens=rows.filter(function(r){return r.Conta!=='Resumo';});
+  var meses={};
+  resumo.forEach(function(r){
+    meses[r.Mes]=meses[r.Mes]||{};
+    if(r.Descricao==='Status geral')meses[r.Mes].status=r.Status;
+    if(r.Descricao==='Resíduo Caixa')meses[r.Mes].residuo=parseFloat(r.Valor)||0;
+    if(r.Descricao==='Taxa PagBank')meses[r.Mes].taxa=parseFloat(r.Valor)||0;
+  });
+  var mk=Object.keys(meses).sort();
+  var fechados=mk.filter(function(m){return meses[m].status==='Fechado';});
+  sEl('cn-fechados',fechados.length);
+  sEl('cn-fechados-s',fechados.map(mesLbl).join(', ')||'nenhum ainda');
+  var pend=itens.filter(function(i){return(i.Status||'')!=='Confirmado';});
+  sEl('cn-revisar',pend.length);
+  var residuoTotal=mk.reduce(function(s,m){return s+(meses[m].residuo||0);},0);
+  sEl('cn-residuo',fmt(residuoTotal));
+  var taxas=mk.map(function(m){return meses[m].taxa;}).filter(function(t){return t>0;});
+  var taxaMedia=taxas.length?taxas.reduce(function(a,b){return a+b;},0)/taxas.length:0;
+  sEl('cn-taxa',(taxaMedia*100).toFixed(1)+'%');
+  document.getElementById('cn-meses-lst').innerHTML=mk.length?mk.map(function(m){
+    var mo=meses[m],ok=mo.status==='Fechado';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd);"><b style="min-width:60px;">'+mesLbl(m)+'</b><span class="bdg '+(ok?'b-ok':'b-pnd')+'">'+(mo.status||'Pendente')+'</span><span style="color:var(--light);font-size:12px;">Resíduo Caixa: '+fmt(mo.residuo||0)+' · Taxa PagBank: '+((mo.taxa||0)*100).toFixed(1)+'%</span></div>';
+  }).join(''):'<div class="empty">Nenhum mês registrado ainda</div>';
+  var tb=document.getElementById('tb-conc');
+  if(!pend.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--light);">Nada pendente 🎉</td></tr>';return;}
+  tb.innerHTML=pend.map(function(it){
+    var idxReal=rows.indexOf(it);
+    return '<tr><td>'+mesLbl(it.Mes)+'</td><td>'+esc(it.Conta)+'</td><td>'+esc(it.Descricao)+'</td><td style="font-weight:600;">'+fmt(parseFloat(it.Valor)||0)+'</td><td><span class="bdg b-pnd">'+esc(it.Status)+'</span></td><td style="color:var(--light);max-width:260px;">'+esc(it.Observacao||'')+'</td><td><button style="font-size:10px;padding:2px 8px;border-radius:8px;border:1px solid var(--vj);color:var(--vf);background:var(--vj-pale);cursor:pointer;font-family:Sora,sans-serif;" onclick="marcarConciliado('+idxReal+')">Confirmar</button></td></tr>';
+  }).join('');
+}
+async function marcarConciliado(idx){
+  var it=D.conciliacao[idx];if(!it)return;
+  it.Status='Confirmado';renConciliacao();
+  await apiPost({tipo:'conciliacao_update',linha:idx+2,status:'Confirmado'});
+  showToast('Marcado como confirmado');
+}
 
 /* ── COMPRAS ── */
 var cpIdealPreco=null;
