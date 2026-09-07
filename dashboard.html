@@ -1717,11 +1717,11 @@ function renderBoletos(prefix){
   }).join('');
   var total=arr.reduce(function(s,b){return s+(parseFloat(b.valor)||0);},0);
   var totEl=document.getElementById(prefix+'-boletos-total');
-  if(totEl)totEl.textContent='Total parcelado: R$ '+fmt(total);
+  if(totEl)totEl.textContent='Total parcelado: '+fmt(total);
 }
 function addBoleto(prefix,valorSugerido){boletoState(prefix).push({valor:valorSugerido||0,vencimento:''});renderBoletos(prefix);}
 function removerBoleto(prefix,i){boletoState(prefix).splice(i,1);renderBoletos(prefix);}
-function setBoletoValor(prefix,i,v){boletoState(prefix)[i].valor=parseFloat(v)||0;var arr=boletoState(prefix);var total=arr.reduce(function(s,b){return s+(parseFloat(b.valor)||0);},0);var totEl=document.getElementById(prefix+'-boletos-total');if(totEl)totEl.textContent='Total parcelado: R$ '+fmt(total);}
+function setBoletoValor(prefix,i,v){boletoState(prefix)[i].valor=parseFloat(v)||0;var arr=boletoState(prefix);var total=arr.reduce(function(s,b){return s+(parseFloat(b.valor)||0);},0);var totEl=document.getElementById(prefix+'-boletos-total');if(totEl)totEl.textContent='Total parcelado: '+fmt(total);}
 function setBoletoVenc(prefix,i,v){boletoState(prefix)[i].vencimento=v;}
 function onCpProdChange(){
   var nome=document.getElementById('cp-prod').value.trim(),loja=document.getElementById('cp-lj').value;
