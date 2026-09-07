@@ -455,8 +455,14 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
       <div class="kgrid">
         <div class="kpi gn"><div class="ki">✅</div><div class="kl">Meses fechados</div><div class="kv" id="cn-fechados">—</div><div class="ks" id="cn-fechados-s"></div></div>
         <div class="kpi go"><div class="ki">🔎</div><div class="kl">Itens pra revisar</div><div class="kv go" id="cn-revisar">—</div><div class="ks">precisam da sua decisão</div></div>
-        <div class="kpi dk"><div class="ki">🧾</div><div class="kl">Resíduo não explicado</div><div class="kv" id="cn-residuo">—</div><div class="ks">soma de todos os meses</div></div>
-        <div class="kpi ro"><div class="ki">💳</div><div class="kl">Taxa média maquininha</div><div class="kv ro" id="cn-taxa">—</div><div class="ks">PagBank, estimado</div></div>
+        <div class="kpi dk"><div class="ki">🧾</div><div class="kl" id="cn-residuo-lbl">Diferença de caixa</div><div class="kv" id="cn-residuo">—</div><div class="ks" id="cn-residuo-s">soma de todos os meses</div></div>
+        <div class="kpi ro"><div class="ki">💳</div><div class="kl">Taxa média maquininha</div><div class="kv ro" id="cn-taxa">—</div><div class="ks" id="cn-taxa-s">PagBank</div></div>
+      </div>
+      <div class="cc" style="margin-bottom:20px;background:var(--vj-pale,#eef3e4);border:1px solid var(--vj,#83ab33);">
+        <div style="font-size:12px;line-height:1.6;color:var(--dark,#333);">
+          <b>O que é a "Diferença de caixa"?</b> É o dinheiro que sobrou ou faltou no Caixa depois de tirar tudo que já foi identificado (vendas, PIX, repasses do PagBank). Quando é <b>sobra</b>, entrou mais dinheiro do que os lançamentos explicam; quando é <b>falta</b>, entrou menos. Ainda não foi possível achar a causa exata — precisa descer dia a dia pra investigar (pode ser venda de outra loja, forma de pagamento trocada, ou algo que não foi lançado). Por enquanto é só acompanhado, não corrigido.<br><br>
+          <b>Taxa média maquininha:</b> hoje mostra 0% porque ainda não foi calculada transação a transação — precisa cruzar o valor bruto de cada venda no cartão com o valor líquido que o PagBank realmente repassou (o extrato do PagBank mostra isso). Assim que esse extrato detalhado for enviado, dá pra calcular a taxa real de cada mês.
+        </div>
       </div>
       <div class="cc" style="margin-bottom:20px;">
         <div class="ch"><div><div class="ct">Status por mês</div><div class="csb">Cartão (C6/Itaú/Maga) + Caixa + Itaú + PagBank cruzados contra Vendas/Gastos/Compras/Pagamentos</div></div></div>
@@ -464,7 +470,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
       </div>
       <div class="cc">
         <div class="ch"><div><div class="ct">Itens pendentes de revisão</div><div class="csb">Marque como confirmado depois de decidir o que fazer com cada um</div></div></div>
-        <div class="tw"><table class="dt dt-compact"><thead><tr><th>Mês</th><th>Conta</th><th>Descrição</th><th>Valor</th><th>Status</th><th>Observação</th><th></th></tr></thead><tbody id="tb-conc"><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--light);">Carregue os dados</td></tr></tbody></table></div>
+        <div class="tw"><table class="dt dt-compact"><thead><tr><th>Mês</th><th>Loja</th><th>Categoria</th><th>Descrição</th><th>Valor</th><th>Status</th><th>Observação</th><th></th></tr></thead><tbody id="tb-conc"><tr><td colspan="8" style="text-align:center;padding:24px;color:var(--light);">Carregue os dados</td></tr></tbody></table></div>
       </div>
     </div>
 
@@ -637,9 +643,13 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 <div class="fg"><label class="fl">Descrição *</label><input class="fi" id="fs-desc" type="text" placeholder="Ex: Almoço, fornecedor, aluguel…"></div>
 <div class="fg2"><div class="fg"><label class="fl">Valor (R$) *</label><input class="fi" id="fs-val" type="number" min="0" step="0.01" placeholder="0,00"></div><div class="fg" id="fs-cat-wrap"><label class="fl">Categoria</label><select class="fsl" id="fs-cat" onchange="popularSubcatUnificada()"></select></div></div>
 <div class="fg" id="fs-subcat-wrap" style="display:none;"><label class="fl">Subcategoria</label><select class="fsl" id="fs-subcat-sel"></select></div>
-<div class="fg2"><div class="fg"><label class="fl">Pagamento</label><select class="fsl" id="fs-pag"><option>Dinheiro</option><option>Pix</option><option>Crédito</option><option>Débito</option><option>Boleto</option><option>Transferência</option></select></div><div class="fg" id="fs-st-w"><label class="fl">Status</label><select class="fsl" id="fs-st"><option value="Pago">Pago</option><option value="Pendente">Pendente</option></select></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Pagamento</label><select class="fsl" id="fs-pag" onchange="onFsPagChange()"><option>Dinheiro</option><option>Pix</option><option>Crédito</option><option>Débito</option><option>Boleto</option><option>Transferência</option></select></div><div class="fg" id="fs-st-w"><label class="fl">Status</label><select class="fsl" id="fs-st"><option value="Pago">Pago</option><option value="Pendente">Pendente</option></select></div></div>
 <div id="fs-pag-ex" style="display:none;"><div class="fg"><label class="fl">Vencimento *</label><input class="fi" id="fs-venc" type="date"></div></div>
-<div id="fs-cmp-x" style="display:none;"><div class="fg2"><div class="fg"><label class="fl">Fornecedor</label><input class="fi" id="fs-forn" type="text" placeholder="Fornecedor"></div><div class="fg"><label class="fl">Produto</label><input class="fi" id="fs-prod" type="text" placeholder="Nome do produto"></div></div><div class="fg2"><div class="fg"><label class="fl">Qtd</label><input class="fi" id="fs-qtd" type="number" min="1" placeholder="0"></div><div class="fg"><label class="fl">NF / Ref.</label><input class="fi" id="fs-nf" type="text" placeholder="NF-001"></div></div></div>
+<div id="fs-cmp-x" style="display:none;"><div class="fg2"><div class="fg"><label class="fl">Fornecedor</label><input class="fi" id="fs-forn" type="text" placeholder="Fornecedor"></div><div class="fg"><label class="fl">Produto</label><input class="fi" id="fs-prod" type="text" placeholder="Nome do produto"></div></div><div class="fg2"><div class="fg"><label class="fl">Qtd</label><input class="fi" id="fs-qtd" type="number" min="1" placeholder="0"></div><div class="fg"><label class="fl">NF / Ref.</label><input class="fi" id="fs-nf" type="text" placeholder="NF-001"></div></div>
+<div id="fs-cp-venc-wrap" style="display:none;"><div class="fg"><label class="fl">Vencimento *</label><input class="fi" id="fs-cp-venc" type="date"></div></div>
+<div id="fs-cp-boleto-toggle-wrap" style="display:none;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--cream);border-radius:8px;"><div><div style="font-size:13px;">Parcelar em vários boletos?</div><div style="font-size:11px;color:var(--light);">Cada parcela pode ter valor e vencimento diferente</div></div><button class="tog" id="tog-fs-boleto" onclick="onToggleFsBoleto()" aria-label="toggle boleto parcelado saida"></button></div></div>
+<div id="fs-boletos-box" style="display:none;margin-bottom:12px;"><div id="fs-boletos-lista"></div><button type="button" class="btn-cn" style="font-size:12px;padding:6px 12px;" onclick="addBoleto('fs')">+ Adicionar parcela</button><div id="fs-boletos-total" style="font-size:12px;margin-top:6px;color:var(--light);"></div></div>
+</div>
 <div id="fs-gst-x"><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--cream);border-radius:8px;margin-bottom:10px;"><div><div style="font-size:13px;">Entra no estoque?</div><div style="font-size:11px;color:var(--light);">Para compras de insumos</div></div><button class="tog" id="tog-se" onclick="togSE()" aria-label="toggle estoque saída"></button></div><div id="fs-se-x" style="display:none;" class="fg2"><div class="fg"><label class="fl">Produto</label><input class="fi" id="fs-se-p" type="text" placeholder="Nome"></div><div class="fg"><label class="fl">Quantidade</label><input class="fi" id="fs-se-q" type="number" min="1" placeholder="0"></div></div></div>
 <div class="fg"><label class="fl">Observação</label><input class="fi" id="fs-obs" type="text" placeholder="Opcional"></div>
 <div class="fmsg" id="fm-sai"></div><div class="mft"><button class="btn-cn" onclick="fM('saida')">Cancelar</button><button class="btn-sb" id="btn-fsai" onclick="subSai()"><div class="msp" id="sp-sai"></div>Registrar</button></div></div></div>
@@ -658,7 +668,10 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 <div class="fg2"><div class="fg"><label class="fl">Produto *</label><input class="fi" id="cp-prod" type="text" placeholder="Nome do produto" list="cp-prod-list" oninput="onCpProdChange()"><datalist id="cp-prod-list"></datalist></div><div class="fg"><label class="fl">Fornecedor</label><input class="fi" id="cp-forn" type="text" placeholder="Ex: Ceagesp"></div></div>
 <div class="fg2"><div class="fg"><label class="fl">Quantidade *</label><input class="fi" id="cp-qtd" type="number" min="1" placeholder="0" oninput="calcCpMargem()"></div><div class="fg"><label class="fl">Valor unitário (R$) *</label><input class="fi" id="cp-vu" type="number" min="0" step="0.01" placeholder="0,00" oninput="calcCpMargem()"></div></div>
 <div class="fg2"><div class="fg"><label class="fl">Valor total</label><input class="fi" id="cp-vt" type="text" disabled style="background:var(--cream);"></div><div class="fg"><label class="fl">NF / Ref.</label><input class="fi" id="cp-nf" type="text" placeholder="Opcional"></div></div>
-<div class="fg2"><div class="fg"><label class="fl">Forma de pagamento</label><select class="fsl" id="cp-pag"><option>Dinheiro</option><option>Pix</option><option>Crédito</option><option>Débito</option><option>Boleto</option><option>Transferência</option></select></div><div class="fg"><label class="fl">Observação</label><input class="fi" id="cp-obs" type="text" placeholder="Opcional"></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Forma de pagamento</label><select class="fsl" id="cp-pag" onchange="onCpPagChange()"><option>Dinheiro</option><option>Pix</option><option>Crédito</option><option>Débito</option><option>Boleto</option><option>Transferência</option></select></div><div class="fg"><label class="fl">Observação</label><input class="fi" id="cp-obs" type="text" placeholder="Opcional"></div></div>
+<div id="cp-venc-wrap" style="display:none;"><div class="fg"><label class="fl">Vencimento *</label><input class="fi" id="cp-venc" type="date"></div></div>
+<div id="cp-boleto-toggle-wrap" style="display:none;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--cream);border-radius:8px;"><div><div style="font-size:13px;">Parcelar em vários boletos?</div><div style="font-size:11px;color:var(--light);">Cada parcela pode ter valor e vencimento diferente</div></div><button class="tog" id="tog-cp-boleto" onclick="onToggleCpBoleto()" aria-label="toggle boleto parcelado"></button></div></div>
+<div id="cp-boletos-box" style="display:none;margin-bottom:12px;"><div id="cp-boletos-lista"></div><button type="button" class="btn-cn" style="font-size:12px;padding:6px 12px;" onclick="addBoleto('cp')">+ Adicionar parcela</button><div id="cp-boletos-total" style="font-size:12px;margin-top:6px;color:var(--light);"></div></div>
 <div id="cp-marg-box" style="display:none;margin-bottom:12px;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.5;"></div>
 <div class="fmsg" id="fm-compra"></div><div class="mft"><button class="btn-cn" onclick="fM('compra')">Cancelar</button><button class="btn-sb" id="btn-fcp" onclick="subCompra()"><div class="msp" id="sp-cp"></div>Registrar compra</button></div></div></div>
 
@@ -845,6 +858,12 @@ function goSec(id,btn){
   if(btn)btn.classList.add('active');
   sEl('tb-ttl',SEC_TITLES[id]||id);
   secAtiva=id;
+  // Conciliação cruza os meses fechados inteiros, sempre — filtro de loja e
+  // período não se aplicam (não fazem nada nessa tela), então ficam ocultos
+  // pra não sugerir um filtro que não existe de verdade.
+  var lc=document.getElementById('loja-chips'), pb=document.querySelector('.period-bar');
+  if(lc)lc.style.display=(id==='conciliacao')?'none':'';
+  if(pb)pb.style.display=(id==='conciliacao')?'none':'';
   if(id==='config')initCfg();
   if(D.vendas.length){
     if(id==='estoque')renEst();
@@ -1449,25 +1468,52 @@ function renConciliacao(){
   var pend=itens.filter(function(i){return(i.Status||'')!=='Confirmado';});
   sEl('cn-revisar',pend.length);
   var residuoTotal=mk.reduce(function(s,m){return s+(meses[m].residuo||0);},0);
-  sEl('cn-residuo',fmt(residuoTotal));
+  var ehSobra=residuoTotal>=0;
+  sEl('cn-residuo-lbl',ehSobra?'Sobra de caixa não explicada':'Falta de caixa não explicada');
+  sEl('cn-residuo',fmt(Math.abs(residuoTotal)));
+  sEl('cn-residuo-s','soma de todos os meses · '+(ehSobra?'sobrou':'faltou')+' em relação ao lançado');
   var taxas=mk.map(function(m){return meses[m].taxa;}).filter(function(t){return t>0;});
   var taxaMedia=taxas.length?taxas.reduce(function(a,b){return a+b;},0)/taxas.length:0;
   sEl('cn-taxa',(taxaMedia*100).toFixed(1)+'%');
+  sEl('cn-taxa-s',taxaMedia>0?'PagBank, média dos meses calculados':'PagBank — ainda sem cálculo transação a transação');
   document.getElementById('cn-meses-lst').innerHTML=mk.length?mk.map(function(m){
     var mo=meses[m],ok=mo.status==='Fechado';
     return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd);"><b style="min-width:60px;">'+mesLbl(m)+'</b><span class="bdg '+(ok?'b-ok':'b-pnd')+'">'+(mo.status||'Pendente')+'</span><span style="color:var(--light);font-size:12px;">Resíduo Caixa: '+fmt(mo.residuo||0)+' · Taxa PagBank: '+((mo.taxa||0)*100).toFixed(1)+'%</span></div>';
   }).join(''):'<div class="empty">Nenhum mês registrado ainda</div>';
   var tb=document.getElementById('tb-conc');
-  if(!pend.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--light);">Nada pendente 🎉</td></tr>';return;}
+  if(!pend.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--light);">Nada pendente 🎉</td></tr>';return;}
+  var lojaOpts=TODAS_LOJAS.map(function(l){return {v:l,lbl:l.charAt(0).toUpperCase()+l.slice(1)};});
   tb.innerHTML=pend.map(function(it){
     var idxReal=rows.indexOf(it);
-    return '<tr><td>'+mesLbl(it.Mes)+'</td><td>'+esc(it.Conta)+'</td><td>'+esc(it.Descricao)+'</td><td style="font-weight:600;">'+fmt(parseFloat(it.Valor)||0)+'</td><td><span class="bdg b-pnd">'+esc(it.Status)+'</span></td><td style="color:var(--light);max-width:260px;">'+esc(it.Observacao||'')+'</td><td><button style="font-size:10px;padding:2px 8px;border-radius:8px;border:1px solid var(--vj);color:var(--vf);background:var(--vj-pale);cursor:pointer;font-family:Sora,sans-serif;" onclick="marcarConciliado('+idxReal+')">Confirmar</button></td></tr>';
+    var lojaSel='<select id="conc-loja-'+idxReal+'" style="font-size:11px;padding:3px 4px;border:1px solid var(--bd);border-radius:6px;font-family:Sora,sans-serif;">'+
+      '<option value="">—</option>'+lojaOpts.map(function(o){return '<option value="'+o.v+'"'+(it.Loja===o.v?' selected':'')+'>'+o.lbl+'</option>';}).join('')+'</select>';
+    var catInp='<input id="conc-cat-'+idxReal+'" type="text" value="'+esc(it.Categoria||'')+'" style="font-size:11px;padding:3px 5px;border:1px solid var(--bd);border-radius:6px;font-family:Sora,sans-serif;width:100px;">';
+    var valInp='<input id="conc-val-'+idxReal+'" type="number" step="0.01" value="'+(parseFloat(it.Valor)||0)+'" style="font-size:11px;padding:3px 5px;border:1px solid var(--bd);border-radius:6px;font-family:Sora,sans-serif;width:80px;font-weight:600;">';
+    return '<tr><td>'+mesLbl(it.Mes)+(it.Data?'<br><span style="font-size:10px;color:var(--light);">'+esc(it.Data)+'</span>':'')+'</td>'+
+      '<td>'+lojaSel+'</td><td>'+catInp+'</td><td>'+esc(it.Descricao)+'</td><td>'+valInp+'</td>'+
+      '<td><span class="bdg b-pnd">'+esc(it.Status)+'</span></td><td style="color:var(--light);max-width:220px;">'+esc(it.Observacao||'')+'</td>'+
+      '<td style="white-space:nowrap;"><button style="font-size:10px;padding:2px 8px;border-radius:8px;border:1px solid var(--bd);color:var(--dark);background:#fff;cursor:pointer;font-family:Sora,sans-serif;margin-right:4px;" onclick="salvarConciliacaoItem('+idxReal+')">Salvar</button>'+
+      '<button style="font-size:10px;padding:2px 8px;border-radius:8px;border:1px solid var(--vj);color:var(--vf);background:var(--vj-pale);cursor:pointer;font-family:Sora,sans-serif;" onclick="marcarConciliado('+idxReal+')">Confirmar</button></td></tr>';
   }).join('');
+}
+// Salva loja/categoria/valor editados sem mudar o status (ainda "Revisar").
+async function salvarConciliacaoItem(idx){
+  var it=D.conciliacao[idx];if(!it)return;
+  var loja=document.getElementById('conc-loja-'+idx).value;
+  var categoria=document.getElementById('conc-cat-'+idx).value.trim();
+  var valor=parseFloat(document.getElementById('conc-val-'+idx).value)||0;
+  it.Loja=loja;it.Categoria=categoria;it.Valor=valor;
+  await apiPost({tipo:'conciliacao_update',linha:idx+2,loja:loja,categoria:categoria,valor:valor});
+  showToast('Alterações salvas');
 }
 async function marcarConciliado(idx){
   var it=D.conciliacao[idx];if(!it)return;
-  it.Status='Confirmado';renConciliacao();
-  await apiPost({tipo:'conciliacao_update',linha:idx+2,status:'Confirmado'});
+  var loja=document.getElementById('conc-loja-'+idx).value;
+  var categoria=document.getElementById('conc-cat-'+idx).value.trim();
+  var valor=parseFloat(document.getElementById('conc-val-'+idx).value)||0;
+  it.Loja=loja;it.Categoria=categoria;it.Valor=valor;it.Status='Confirmado';
+  renConciliacao();
+  await apiPost({tipo:'conciliacao_update',linha:idx+2,status:'Confirmado',loja:loja,categoria:categoria,valor:valor});
   showToast('Marcado como confirmado');
 }
 
@@ -1587,9 +1633,52 @@ function abMCompra(nome,loja){
   document.getElementById('cp-prod').value=nome||'';
   document.getElementById('cp-forn').value='';document.getElementById('cp-qtd').value='';document.getElementById('cp-vu').value='';document.getElementById('cp-vt').value='';document.getElementById('cp-nf').value='';document.getElementById('cp-obs').value='';
   document.getElementById('cp-marg-box').style.display='none';cpIdealPreco=null;
+  document.getElementById('cp-pag').value='Dinheiro';
+  document.getElementById('cp-venc-wrap').style.display='none';document.getElementById('cp-venc').value='';
+  document.getElementById('cp-boleto-toggle-wrap').style.display='none';document.getElementById('cp-boletos-box').style.display='none';
+  document.getElementById('tog-cp-boleto').classList.remove('on');cpBoletos=[];
   if(nome)onCpProdChange();
   document.getElementById('m-compra').classList.add('open');
 }
+// Boleto (à vista, uma parcela) precisa de vencimento; parcelado usa a lista abaixo.
+function onCpPagChange(){
+  var isBoleto=document.getElementById('cp-pag').value==='Boleto';
+  document.getElementById('cp-boleto-toggle-wrap').style.display=isBoleto?'block':'none';
+  var parcelado=document.getElementById('tog-cp-boleto').classList.contains('on');
+  document.getElementById('cp-venc-wrap').style.display=(isBoleto&&!parcelado)?'block':'none';
+  if(!isBoleto){document.getElementById('tog-cp-boleto').classList.remove('on');document.getElementById('cp-boletos-box').style.display='none';cpBoletos=[];}
+}
+function onToggleCpBoleto(){
+  var t=document.getElementById('tog-cp-boleto');t.classList.toggle('on');
+  var on=t.classList.contains('on');
+  document.getElementById('cp-boletos-box').style.display=on?'block':'none';
+  document.getElementById('cp-venc-wrap').style.display=on?'none':'block';
+  cpBoletos=[];
+  if(on){
+    var qtd=parseFloat(document.getElementById('cp-qtd').value)||0,vu=parseFloat(document.getElementById('cp-vu').value)||0;
+    addBoleto('cp',qtd*vu);
+  }else renderBoletos('cp');
+}
+/* ── Parcelas de boleto (reutilizado nos modais Compra e Saída) ── */
+var cpBoletos=[],fsBoletos=[];
+function boletoState(prefix){return prefix==='cp'?cpBoletos:fsBoletos;}
+function renderBoletos(prefix){
+  var arr=boletoState(prefix),box=document.getElementById(prefix+'-boletos-lista');
+  if(!box)return;
+  box.innerHTML=arr.map(function(b,i){
+    return '<div class="fg2" style="align-items:flex-end;margin-bottom:6px;">'+
+      '<div class="fg" style="margin-bottom:0;"><label class="fl">Parcela '+(i+1)+' — Valor (R$)</label><input class="fi" type="number" min="0" step="0.01" value="'+(b.valor||'')+'" oninput="setBoletoValor(\''+prefix+'\','+i+',this.value)"></div>'+
+      '<div class="fg" style="margin-bottom:0;"><label class="fl">Vencimento</label><div style="display:flex;gap:6px;"><input class="fi" type="date" value="'+(b.vencimento||'')+'" oninput="setBoletoVenc(\''+prefix+'\','+i+',this.value)" style="flex:1;"><button type="button" onclick="removerBoleto(\''+prefix+'\','+i+')" style="height:38px;padding:0 12px;border-radius:8px;border:1px solid var(--bd);background:#fff;cursor:pointer;">×</button></div></div>'+
+    '</div>';
+  }).join('');
+  var total=arr.reduce(function(s,b){return s+(parseFloat(b.valor)||0);},0);
+  var totEl=document.getElementById(prefix+'-boletos-total');
+  if(totEl)totEl.textContent='Total parcelado: R$ '+fmt(total);
+}
+function addBoleto(prefix,valorSugerido){boletoState(prefix).push({valor:valorSugerido||0,vencimento:''});renderBoletos(prefix);}
+function removerBoleto(prefix,i){boletoState(prefix).splice(i,1);renderBoletos(prefix);}
+function setBoletoValor(prefix,i,v){boletoState(prefix)[i].valor=parseFloat(v)||0;var arr=boletoState(prefix);var total=arr.reduce(function(s,b){return s+(parseFloat(b.valor)||0);},0);var totEl=document.getElementById(prefix+'-boletos-total');if(totEl)totEl.textContent='Total parcelado: R$ '+fmt(total);}
+function setBoletoVenc(prefix,i,v){boletoState(prefix)[i].vencimento=v;}
 function onCpProdChange(){
   var nome=document.getElementById('cp-prod').value.trim(),loja=document.getElementById('cp-lj').value;
   var p=D.estoque.find(function(x){return x.Nome===nome&&lSlug(x.Loja||'')===loja;})||D.estoque.find(function(x){return x.Nome===nome;});
@@ -1623,15 +1712,37 @@ async function subCompra(){
   var vt=qtd*vu,forn=document.getElementById('cp-forn').value.trim();
   var chk=document.getElementById('cp-aceitar-novo');
   var novoPreco=(chk&&chk.checked&&cpIdealPreco)?cpIdealPreco:null;
-  var pl={tipo:'compra',loja:lj,data:isoToDateBR(dt),fornecedor:forn,produto:prod,qtd:qtd,valorUnit:vu,valorTotal:vt,formaPagamento:document.getElementById('cp-pag').value,nf:document.getElementById('cp-nf').value,observacao:document.getElementById('cp-obs').value,operador:'Jax'};
+  var forma=document.getElementById('cp-pag').value;
+  var parcelado=forma==='Boleto'&&document.getElementById('tog-cp-boleto').classList.contains('on');
+  var boletosPayload=null;
+  if(parcelado){
+    if(!cpBoletos.length){sFMsg('fm-compra','Adicione ao menos uma parcela','err');return;}
+    for(var i=0;i<cpBoletos.length;i++){
+      if(!cpBoletos[i].valor||!cpBoletos[i].vencimento){sFMsg('fm-compra','Preencha valor e vencimento de todas as parcelas','err');return;}
+    }
+    boletosPayload=cpBoletos.map(function(b){return{valor:b.valor,vencimento:isoToDateBR(b.vencimento)};});
+  }else if(forma==='Boleto'&&!document.getElementById('cp-venc').value){
+    sFMsg('fm-compra','Informe o vencimento do boleto','err');return;
+  }
+  var pl={tipo:'compra',loja:lj,data:isoToDateBR(dt),fornecedor:forn,produto:prod,qtd:qtd,valorUnit:vu,valorTotal:vt,formaPagamento:forma,nf:document.getElementById('cp-nf').value,observacao:document.getElementById('cp-obs').value,operador:'Jax'};
+  if(forma==='Boleto'&&!parcelado)pl.vencimento=isoToDateBR(document.getElementById('cp-venc').value);
+  if(boletosPayload)pl.boletos=boletosPayload;
   if(novoPreco)pl.novoPrecoVenda=novoPreco;
   setML('btn-fcp','sp-cp',true);var ok=await apiPost(pl);setML('btn-fcp','sp-cp',false);
   if(ok){
     // Vai pra Pagamentos (esquema unificado) — não mais pra aba legada Compras.
-    var statusLocal=(pl.formaPagamento==='CartaoC6'||pl.formaPagamento==='CartaoItau'||pl.formaPagamento==='Boleto')?'Pendente':'Pago';
-    D.pagamentos.push({Vencimento:pl.data,Loja:lj,Descricao:'Compra'+(forn?' - '+forn:''),Categoria:'Compra de Mercadorias',Subcategoria:'',
-      Valor:vt,Status:statusLocal,Observacao:pl.observacao||'',Tipo:'Compra',Data:pl.data,Grupo:'',
-      Fornecedor:forn,Produto:prod,Qtd:qtd,Valor_Unit:vu,Valor_Venda:'',Forma_Pagamento:pl.formaPagamento,Gera_Estoque:'Sim',Operador:'Jax'});
+    if(boletosPayload){
+      boletosPayload.forEach(function(b,i){
+        D.pagamentos.push({Vencimento:b.vencimento,Loja:lj,Descricao:'Compra'+(forn?' - '+forn:''),Categoria:'Compra de Mercadorias',Subcategoria:'',
+          Valor:b.valor,Status:'Pendente',Observacao:pl.observacao||'',Tipo:'Compra',Data:pl.data,Grupo:'',
+          Fornecedor:forn,Produto:prod,Qtd:i===0?qtd:'',Valor_Unit:i===0?vu:'',Valor_Venda:'',Forma_Pagamento:forma,Gera_Estoque:i===0?'Sim':'Nao',Operador:'Jax'});
+      });
+    }else{
+      var statusLocal=(forma==='CartaoC6'||forma==='CartaoItau'||forma==='Boleto')?'Pendente':'Pago';
+      D.pagamentos.push({Vencimento:pl.vencimento||pl.data,Loja:lj,Descricao:'Compra'+(forn?' - '+forn:''),Categoria:'Compra de Mercadorias',Subcategoria:'',
+        Valor:vt,Status:statusLocal,Observacao:pl.observacao||'',Tipo:'Compra',Data:pl.data,Grupo:'',
+        Fornecedor:forn,Produto:prod,Qtd:qtd,Valor_Unit:vu,Valor_Venda:'',Forma_Pagamento:forma,Gera_Estoque:'Sim',Operador:'Jax'});
+    }
     var p=D.estoque.find(function(x){return x.Nome===prod&&lSlug(x.Loja||'')===lj;});
     if(p){p.Qtd=(parseInt(p.Qtd||0)+qtd);p.Preco_Custo=vu;if(novoPreco)p.Preco_Venda=novoPreco;}
     showToast('Compra registrada!');fM('compra');renCompras();if(secAtiva==='estoque')renEst();
@@ -1986,8 +2097,25 @@ async function subEnt(){
 }
 
 /* ── MODAL SAÍDA ── */
-function abMSai(){saiTipo='gasto';document.getElementById('fs-dt').value=new Date().toISOString().split('T')[0];['fs-desc','fs-val','fs-obs','fs-forn','fs-prod','fs-qtd','fs-nf','fs-se-p','fs-se-q','fs-venc'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fm-sai').className='fmsg';document.getElementById('fs-cmp-x').style.display='none';document.getElementById('fs-gst-x').style.display='block';document.getElementById('fs-pag-ex').style.display='none';document.getElementById('fs-cat-wrap').style.display='block';document.getElementById('fs-se-x').style.display='none';document.getElementById('tog-se').classList.remove('on');document.querySelectorAll('#m-saida .fbtn').forEach(function(b){b.classList.remove('active');});document.getElementById('st-g').classList.add('active');popularCategoriasUnificada();document.getElementById('m-saida').classList.add('open');}
-function setST(t,b){saiTipo=t;document.querySelectorAll('#m-saida .fbtn').forEach(function(x){x.classList.remove('active');});b.classList.add('active');document.getElementById('fs-cmp-x').style.display=t==='compra'?'block':'none';document.getElementById('fs-gst-x').style.display=t==='gasto'?'block':'none';document.getElementById('fs-pag-ex').style.display=t==='pagamento'?'block':'none';document.getElementById('fs-cat-wrap').style.display=t==='compra'?'none':'block';popularCategoriasUnificada();}
+function abMSai(){saiTipo='gasto';document.getElementById('fs-dt').value=new Date().toISOString().split('T')[0];['fs-desc','fs-val','fs-obs','fs-forn','fs-prod','fs-qtd','fs-nf','fs-se-p','fs-se-q','fs-venc','fs-cp-venc'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fm-sai').className='fmsg';document.getElementById('fs-cmp-x').style.display='none';document.getElementById('fs-gst-x').style.display='block';document.getElementById('fs-pag-ex').style.display='none';document.getElementById('fs-cat-wrap').style.display='block';document.getElementById('fs-se-x').style.display='none';document.getElementById('tog-se').classList.remove('on');document.getElementById('fs-cp-venc-wrap').style.display='none';document.getElementById('fs-cp-boleto-toggle-wrap').style.display='none';document.getElementById('fs-boletos-box').style.display='none';document.getElementById('tog-fs-boleto').classList.remove('on');fsBoletos=[];document.getElementById('fs-pag').value='Dinheiro';document.querySelectorAll('#m-saida .fbtn').forEach(function(b){b.classList.remove('active');});document.getElementById('st-g').classList.add('active');popularCategoriasUnificada();document.getElementById('m-saida').classList.add('open');}
+function setST(t,b){saiTipo=t;document.querySelectorAll('#m-saida .fbtn').forEach(function(x){x.classList.remove('active');});b.classList.add('active');document.getElementById('fs-cmp-x').style.display=t==='compra'?'block':'none';document.getElementById('fs-gst-x').style.display=t==='gasto'?'block':'none';document.getElementById('fs-pag-ex').style.display=t==='pagamento'?'block':'none';document.getElementById('fs-cat-wrap').style.display=t==='compra'?'none':'block';popularCategoriasUnificada();onFsPagChange();}
+// Boleto (à vista) precisa de vencimento; parcelado usa a lista. Só se aplica pra Compra.
+function onFsPagChange(){
+  var isBoletoCompra=saiTipo==='compra'&&document.getElementById('fs-pag').value==='Boleto';
+  document.getElementById('fs-cp-boleto-toggle-wrap').style.display=isBoletoCompra?'block':'none';
+  var parcelado=document.getElementById('tog-fs-boleto').classList.contains('on');
+  document.getElementById('fs-cp-venc-wrap').style.display=(isBoletoCompra&&!parcelado)?'block':'none';
+  if(!isBoletoCompra){document.getElementById('tog-fs-boleto').classList.remove('on');document.getElementById('fs-boletos-box').style.display='none';fsBoletos=[];}
+}
+function onToggleFsBoleto(){
+  var t=document.getElementById('tog-fs-boleto');t.classList.toggle('on');
+  var on=t.classList.contains('on');
+  document.getElementById('fs-boletos-box').style.display=on?'block':'none';
+  document.getElementById('fs-cp-venc-wrap').style.display=on?'none':'block';
+  fsBoletos=[];
+  if(on){var vl=parseFloat(document.getElementById('fs-val').value)||0;addBoleto('fs',vl);}
+  else renderBoletos('fs');
+}
 /* ── Categorias unificadas (Gasto/Pagamento) — vindas da aba Categorias ── */
 function categoriasDespesaUnicas(){
   var set={},out=[];
@@ -2016,10 +2144,23 @@ async function subSai(){
   if(!dt||!ds||!vl){sFMsg('fm-sai','Preencha data, descrição e valor','err');return;}
   var ct=document.getElementById('fs-cat').value,subc=document.getElementById('fs-subcat-sel').value||'',pg=document.getElementById('fs-pag').value,st=document.getElementById('fs-st').value,seOn=document.getElementById('tog-se').classList.contains('on'),pl;
   if(saiTipo==='gasto'){pl={tipo:'gasto',loja:lj,data:isoToDateBR(dt),descricao:ds,grupo:'',categoria:ct,subcategoria:subc,valor:vl,formaPagamento:pg,entraEstoque:seOn?'Sim':'Nao',produto:seOn?document.getElementById('fs-se-p').value:'',qtdEstoque:seOn?parseInt(document.getElementById('fs-se-q').value)||0:0,operador:'Jax'};}
-  else if(saiTipo==='compra'){pl={tipo:'compra',loja:lj,data:isoToDateBR(dt),fornecedor:document.getElementById('fs-forn').value,produto:document.getElementById('fs-prod').value||ds,qtd:parseInt(document.getElementById('fs-qtd').value)||1,valorUnit:vl,valorTotal:vl,formaPagamento:pg,nf:document.getElementById('fs-nf').value,observacao:document.getElementById('fs-obs').value,operador:'Jax'};}
+  else if(saiTipo==='compra'){
+    pl={tipo:'compra',loja:lj,data:isoToDateBR(dt),fornecedor:document.getElementById('fs-forn').value,produto:document.getElementById('fs-prod').value||ds,qtd:parseInt(document.getElementById('fs-qtd').value)||1,valorUnit:vl,valorTotal:vl,formaPagamento:pg,nf:document.getElementById('fs-nf').value,observacao:document.getElementById('fs-obs').value,operador:'Jax'};
+    var parcelado=pg==='Boleto'&&document.getElementById('tog-fs-boleto').classList.contains('on');
+    if(parcelado){
+      if(!fsBoletos.length){sFMsg('fm-sai','Adicione ao menos uma parcela','err');return;}
+      for(var i=0;i<fsBoletos.length;i++){
+        if(!fsBoletos[i].valor||!fsBoletos[i].vencimento){sFMsg('fm-sai','Preencha valor e vencimento de todas as parcelas','err');return;}
+      }
+      pl.boletos=fsBoletos.map(function(b){return{valor:b.valor,vencimento:isoToDateBR(b.vencimento)};});
+    }else if(pg==='Boleto'){
+      if(!document.getElementById('fs-cp-venc').value){sFMsg('fm-sai','Informe o vencimento do boleto','err');return;}
+      pl.vencimento=isoToDateBR(document.getElementById('fs-cp-venc').value);
+    }
+  }
   else{pl={tipo:'pagamento',loja:lj,vencimento:isoToDateBR(document.getElementById('fs-venc').value||dt),descricao:ds,categoria:ct,subcategoria:subc,valor:vl,status:st,observacao:document.getElementById('fs-obs').value};}
   setML('btn-fsai','sp-sai',true);var ok=await apiPost(pl);setML('btn-fsai','sp-sai',false);
-  if(ok){showToast('Saída registrada!');fM('saida');}else sFMsg('fm-sai','Erro ao salvar','err');
+  if(ok){showToast('Saída registrada!');fM('saida');if(secAtiva==='compras')renCompras();if(secAtiva==='saidas')renSai();}else sFMsg('fm-sai','Erro ao salvar','err');
 }
 
 /* ── MODAL CLIENTE ── */
