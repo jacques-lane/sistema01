@@ -2132,6 +2132,7 @@ function abMEnt(){
 async function subEnt(){
   var lj=document.getElementById('fe-lj').value,dt=document.getElementById('fe-dt').value,vl=parseFloat(document.getElementById('fe-val').value)||0,desc=document.getElementById('fe-nm').value.trim(),pg=document.getElementById('fe-pag').value,op=document.getElementById('fe-op').value.trim(),hr=document.getElementById('fe-hr').value||new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),cat=lj==='pessoal'?document.getElementById('fe-cat').value:'';
   if(!desc||!vl||!dt){sFMsg('fm-ent','Preencha data, descrição e valor','err');return;}
+  if(lj==='pessoal'&&!cat){sFMsg('fm-ent','Escolha a categoria da receita','err');return;}
   var pgs={Dinheiro:0,Pix:0,Credito:0,Debito:0,Transferencia:0};
   var chave=pg.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z]/g,'');
   pgs[chave]=vl;
