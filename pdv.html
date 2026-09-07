@@ -47,7 +47,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 .blocked-meta{font-size:12px;color:rgba(255,255,255,.35);margin-top:4px;}
 
 /* ── PONTO / CAIXA (gates antes de liberar o app) ── */
-#ponto-screen,#caixa-screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:var(--vf);padding:32px 24px;text-align:center;}
+#ponto-screen,#caixa-screen,#almoco-screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:var(--vf);padding:32px 24px;text-align:center;}
 .cx-info{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px;font-size:12px;color:rgba(255,255,255,.6);line-height:1.7;text-align:left;}
 
 /* ── APP ── */
@@ -310,6 +310,10 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
       <option value="pessoal">Pessoal</option>
       <option value="viveiro">Viveiro</option>
     </select>
+    <label class="lf-label">Funcionário padrão (opcional)</label>
+    <select class="lf-input" id="lf-func-padrao">
+      <option value="">Nenhum — sempre perguntar</option>
+    </select>
     <button class="lf-btn" id="lf-btn" disabled onclick="salvarConfigLock()">Salvar e entrar</button>
     <div class="lock-err" id="lock-err">Não foi possível conectar. Verifique URL e token.</div>
   </div>
@@ -366,12 +370,30 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
   <div class="lock-logo">Mayse</div>
   <div class="lock-ico">💰</div>
   <div class="lock-title">Abrir caixa</div>
-  <div class="lock-desc">Informe o valor em dinheiro no caixa para começar o dia.</div>
+  <div class="lock-desc">Informe a loja e o valor em dinheiro no caixa para começar o dia.</div>
   <div class="cx-info" id="cx-quem"></div>
   <div class="lock-form">
+    <label class="lf-label">Loja de hoje</label>
+    <div class="pay-chips" id="cx-loja-chips" style="margin-bottom:16px;">
+      <button class="pay-chip" data-loja="juquia" onclick="setCaixaLoja('juquia',this)">Juquiá</button>
+      <button class="pay-chip" data-loja="cambuci" onclick="setCaixaLoja('cambuci',this)">Cambuci</button>
+      <button class="pay-chip" data-loja="pessoal" onclick="setCaixaLoja('pessoal',this)">Pessoal</button>
+      <button class="pay-chip" data-loja="viveiro" onclick="setCaixaLoja('viveiro',this)">Viveiro</button>
+    </div>
     <label class="lf-label">Valor inicial em dinheiro</label>
     <input class="lf-input" id="cx-val" type="number" inputmode="decimal" placeholder="0,00">
     <button class="lf-btn" onclick="abrirCaixaGate()">Abrir caixa</button>
+  </div>
+</div>
+
+<!-- ══ ALMOÇO (bloqueia o PDV durante a saída pro almoço) ══ -->
+<div id="almoco-screen">
+  <div class="lock-logo">Mayse</div>
+  <div class="lock-ico">🍽️</div>
+  <div class="lock-title">Em horário de almoço</div>
+  <div class="lock-desc">O PDV fica bloqueado até você bater o ponto de volta.</div>
+  <div class="lock-form">
+    <button class="lf-btn" onclick="voltarAlmoco()">Voltar do almoço</button>
   </div>
 </div>
 
@@ -582,6 +604,13 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <button class="view-tab" id="gas-tab-hist" onclick="setGastosView('historico')">Histórico</button>
   </div>
   <div id="gas-view-novo">
+    <div class="form-label" style="margin-bottom:8px;">Loja</div>
+    <div class="pay-chips" id="gas-loja-chips" style="margin-bottom:16px;">
+      <button class="pay-chip" data-loja="juquia" onclick="setGasLoja('juquia',this)">Juquiá</button>
+      <button class="pay-chip" data-loja="cambuci" onclick="setGasLoja('cambuci',this)">Cambuci</button>
+      <button class="pay-chip" data-loja="pessoal" onclick="setGasLoja('pessoal',this)">Pessoal</button>
+      <button class="pay-chip" data-loja="viveiro" onclick="setGasLoja('viveiro',this)">Viveiro</button>
+    </div>
     <div class="form-label" style="margin-bottom:8px;">Categoria</div>
     <div class="cat-grid">
       <button class="cat-btn active" onclick="setGasCat('Alimentação',this)">🍽 Alimentação</button>
@@ -685,6 +714,12 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <div class="form-group">
       <label class="form-label">Token secreto</label>
       <input class="form-input" id="cfg-token" type="password" placeholder="Token configurado no script">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Funcionário padrão deste aparelho (opcional)</label>
+      <select class="form-input" id="cfg-func-padrao">
+        <option value="">Nenhum — sempre perguntar</option>
+      </select>
     </div>
     <button class="btn btn-primary" onclick="salvarConfigModal()">Salvar</button>
     <button class="btn btn-outline" id="btn-almoco" onclick="toggleAlmoco()">🍽️ Saída para almoço</button>
@@ -840,6 +875,7 @@ var tokenSecreto  = localStorage.getItem('mayse_v3_token') || TOKEN_ATUAL;
 var pdvNome       = localStorage.getItem('mayse_v3_nome')  || '';
 var pdvLoja       = localStorage.getItem('mayse_v3_loja')  || 'juquia';
 var operador      = localStorage.getItem('mayse_v3_op')    || '';
+var sessaoLoja    = localStorage.getItem('mayse_v3_caixaloja') || null;
 
 var LOJA_NOMES = {juquia:'Juquiá',cambuci:'Cambuci',pessoal:'Pessoal',viveiro:'Viveiro'};
 var LOJA_CORES = {juquia:'#C97A1A',cambuci:'#3B5BC9',pessoal:'#9c56b8',viveiro:'#83AB33'};
@@ -863,6 +899,7 @@ var encHistFiltro = 'Disponível';
 var encomendaConvertendoIdx = null; // guarda a encomenda sendo convertida em venda, pra marcar como Paga ao finalizar
 var gasCat = 'Alimentação';
 var gasPag = 'Dinheiro';
+var gasLoja = null; // definido em abrirPageGastos()/primeira renderização, default = loja do dispositivo
 var perdaProduto = null;
 var perdaMotivo = '';
 var encTipo = 'Futura';
@@ -871,6 +908,7 @@ var encTipo = 'Futura';
 (function init() {
   if (!webhookUrl || !tokenSecreto || !pdvNome) {
     document.getElementById('lock-screen').style.display = 'flex';
+    carregarFuncPadraoLock();
     return;
   }
   validarPdv();
@@ -909,14 +947,41 @@ function iniciarApp() {
 // (ou abre um novo). Ver CLAUDE.md > "Módulo Ponto/Caixa".
 var funcionariosCache = [];
 
+// Verifica no SERVIDOR (não no localStorage do aparelho) se já existe um caixa
+// aberto hoje pra loja. Isso permite que qualquer aparelho da mesma loja (ex:
+// os 2 tablets de Juquiá) reconheça uma sessão já aberta em outro aparelho —
+// quem bateu ponto e abriu caixa em um deles não precisa refazer no outro.
 function verificarPonto() {
   var hoje = new Date().toLocaleDateString('pt-BR');
-  if (operador && localStorage.getItem('mayse_v3_pontodata') === hoje) {
-    verificarCaixa();
-    return;
-  }
-  document.getElementById('ponto-screen').style.display = 'flex';
-  carregarFuncionarios();
+  var lojaCheck = localStorage.getItem('mayse_v3_caixaloja') || pdvLoja;
+  apiGet('Caixa', 'loja=' + lojaCheck).then(function(d) {
+    var linha = (d.data || []).filter(function(c) { return c.Data === hoje && !c.Hora_Fechamento; }).pop();
+    if (linha) {
+      operador = linha.Funcionario_Abertura;
+      sessaoLoja = lojaCheck;
+      localStorage.setItem('mayse_v3_op', operador);
+      localStorage.setItem('mayse_v3_pontodata', hoje);
+      localStorage.setItem('mayse_v3_caixaloja', sessaoLoja);
+      atualizarHeaderLoja();
+      mostrarApp();
+      if (statusAlmocoHoje()) mostrarAlmocoBloqueado();
+    } else {
+      localStorage.removeItem('mayse_v3_pontodata');
+      localStorage.removeItem('mayse_v3_caixaloja');
+      document.getElementById('ponto-screen').style.display = 'flex';
+      carregarFuncionarios();
+    }
+  }).catch(function() {
+    // Offline: não trava o PDV, cai no comportamento local antigo.
+    if (operador && localStorage.getItem('mayse_v3_pontodata') === hoje) {
+      sessaoLoja = localStorage.getItem('mayse_v3_caixaloja') || pdvLoja;
+      mostrarApp();
+      if (statusAlmocoHoje()) mostrarAlmocoBloqueado();
+    } else {
+      document.getElementById('ponto-screen').style.display = 'flex';
+      carregarFuncionarios();
+    }
+  });
 }
 
 function carregarFuncionarios() {
@@ -927,7 +992,9 @@ function carregarFuncionarios() {
     var opts = '<option value="">Selecione…</option>';
     lista.forEach(function(f) { opts += '<option value="' + escapeHtml(f.Nome) + '">' + escapeHtml(f.Nome) + '</option>'; });
     sel.innerHTML = opts;
+    var funcPadrao = localStorage.getItem('mayse_v3_func_padrao') || '';
     if (operador && lista.some(function(f) { return f.Nome === operador; })) sel.value = operador;
+    else if (funcPadrao && lista.some(function(f) { return f.Nome === funcPadrao; })) sel.value = funcPadrao;
     onSelectFuncionario();
   });
 }
@@ -1032,14 +1099,35 @@ function baterPontoEntrada() {
   verificarCaixa();
 }
 
+// Loja escolhida na ABERTURA DE CAIXA vira a "loja da sessão" (sessaoLoja):
+// tudo que for feito dali em diante (venda, estoque, compra, gasto por
+// padrão) entra nessa loja, até o caixa ser fechado. Padrão = loja do
+// aparelho (pdvLoja), mas pode trocar aqui — ex: Jax/Mayse usando o próprio
+// celular pra atender em Juquiá em vez de Cambuci.
+function setCaixaLoja(loja, btn) {
+  sessaoLoja = loja;
+  document.querySelectorAll('#cx-loja-chips .pay-chip').forEach(function(b) { b.classList.remove('selected'); });
+  btn.classList.add('selected');
+}
+function initCaixaLoja() {
+  if (!sessaoLoja) sessaoLoja = pdvLoja;
+  document.querySelectorAll('#cx-loja-chips .pay-chip').forEach(function(b) {
+    b.classList.toggle('selected', b.getAttribute('data-loja') === sessaoLoja);
+  });
+}
+
 function verificarCaixa() {
+  var lojaCheck = pdvLoja;
   var hoje = new Date().toLocaleDateString('pt-BR');
-  apiGet('Caixa', 'loja=' + pdvLoja).then(function(d) {
-    var aberto = (d.data || []).some(function(c) { return c.Data === hoje && !c.Hora_Fechamento; });
-    if (aberto) {
+  apiGet('Caixa', 'loja=' + lojaCheck).then(function(d) {
+    var linha = (d.data || []).filter(function(c) { return c.Data === hoje && !c.Hora_Fechamento; }).pop();
+    if (linha) {
+      sessaoLoja = lojaCheck;
+      localStorage.setItem('mayse_v3_caixaloja', sessaoLoja);
       mostrarApp();
     } else {
-      document.getElementById('cx-quem').textContent = operador + ' · ' + (LOJA_NOMES[pdvLoja] || pdvLoja) + ' · ' + hoje;
+      initCaixaLoja();
+      document.getElementById('cx-quem').textContent = operador + ' · ' + hoje;
       document.getElementById('caixa-screen').style.display = 'flex';
     }
   });
@@ -1048,9 +1136,11 @@ function verificarCaixa() {
 function abrirCaixaGate() {
   var val = parseFloat(document.getElementById('cx-val').value || 0);
   if (isNaN(val) || val < 0) { showToast('Informe um valor válido', true); return; }
-  enviarParaSheets({ tipo: 'abrir_caixa', funcionario: operador, loja: pdvLoja, valorAbertura: val });
+  if (!sessaoLoja) sessaoLoja = pdvLoja;
+  enviarParaSheets({ tipo: 'abrir_caixa', funcionario: operador, loja: sessaoLoja, valorAbertura: val });
+  localStorage.setItem('mayse_v3_caixaloja', sessaoLoja);
   document.getElementById('caixa-screen').style.display = 'none';
-  showToast('Caixa aberto');
+  showToast('Caixa aberto — ' + (LOJA_NOMES[sessaoLoja] || sessaoLoja));
   mostrarApp();
 }
 
@@ -1059,6 +1149,7 @@ function mostrarApp() {
   document.getElementById('caixa-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   if (operador) document.getElementById('op-label').textContent = operador;
+  atualizarHeaderLoja();
   adicionarProduto();
   carregarEstoque();
   carregarClientes();
@@ -1067,13 +1158,14 @@ function mostrarApp() {
 
 function abrirFecharCaixa() {
   document.getElementById('modal-config').classList.remove('open');
+  var lojaCaixa = sessaoLoja || pdvLoja;
   var hoje = new Date().toLocaleDateString('pt-BR');
-  apiGet('Caixa', 'loja=' + pdvLoja).then(function(d) {
+  apiGet('Caixa', 'loja=' + lojaCaixa).then(function(d) {
     var linha = (d.data || []).filter(function(c) { return c.Data === hoje && !c.Hora_Fechamento; })[0];
     if (!linha) { showToast('Nenhum caixa aberto hoje', true); return; }
     Promise.all([
-      apiGet('Vendas', 'loja=' + pdvLoja),
-      apiGet('Gastos', 'loja=' + pdvLoja)
+      apiGet('Vendas', 'loja=' + lojaCaixa),
+      apiGet('Gastos', 'loja=' + lojaCaixa)
     ]).then(function(res) {
       var dv = res[0], dg = res[1];
       var totalDinheiro = 0;
@@ -1098,18 +1190,21 @@ function confirmarFecharCaixa() {
   var contado = parseFloat(contadoStr);
   var esperado = window._caixaEsperado || 0;
   var dif = contado - esperado;
-  enviarParaSheets({ tipo: 'fechar_caixa', funcionario: operador, loja: pdvLoja, valorFechamento: contado, valorEsperado: esperado, diferenca: dif });
-  enviarParaSheets({ tipo: 'bater_ponto', funcionario: operador, loja: pdvLoja, tipoPonto: 'Saida', dispositivo: pdvNome });
+  var lojaCaixa = sessaoLoja || pdvLoja;
+  enviarParaSheets({ tipo: 'fechar_caixa', funcionario: operador, loja: lojaCaixa, valorFechamento: contado, valorEsperado: esperado, diferenca: dif });
+  enviarParaSheets({ tipo: 'bater_ponto', funcionario: operador, loja: lojaCaixa, tipoPonto: 'Saida', dispositivo: pdvNome });
   document.getElementById('modal-fechar-caixa').classList.remove('open');
   localStorage.removeItem('mayse_v3_pontodata');
+  localStorage.removeItem('mayse_v3_caixaloja');
   showToast('Caixa fechado. Diferença: R$ ' + fmt(dif));
   setTimeout(function() { location.reload(); }, 1500);
 }
 
 function atualizarHeaderLoja() {
+  var loja = sessaoLoja || pdvLoja;
   var chip = document.getElementById('chip-loja');
-  chip.textContent = LOJA_NOMES[pdvLoja] || pdvLoja;
-  chip.style.background = LOJA_CORES[pdvLoja] || '#3B6D11';
+  chip.textContent = LOJA_NOMES[loja] || loja;
+  chip.style.background = LOJA_CORES[loja] || '#3B6D11';
 }
 
 // ── LOCK FORM ──────────────────────────────────────────────
@@ -1118,11 +1213,30 @@ function checkLockForm() {
   document.getElementById('lf-btn').disabled = !n;
 }
 
+// Popula o "funcionário padrão" da tela de configuração inicial do aparelho
+// (só roda quando o lock-screen de fato vai aparecer — aparelho novo/sem
+// config ainda — pra não gastar uma chamada à API em todo boot do PDV).
+function carregarFuncPadraoLock(){
+  var sel = document.getElementById('lf-func-padrao');
+  if (!sel) return;
+  fetch(URL_ATUAL + '?token=' + encodeURIComponent(TOKEN_ATUAL) + '&sheet=Funcionarios')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var opts = '<option value="">Nenhum — sempre perguntar</option>';
+      (d.data||[]).filter(function(f){return f.Ativo==='Sim';}).forEach(function(f){
+        opts += '<option value="'+escapeHtml(f.Nome)+'">'+escapeHtml(f.Nome)+'</option>';
+      });
+      sel.innerHTML = opts;
+    })
+    .catch(function(){});
+}
+
 function salvarConfigLock() {
   var url   = URL_ATUAL;
   var token = TOKEN_ATUAL;
   var nome  = document.getElementById('lf-nome').value.trim();
   var loja  = document.getElementById('lf-loja').value;
+  var funcPadrao = document.getElementById('lf-func-padrao').value;
   var btn   = document.getElementById('lf-btn');
   var err   = document.getElementById('lock-err');
   btn.disabled = true; btn.textContent = 'Verificando…'; err.style.display = 'none';
@@ -1137,6 +1251,7 @@ function salvarConfigLock() {
       localStorage.setItem('mayse_v3_token', token);
       localStorage.setItem('mayse_v3_nome', nome);
       localStorage.setItem('mayse_v3_loja', loja);
+      if (funcPadrao) localStorage.setItem('mayse_v3_func_padrao', funcPadrao);
       webhookUrl = url; tokenSecreto = token; pdvNome = nome; pdvLoja = loja;
       if (d.ativo === false) { mostrarBloqueado(); return; }
       iniciarApp();
@@ -1173,7 +1288,7 @@ function apiGet(sheet, extra) {
 // ── CARREGAR DADOS ─────────────────────────────────────────
 function carregarEstoque() {
   if (!webhookUrl) return;
-  apiGet('Estoque', 'loja=' + pdvLoja).then(function(d){
+  apiGet('Estoque', 'loja=' + (sessaoLoja || pdvLoja)).then(function(d){
     if (d.data) {
       estoque = d.data;
       estoqueFiltered = estoque.slice();
@@ -1193,7 +1308,7 @@ function carregarClientes() {
 function carregarEncomendas() {
   if (!webhookUrl) return;
   document.getElementById('enc-hist-lista').innerHTML = '<div class="loading-state">Carregando…</div>';
-  apiGet('Encomendas', 'loja=' + pdvLoja).then(function(d){
+  apiGet('Encomendas', 'loja=' + (sessaoLoja || pdvLoja)).then(function(d){
     if (d.data) { encomendas = d.data; renderEncHistorico(); }
   });
 }
@@ -1208,6 +1323,7 @@ function showPage(name, btn) {
   document.getElementById('header-title').innerHTML = titles[name] || name;
   if (name === 'historico') renderHistorico();
   if (name === 'estoque') carregarEstoque();
+  if (name === 'gastos') initGasLoja();
 }
 
 // ── FORM UTILS ─────────────────────────────────────────────
@@ -1525,7 +1641,7 @@ function recalcBalance() {
   else{bar.className='balance-bar under';bar.innerHTML='<span style="font-weight:500;">⚠ Falta</span><span style="font-size:17px;font-weight:700;">R$ '+fmt(Math.abs(diff))+'</span>';tc.classList.remove('visible');}
 }
 
-function getMeta(){return{operador:operador||'Não identificado',cidade:pdvLoja,dispositivo:pdvNome,loja:pdvLoja};}
+function getMeta(){var lj=sessaoLoja||pdvLoja;return{operador:operador||'Não identificado',cidade:lj,dispositivo:pdvNome,loja:lj};}
 
 // ── FINALIZAR VENDA ────────────────────────────────────────
 async function finalizarVenda() {
@@ -1557,7 +1673,7 @@ async function finalizarVenda() {
     data:agora.toLocaleDateString('pt-BR'),
     hora:agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
     ts:agora.getTime(),
-    operador:operador||'Não identificado', cidade:pdvLoja, dispositivo:pdvNome, loja:pdvLoja
+    operador:operador||'Não identificado', cidade:(sessaoLoja||pdvLoja), dispositivo:pdvNome, loja:(sessaoLoja||pdvLoja)
   };
 
   setLoading('btn-finalizar','btn-text','spinner',true,'Salvando…');
@@ -1701,7 +1817,7 @@ async function ajustarQtd(nome, delta) {
   var novaQtd = Math.max(0,parseInt(p.Qtd||0)+delta);
   p.Qtd = novaQtd;
   renderEstoque(); atualizarAlertas();
-  await enviarParaSheets({tipo:'ajuste_estoque',loja:pdvLoja,nome:nome,novaQtd:novaQtd,operador:operador||'PDV'});
+  await enviarParaSheets({tipo:'ajuste_estoque',loja:(sessaoLoja||pdvLoja),nome:nome,novaQtd:novaQtd,operador:operador||'PDV'});
   showToast(nome+': '+novaQtd+' unidades');
 }
 
@@ -1722,7 +1838,7 @@ async function salvarProduto() {
   if(!nome){showToast('Informe o nome do produto',false,'warn');return;}
   setLoading('btn-prod-text','btn-prod-text','spinner-prod',true,'Salvando…');
   var payload = {
-    tipo:'upsert_produto', loja:pdvLoja,
+    tipo:'upsert_produto', loja:(sessaoLoja||pdvLoja),
     emoji:   document.getElementById('prod-emoji').value||'🌷',
     nome:    nome,
     categoria: document.getElementById('prod-cat').value.trim(),
@@ -1767,7 +1883,7 @@ async function salvarCompra() {
   if(!qtd||!vp||!frac){showToast('Preencha quantidade, valor pago e fracionado',false,'warn');return;}
   setLoading('btn-cp-text','btn-cp-text','spinner-cp',true,'Salvando…');
   var payload = {
-    tipo:'registrar_compra_estoque', loja:pdvLoja,
+    tipo:'registrar_compra_estoque', loja:(sessaoLoja||pdvLoja),
     produto: produto,
     formato: document.getElementById('cp-formato').value,
     fornecedor: document.getElementById('cp-fornecedor').value.trim()||'Ceagesp',
@@ -1803,7 +1919,7 @@ async function confirmarPerda() {
   if(!perdaMotivo){showToast('Selecione o motivo',false,'warn');return;}
   var qtd=parseInt(document.getElementById('perda-qtd').textContent)||1;
   var ok = await enviarParaSheets({
-    tipo:'registrar_perda',loja:pdvLoja,
+    tipo:'registrar_perda',loja:(sessaoLoja||pdvLoja),
     produto:perdaProduto.Nome, qtd:qtd,
     motivo:perdaMotivo, observacao:document.getElementById('perda-obs').value,
     operador:operador||'PDV', data:new Date().toLocaleDateString('pt-BR')
@@ -1894,7 +2010,7 @@ async function finalizarEncomenda(){
   var agora=new Date();
 
   encomendaAtual={
-    tipo:'encomenda', loja:pdvLoja,
+    tipo:'encomenda', loja:(sessaoLoja||pdvLoja),
     nome:nome, telefone:tel, descricao:desc,
     tipoEncomenda:encTipo,
     status:encTipo==='Agendada'?'Confirmada':'Pendente',
@@ -1907,7 +2023,7 @@ async function finalizarEncomenda(){
     formaPagamento:togPagar?document.getElementById('enc-pag').value:'',
     data:agora.toLocaleDateString('pt-BR'),
     hora:agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
-    operador:operador||'Não identificado', cidade:pdvLoja, dispositivo:pdvNome, loja:pdvLoja
+    operador:operador||'Não identificado', cidade:(sessaoLoja||pdvLoja), dispositivo:pdvNome, loja:(sessaoLoja||pdvLoja)
   };
 
   setLoading('btn-encomenda','btn-enc-text','spinner-enc',true,'Salvando…');
@@ -1992,7 +2108,7 @@ async function updateEncStatus(idx,novoStatus){
     if(eValor>0&&ePag){
       var agora=new Date();
       await enviarParaSheets({
-        tipo:'venda_manual', loja:pdvLoja,
+        tipo:'venda_manual', loja:(sessaoLoja||pdvLoja),
         data:agora.toLocaleDateString('pt-BR'),
         hora:agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
         telefone:e.Telefone||'', nome:e.Cliente||e.Nome||'—',
@@ -2000,7 +2116,7 @@ async function updateEncStatus(idx,novoStatus){
         total:eValor,
         pagamentos:(function(){var p={};var ch=ePag.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z]/g,'');p[ch]=eValor;return p;})(),
         desconto:0, troco:0,
-        operador:operador||'PDV', cidade:pdvLoja, dispositivo:pdvNome, loja:pdvLoja
+        operador:operador||'PDV', cidade:(sessaoLoja||pdvLoja), dispositivo:pdvNome, loja:(sessaoLoja||pdvLoja)
       });
     }
   }
@@ -2082,6 +2198,18 @@ function setGastosView(v){
 }
 function setGasCat(cat,btn){gasCat=cat;document.querySelectorAll('.cat-btn').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');}
 function setGasPag(pag,btn){gasPag=pag;document.querySelectorAll('#gas-pag-chips .pay-chip').forEach(function(b){b.classList.remove('selected');});btn.classList.add('selected');}
+function setGasLoja(loja,btn){
+  gasLoja=loja;
+  document.querySelectorAll('#gas-loja-chips .pay-chip').forEach(function(b){b.classList.remove('selected');});
+  btn.classList.add('selected');
+}
+function initGasLoja(){
+  // Default = loja da sessão (aberta no caixa), mas o usuário pode trocar por lançamento
+  if(!gasLoja) gasLoja = sessaoLoja || pdvLoja;
+  document.querySelectorAll('#gas-loja-chips .pay-chip').forEach(function(b){
+    b.classList.toggle('selected', b.getAttribute('data-loja')===gasLoja);
+  });
+}
 
 async function salvarGasto(){
   var desc  = document.getElementById('gas-desc').value.trim()||gasCat;
@@ -2094,9 +2222,10 @@ async function salvarGasto(){
   var valorVenda = togEst?parseFloat(document.getElementById('gas-est-venda').value)||0:0;
   if(togEst && produto && qtdEst>0 && !valorVenda){showToast('Informe o valor de venda do produto',false,'warn');return;}
 
+  var lojaGastoUsada = gasLoja || sessaoLoja || pdvLoja;
   setLoading('btn-gasto','btn-gasto-text','spinner-gasto',true,'Salvando…');
   var ok = await enviarParaSheets({
-    tipo:'gasto', loja:pdvLoja,
+    tipo:'gasto', loja:lojaGastoUsada,
     data:new Date().toLocaleDateString('pt-BR'),
     descricao:desc, categoria:gasCat, valor:valor,
     formaPagamento:gasPag,
@@ -2115,6 +2244,7 @@ async function salvarGasto(){
     document.getElementById('gas-est-produto').value='';
     document.getElementById('gas-est-qtd').value='';
     document.getElementById('gas-est-venda').value='';
+    gasLoja = sessaoLoja || pdvLoja; initGasLoja(); // volta pro padrão da sessão após lançar
     // Se entra no estoque: dispara também ajuste_estoque para garantir
     if(togEst && produto && qtdEst > 0) {
       var ep = estoque.find(function(x){return x.Nome===produto;});
@@ -2123,8 +2253,9 @@ async function salvarGasto(){
         ep.Qtd = novaQtd;
         if(valorVenda>0) ep.Preco_Venda = valorVenda;
         // Envia ajuste de estoque separado (inclui valor de venda e responsável)
+        // Usa lojaGastoUsada (não gasLoja, que já foi resetado acima pro padrão da sessão)
         await enviarParaSheets({
-          tipo:'ajuste_estoque', loja:pdvLoja,
+          tipo:'ajuste_estoque', loja:lojaGastoUsada,
           nome:produto, novaQtd:novaQtd, precoVenda:valorVenda,
           motivo:'Gasto com entrada no estoque', operador:operador||'PDV'
         });
@@ -2132,7 +2263,7 @@ async function salvarGasto(){
       } else {
         // Produto não existe no estoque local — cria via upsert
         await enviarParaSheets({
-          tipo:'upsert_produto', loja:pdvLoja,
+          tipo:'upsert_produto', loja:lojaGastoUsada,
           nome:produto, categoria:gasCat,
           emoji:'📦', qtd:qtdEst,
           precoCusto:0, precoVenda:valorVenda,
@@ -2168,7 +2299,23 @@ function salvarOperador(){
   document.getElementById('modal-operador').classList.remove('open');
   showToast('Nome salvo: '+op);
 }
-function abrirConfig(){document.getElementById('cfg-url').value=webhookUrl;document.getElementById('cfg-token').value=tokenSecreto;atualizarBtnAlmoco();document.getElementById('modal-config').classList.add('open');}
+function abrirConfig(){
+  document.getElementById('cfg-url').value=webhookUrl;
+  document.getElementById('cfg-token').value=tokenSecreto;
+  atualizarBtnAlmoco();
+  var sel=document.getElementById('cfg-func-padrao');
+  var atual=localStorage.getItem('mayse_v3_func_padrao')||'';
+  var lista=funcionariosCache.length?funcionariosCache:null;
+  function preencher(fs){
+    var opts='<option value="">Nenhum — sempre perguntar</option>';
+    fs.forEach(function(f){opts+='<option value="'+escapeHtml(f.Nome)+'">'+escapeHtml(f.Nome)+'</option>';});
+    sel.innerHTML=opts;
+    sel.value=atual;
+  }
+  if(lista) preencher(lista);
+  else apiGet('Funcionarios').then(function(d){preencher((d.data||[]).filter(function(f){return f.Ativo==='Sim';}));});
+  document.getElementById('modal-config').classList.add('open');
+}
 
 // ── ALMOÇO (ponto separado, sem fechar caixa) ─────────────
 function statusAlmocoHoje() {
@@ -2182,21 +2329,28 @@ function atualizarBtnAlmoco() {
   var chip = document.getElementById('chip-almoco');
   if (chip) { chip.textContent = fora ? '🍽️ Voltar' : '🍽️'; chip.title = fora ? 'Registrar retorno do almoço' : 'Saída para almoço'; }
 }
+// Saída pra almoço agora BLOQUEIA o PDV (tela cheia) até bater o ponto de volta.
 function toggleAlmoco() {
   if (!operador) { showToast('Identifique-se primeiro', true); document.getElementById('modal-config').classList.remove('open'); abrirOperador(); return; }
   var hoje = new Date().toLocaleDateString('pt-BR');
-  var fora = statusAlmocoHoje();
-  if (!fora) {
-    enviarParaSheets({ tipo: 'bater_ponto', funcionario: operador, loja: pdvLoja, tipoPonto: 'Saida Almoco', dispositivo: pdvNome });
-    localStorage.setItem('mayse_v3_almoco', hoje);
-    showToast('Saída para almoço registrada');
-  } else {
-    enviarParaSheets({ tipo: 'bater_ponto', funcionario: operador, loja: pdvLoja, tipoPonto: 'Retorno Almoco', dispositivo: pdvNome });
-    localStorage.removeItem('mayse_v3_almoco');
-    showToast('Retorno do almoço registrado');
-  }
-  atualizarBtnAlmoco();
   document.getElementById('modal-config').classList.remove('open');
+  if (statusAlmocoHoje()) { mostrarAlmocoBloqueado(); return; }
+  enviarParaSheets({ tipo: 'bater_ponto', funcionario: operador, loja: sessaoLoja || pdvLoja, tipoPonto: 'Saida Almoco', dispositivo: pdvNome });
+  localStorage.setItem('mayse_v3_almoco', hoje);
+  mostrarAlmocoBloqueado();
+}
+function mostrarAlmocoBloqueado() {
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('almoco-screen').style.display = 'flex';
+  atualizarBtnAlmoco();
+}
+function voltarAlmoco() {
+  enviarParaSheets({ tipo: 'bater_ponto', funcionario: operador, loja: sessaoLoja || pdvLoja, tipoPonto: 'Retorno Almoco', dispositivo: pdvNome });
+  localStorage.removeItem('mayse_v3_almoco');
+  document.getElementById('almoco-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  showToast('Retorno do almoço registrado. Bom trabalho!');
+  atualizarBtnAlmoco();
 }
 function salvarConfigModal(){
   var url=document.getElementById('cfg-url').value.trim();
@@ -2204,6 +2358,9 @@ function salvarConfigModal(){
   if(!url||!tok){showToast('Preencha URL e token',false,'warn');return;}
   webhookUrl=url;tokenSecreto=tok;
   localStorage.setItem('mayse_v3_url',url);localStorage.setItem('mayse_v3_token',tok);
+  var funcPadrao=document.getElementById('cfg-func-padrao').value;
+  if(funcPadrao) localStorage.setItem('mayse_v3_func_padrao',funcPadrao);
+  else localStorage.removeItem('mayse_v3_func_padrao');
   document.getElementById('modal-config').classList.remove('open');
   showToast('Configuração salva');
   carregarEstoque();
