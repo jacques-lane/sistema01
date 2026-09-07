@@ -1477,8 +1477,16 @@ function renConciliacao(){
   sEl('cn-taxa',(taxaMedia*100).toFixed(1)+'%');
   sEl('cn-taxa-s',taxaMedia>0?'PagBank, média dos meses calculados':'PagBank — ainda sem cálculo transação a transação');
   document.getElementById('cn-meses-lst').innerHTML=mk.length?mk.map(function(m){
-    var mo=meses[m],ok=mo.status==='Fechado';
-    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd);"><b style="min-width:60px;">'+mesLbl(m)+'</b><span class="bdg '+(ok?'b-ok':'b-pnd')+'">'+(mo.status||'Pendente')+'</span><span style="color:var(--light);font-size:12px;">Resíduo Caixa: '+fmt(mo.residuo||0)+' · Taxa PagBank: '+((mo.taxa||0)*100).toFixed(1)+'%</span></div>';
+    var mo=meses[m],ok=mo.status==='Fechado',r=mo.residuo||0,rLbl=r>=0?'Sobra':'Falta',mid=concMesId(m);
+    var temDetalhe=rows.some(function(x){return x.Conta==='Detalhe Caixa'&&x.Mes===m&&x.Status!=='Duplicado';});
+    return '<div style="padding:10px 0;border-bottom:1px solid var(--bd);">'+
+      '<div style="display:flex;align-items:center;gap:10px;">'+
+      '<b style="min-width:60px;">'+mesLbl(m)+'</b><span class="bdg '+(ok?'b-ok':'b-pnd')+'">'+(mo.status||'Pendente')+'</span>'+
+      '<span style="color:var(--light);font-size:12px;flex:1;">'+rLbl+' de caixa não explicada: '+fmt(Math.abs(r))+' · Taxa PagBank: '+((mo.taxa||0)*100).toFixed(1)+'%</span>'+
+      (temDetalhe?'<button style="font-size:10px;padding:3px 9px;border-radius:8px;border:1px solid var(--bd);background:#fff;cursor:pointer;font-family:Sora,sans-serif;white-space:nowrap;" onclick="toggleConcDetalhe(\''+m+'\')">Ver dia a dia</button>':'')+
+      '</div>'+
+      '<div id="cn-det-'+mid+'" style="display:none;margin-top:10px;"></div>'+
+      '</div>';
   }).join(''):'<div class="empty">Nenhum mês registrado ainda</div>';
   var tb=document.getElementById('tb-conc');
   if(!pend.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--light);">Nada pendente 🎉</td></tr>';return;}
@@ -1495,6 +1503,42 @@ function renConciliacao(){
       '<td style="white-space:nowrap;"><button style="font-size:10px;padding:2px 8px;border-radius:8px;border:1px solid var(--bd);color:var(--dark);background:#fff;cursor:pointer;font-family:Sora,sans-serif;margin-right:4px;" onclick="salvarConciliacaoItem('+idxReal+')">Salvar</button>'+
       '<button style="font-size:10px;padding:2px 8px;border-radius:8px;border:1px solid var(--vj);color:var(--vf);background:var(--vj-pale);cursor:pointer;font-family:Sora,sans-serif;" onclick="marcarConciliado('+idxReal+')">Confirmar</button></td></tr>';
   }).join('');
+}
+function concMesId(m){return String(m).replace(/\//g,'');}
+function parseDetalheObs(obs){
+  var mS=/Sistema[^:]*:\s*R\$\s*([\d.,]+)/.exec(obs||''),mB=/Banco[^:]*:\s*R\$\s*([\d.,]+)/.exec(obs||'');
+  function n(s){return s?parseFloat(s.replace(/\./g,'').replace(',','.')):0;}
+  return{sistema:n(mS&&mS[1]),banco:n(mB&&mB[1])};
+}
+function toggleConcDetalhe(m){
+  var mid=concMesId(m),el=document.getElementById('cn-det-'+mid);
+  if(!el)return;
+  if(el.style.display==='none'){
+    var rows=(D.conciliacao||[]).filter(function(r){return r.Conta==='Detalhe Caixa'&&r.Mes===m&&r.Status!=='Duplicado';});
+    rows.sort(function(a,b){
+      function k(d){var p=(d.Data||'').split('/');return p.length===3?p[2]+p[1]+p[0]:'';}
+      return k(a)<k(b)?-1:1;
+    });
+    var totSis=0,totBan=0;
+    var linhas=rows.map(function(r){
+      var pv=parseDetalheObs(r.Observacao),dif=parseFloat(r.Valor)||0;
+      totSis+=pv.sistema;totBan+=pv.banco;
+      var cor=Math.abs(dif)<1?'var(--light)':(dif>=0?'#2E7D32':'#B33A3A');
+      return '<tr><td style="padding:5px 8px;font-size:11px;">'+esc(r.Data)+'</td>'+
+        '<td style="padding:5px 8px;font-size:11px;text-align:right;">'+fmt(pv.sistema)+'</td>'+
+        '<td style="padding:5px 8px;font-size:11px;text-align:right;">'+fmt(pv.banco)+'</td>'+
+        '<td style="padding:5px 8px;font-size:11px;text-align:right;font-weight:600;color:'+cor+';">'+(dif>=0?'+':'')+fmt(dif)+'</td></tr>';
+    }).join('');
+    el.innerHTML='<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-family:Sora,sans-serif;">'+
+      '<thead><tr style="border-bottom:1px solid var(--bd);"><th style="text-align:left;padding:5px 8px;font-size:10px;color:var(--light);">Data</th><th style="text-align:right;padding:5px 8px;font-size:10px;color:var(--light);">Sistema (Pix)</th><th style="text-align:right;padding:5px 8px;font-size:10px;color:var(--light);">Banco (Pix Caixa)</th><th style="text-align:right;padding:5px 8px;font-size:10px;color:var(--light);">Diferença</th></tr></thead>'+
+      '<tbody>'+linhas+'</tbody>'+
+      '<tfoot><tr style="border-top:2px solid var(--bd);font-weight:700;"><td style="padding:6px 8px;font-size:11px;">Total</td><td style="padding:6px 8px;font-size:11px;text-align:right;">'+fmt(totSis)+'</td><td style="padding:6px 8px;font-size:11px;text-align:right;">'+fmt(totBan)+'</td><td style="padding:6px 8px;font-size:11px;text-align:right;">'+fmt(totBan-totSis)+'</td></tr></tfoot>'+
+      '</table></div>'+
+      '<div style="font-size:10px;color:var(--light);margin-top:6px;">Verde/vermelho = dia em que o banco recebeu mais/menos Pix do que o sistema registrou. Dias sem diferença relevante ficam em cinza. O extrato da Caixa não traz nome do pagador, então nem toda diferença é necessariamente venda não lançada — pode ser outro Pix pessoal caindo na mesma conta.</div>';
+    el.style.display='block';
+  }else{
+    el.style.display='none';
+  }
 }
 // Salva loja/categoria/valor editados sem mudar o status (ainda "Revisar").
 async function salvarConciliacaoItem(idx){

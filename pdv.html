@@ -567,6 +567,14 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <button class="est-filtro active" onclick="setEstFiltro('todos',this)">Todos</button>
     <button class="est-filtro" onclick="setEstFiltro('alertas',this)">⚠ Alertas</button>
     <button class="est-filtro" onclick="setEstFiltro('zerados',this)">🔴 Zerados</button>
+    <button class="est-filtro" onclick="setEstFiltro('lista',this)">📝 Lista de compras <span id="badge-lista-compras" style="display:none;"></span></button>
+  </div>
+  <div id="painel-lista-compras" style="display:none;">
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <input type="text" id="lc-pdv-novo-item" placeholder="O que você precisa? Ex: vaso de vidro médio" style="flex:1;padding:11px;border:1px solid var(--border);border-radius:10px;font-size:14px;">
+      <button class="btn btn-primary" style="width:auto;padding:0 16px;" onclick="solicitarItemListaPDV()">+ Pedir</button>
+    </div>
+    <div id="lista-compras-pdv"><div class="loading-state">Carregando…</div></div>
   </div>
   <div class="alert-banner" id="alert-zero">
     <div class="alert-banner-title">🔴 Sem estoque</div>
@@ -1773,7 +1781,74 @@ function setEstFiltro(tipo, btn) {
   estFiltroAtivo = tipo;
   document.querySelectorAll('.est-filtro').forEach(function(b){b.classList.remove('active');});
   btn.classList.add('active');
-  renderEstoque();
+  var painelLista = document.getElementById('painel-lista-compras');
+  var listaEstoque = document.getElementById('lista-estoque');
+  var estBusca = document.querySelector('.estoque-search');
+  var btnsTopo = document.querySelectorAll('#page-estoque > .btn');
+  if (tipo === 'lista') {
+    painelLista.style.display = 'block';
+    listaEstoque.style.display = 'none';
+    if (estBusca) estBusca.style.display = 'none';
+    btnsTopo.forEach(function(b){b.style.display='none';});
+    carregarListaComprasPDV();
+  } else {
+    painelLista.style.display = 'none';
+    listaEstoque.style.display = '';
+    if (estBusca) estBusca.style.display = '';
+    btnsTopo.forEach(function(b){b.style.display='';});
+    renderEstoque();
+  }
+}
+
+// ── LISTA DE COMPRAS (Mayse pede, Jax compra) ──────────────
+var listaCompras = [];
+var cpListaItemRef = null;
+function carregarListaComprasPDV() {
+  if (!webhookUrl) return;
+  document.getElementById('lista-compras-pdv').innerHTML = '<div class="loading-state">Carregando…</div>';
+  apiGet('ListaCompras', '').then(function(d){
+    listaCompras = d.data || [];
+    renderListaComprasPDV();
+  });
+}
+function solicitarItemListaPDV() {
+  var el = document.getElementById('lc-pdv-novo-item');
+  var v = el.value.trim();
+  if (!v) { showToast('Digite o que você precisa', false, 'warn'); return; }
+  listaCompras.push({Item:v, Origem:'manual', Status:'Pendente'});
+  renderListaComprasPDV();
+  enviarParaSheets({tipo:'add_lista_compra', item:v, origem:'manual', operador:operador||'PDV'});
+  el.value='';
+  showToast('Pedido adicionado à lista!');
+}
+function renderListaComprasPDV() {
+  var el = document.getElementById('lista-compras-pdv');
+  if (!el) return;
+  var itens = [];
+  (estoque||[]).forEach(function(p){
+    var q=parseInt(p.Qtd||0), m=parseInt(p.Alerta_Minimo||5)||1;
+    if (q<=m) itens.push({nome:p.Nome, origem:q===0?'estoque zerado':'estoque baixo', cor:'#B33A3A', listaItem:null});
+  });
+  (encomendas||[]).filter(function(e){return (e.Tipo||'')==='Futura' && (e.Status||'').toLowerCase().indexOf('conclu')!==0;}).forEach(function(e){
+    itens.push({nome:e.Descricao||e.Cliente||'Encomenda', origem:'encomenda de '+(e.Cliente||'—'), cor:'#3B5BC9', listaItem:null});
+  });
+  (listaCompras||[]).filter(function(i){return (i.Status||'')==='Pendente';}).forEach(function(i){
+    itens.push({nome:i.Item, origem:'pedido de '+(i.Operador||'—'), cor:'#5F5E5A', listaItem:i.Item});
+  });
+  var badge = document.getElementById('badge-lista-compras');
+  if (badge) { badge.textContent = itens.length; badge.style.display = itens.length ? 'inline' : 'none'; }
+  if (!itens.length) { el.innerHTML = '<div class="empty-state">📝<br>Nada pendente na lista de compras</div>'; return; }
+  el.innerHTML = itens.map(function(i){
+    return '<div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border);">'+
+      '<div style="flex:1;"><div style="font-weight:600;font-size:14px;">'+escapeHtml(String(i.nome||''))+'</div>'+
+      '<div style="font-size:11px;color:'+i.cor+';">'+escapeHtml(i.origem)+'</div></div>'+
+      '<button class="btn btn-primary" style="width:auto;padding:8px 14px;font-size:13px;" onclick="comprarDaLista(\''+escapeHtml(String(i.nome||'')).replace(/'/g,"\\'")+'\','+(i.listaItem?"'"+escapeHtml(i.listaItem).replace(/'/g,"\\'")+"'":'null')+')">Comprar</button>'+
+      '</div>';
+  }).join('');
+}
+function comprarDaLista(nome, listaItem) {
+  abrirModalCompra(nome);
+  cpListaItemRef = listaItem || null;
 }
 
 function filtrarEstoque(q) {
@@ -1859,6 +1934,7 @@ async function salvarProduto() {
 
 // ── MODAL COMPRA (Ceagesp) ───────────────────────────────────
 function abrirModalCompra(nomeSugerido) {
+  cpListaItemRef = null;
   ['cp-produto','cp-fracionado','cp-quantidade','cp-valorpago','cp-venda','cp-obs'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('cp-fornecedor').value='Ceagesp';
   document.getElementById('cp-produto-list').innerHTML = (estoque||[]).map(function(p){return '<option value="'+escapeHtml(p.Nome||'')+'">';}).join('');
@@ -1896,9 +1972,16 @@ async function salvarCompra() {
     data: new Date().toLocaleDateString('pt-BR'),
     operador: operador||'PDV'
   };
+  if (cpListaItemRef) payload.listaItem = cpListaItemRef;
   var ok = await enviarParaSheets(payload);
   setLoading('btn-cp-text','btn-cp-text','spinner-cp',false,'Registrar compra');
-  if(ok){showToast('Compra registrada, estoque atualizado!');document.getElementById('modal-compra').classList.remove('open');carregarEstoque();}
+  if(ok){
+    showToast('Compra registrada, estoque atualizado!');
+    document.getElementById('modal-compra').classList.remove('open');
+    carregarEstoque();
+    if (cpListaItemRef) { carregarListaComprasPDV(); }
+    cpListaItemRef = null;
+  }
   else showToast('Erro ao salvar',true);
 }
 
