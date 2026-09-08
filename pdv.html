@@ -416,6 +416,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
   <button class="nav-btn active" onclick="showPage('venda',this)">🌷 Venda</button>
   <button class="nav-btn" onclick="showPage('encomenda',this)">📋 Encomenda</button>
   <button class="nav-btn" onclick="showPage('estoque',this)">📦 Estoque <span class="nav-badge" id="badge-alertas" style="display:none">0</span></button>
+  <button class="nav-btn" onclick="showPage('compras',this)">🛒 Compras <span class="nav-badge" id="badge-lista-compras" style="display:none">0</span></button>
   <button class="nav-btn" onclick="showPage('historico',this)">🕐 Histórico</button>
   <button class="nav-btn" onclick="showPage('gastos',this)">💸 Gastos</button>
 </nav>
@@ -567,14 +568,6 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <button class="est-filtro active" onclick="setEstFiltro('todos',this)">Todos</button>
     <button class="est-filtro" onclick="setEstFiltro('alertas',this)">⚠ Alertas</button>
     <button class="est-filtro" onclick="setEstFiltro('zerados',this)">🔴 Zerados</button>
-    <button class="est-filtro" onclick="setEstFiltro('lista',this)">📝 Lista de compras <span id="badge-lista-compras" style="display:none;"></span></button>
-  </div>
-  <div id="painel-lista-compras" style="display:none;">
-    <div style="display:flex;gap:8px;margin-bottom:14px;">
-      <input type="text" id="lc-pdv-novo-item" placeholder="O que você precisa? Ex: vaso de vidro médio" style="flex:1;padding:11px;border:1px solid var(--border);border-radius:10px;font-size:14px;">
-      <button class="btn btn-primary" style="width:auto;padding:0 16px;" onclick="solicitarItemListaPDV()">+ Pedir</button>
-    </div>
-    <div id="lista-compras-pdv"><div class="loading-state">Carregando…</div></div>
   </div>
   <div class="alert-banner" id="alert-zero">
     <div class="alert-banner-title">🔴 Sem estoque</div>
@@ -590,6 +583,28 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
   <button class="btn btn-primary" style="margin-bottom:10px;padding:11px;" onclick="abrirModalCompra()">🛒 Registrar compra</button>
   <button class="btn btn-outline" style="margin-bottom:14px;padding:11px;" onclick="abrirModalProduto()">+ Cadastrar produto</button>
   <div id="lista-estoque"><div class="loading-state">Carregando estoque…</div></div>
+</div>
+
+<!-- PAGE: COMPRAS (lista da Mayse) -->
+<div id="page-compras" class="page">
+  <div class="section-title" style="margin-bottom:4px;">📝 Lista em aberto</div>
+  <p style="font-size:12px;color:var(--light);margin:0 0 12px;">Vá adicionando o que precisa comprar. Quando terminar, feche a lista pra virar a "lista do dia".</p>
+  <div style="display:flex;gap:8px;margin-bottom:8px;">
+    <input type="text" id="lc-pdv-novo-item" placeholder="O que você precisa? Ex: antúrio" class="form-input" style="flex:2;">
+    <input type="text" id="lc-pdv-novo-qtd" placeholder="Qtd (ex: 1 caixa)" class="form-input" style="flex:1;">
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:14px;">
+    <button class="btn btn-primary" style="flex:1;" onclick="solicitarItemListaPDV()">+ Pedir</button>
+    <button class="btn btn-outline" style="flex:1;" onclick="abrirEscolhaEncomendaPDV()">📋 Da encomenda</button>
+  </div>
+  <div id="lista-compras-pdv"><div class="loading-state">Carregando…</div></div>
+  <button class="btn" style="background:var(--gold);color:#fff;margin-top:14px;" onclick="fecharListaPDV()">🔒 Fechar lista de hoje</button>
+
+  <div class="section-title" style="margin:26px 0 10px;">🗓 Listas fechadas</div>
+  <select id="lc-select-data" class="form-input" style="margin-bottom:12px;" onchange="renderListaFechadaPDV(this.value)">
+    <option value="">Selecione uma data…</option>
+  </select>
+  <div id="lista-fechada-pdv"></div>
 </div>
 
 <!-- PAGE: HISTÓRICO -->
@@ -861,6 +876,30 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <div class="form-group"><label class="form-label">Observação (opcional)</label><input class="form-input" id="perda-obs" type="text" placeholder="Detalhes…"></div>
     <button class="btn" style="background:var(--red);color:#fff;" onclick="confirmarPerda()">Registrar perda</button>
     <button class="btn btn-outline" onclick="document.getElementById('modal-perda').classList.remove('open')">Cancelar</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-encomenda-pick" onclick="closeModal(event,'modal-encomenda-pick')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Adicionar da encomenda</div>
+    <div class="form-group">
+      <label class="form-label">Encomenda</label>
+      <select id="enc-pick-select" class="form-input"></select>
+    </div>
+    <button class="btn btn-primary" onclick="confirmarAddEncomendaPDV()">Adicionar à lista</button>
+    <button class="btn btn-outline" onclick="document.getElementById('modal-encomenda-pick').classList.remove('open')">Cancelar</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-recusa" onclick="closeModal(event,'modal-recusa')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Recusar item</div>
+    <p style="font-size:13px;color:var(--mid);margin-bottom:16px;" id="modal-recusa-sub">—</p>
+    <div class="form-group"><label class="form-label">Motivo (opcional)</label><input class="form-input" id="recusa-obs" type="text" placeholder="Ex: muito caro, em falta…"></div>
+    <button class="btn" style="background:#B33A3A;color:#fff;" onclick="confirmarRecusa()">Recusar item</button>
+    <button class="btn btn-outline" onclick="document.getElementById('modal-recusa').classList.remove('open')">Cancelar</button>
   </div>
 </div>
 
@@ -1327,10 +1366,11 @@ function showPage(name, btn) {
   document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('page-'+name).classList.add('active');
   if (btn) btn.classList.add('active');
-  var titles = {venda:'Nova <em>venda</em>',encomenda:'Nova <em>encomenda</em>',estoque:'<em>Estoque</em>',historico:'<em>Histórico</em>',gastos:'<em>Gastos</em>'};
+  var titles = {venda:'Nova <em>venda</em>',encomenda:'Nova <em>encomenda</em>',estoque:'<em>Estoque</em>',compras:'<em>Lista de compras</em>',historico:'<em>Histórico</em>',gastos:'<em>Gastos</em>'};
   document.getElementById('header-title').innerHTML = titles[name] || name;
   if (name === 'historico') renderHistorico();
   if (name === 'estoque') carregarEstoque();
+  if (name === 'compras') { carregarListaComprasPDV(); carregarEncomendas(); }
   if (name === 'gastos') initGasLoja();
 }
 
@@ -1781,74 +1821,138 @@ function setEstFiltro(tipo, btn) {
   estFiltroAtivo = tipo;
   document.querySelectorAll('.est-filtro').forEach(function(b){b.classList.remove('active');});
   btn.classList.add('active');
-  var painelLista = document.getElementById('painel-lista-compras');
-  var listaEstoque = document.getElementById('lista-estoque');
-  var estBusca = document.querySelector('.estoque-search');
-  var btnsTopo = document.querySelectorAll('#page-estoque > .btn');
-  if (tipo === 'lista') {
-    painelLista.style.display = 'block';
-    listaEstoque.style.display = 'none';
-    if (estBusca) estBusca.style.display = 'none';
-    btnsTopo.forEach(function(b){b.style.display='none';});
-    carregarListaComprasPDV();
-  } else {
-    painelLista.style.display = 'none';
-    listaEstoque.style.display = '';
-    if (estBusca) estBusca.style.display = '';
-    btnsTopo.forEach(function(b){b.style.display='';});
-    renderEstoque();
-  }
+  renderEstoque();
 }
 
 // ── LISTA DE COMPRAS (Mayse pede, Jax compra) ──────────────
+// Modelo: itens sem ListaData = "lista em aberto" (Mayse ainda montando).
+// Ao fechar, todos os pendentes sem ListaData ganham a data de hoje em ListaData
+// e viram uma "lista do dia X", navegável no seletor de listas fechadas.
 var listaCompras = [];
 var cpListaItemRef = null;
+var encPickPendentes = [];
 function carregarListaComprasPDV() {
   if (!webhookUrl) return;
   document.getElementById('lista-compras-pdv').innerHTML = '<div class="loading-state">Carregando…</div>';
   apiGet('ListaCompras', '').then(function(d){
     listaCompras = d.data || [];
     renderListaComprasPDV();
+    popularSelectListasFechadas();
   });
 }
 function solicitarItemListaPDV() {
   var el = document.getElementById('lc-pdv-novo-item');
+  var elQtd = document.getElementById('lc-pdv-novo-qtd');
   var v = el.value.trim();
+  var qtd = elQtd ? elQtd.value.trim() : '';
   if (!v) { showToast('Digite o que você precisa', false, 'warn'); return; }
-  listaCompras.push({Item:v, Origem:'manual', Status:'Pendente'});
+  listaCompras.push({Item:v, Quantidade:qtd, Origem:'manual', Status:'Pendente', Operador:operador||'PDV'});
   renderListaComprasPDV();
-  enviarParaSheets({tipo:'add_lista_compra', item:v, origem:'manual', operador:operador||'PDV'});
-  el.value='';
+  enviarParaSheets({tipo:'add_lista_compra', item:v, quantidade:qtd, origem:'manual', operador:operador||'PDV'});
+  el.value=''; if (elQtd) elQtd.value='';
   showToast('Pedido adicionado à lista!');
+}
+function abrirEscolhaEncomendaPDV() {
+  var pendentes = (encomendas||[]).filter(function(e){return (e.Tipo||'')==='Futura' && (e.Status||'').toLowerCase().indexOf('conclu')!==0;});
+  var sel = document.getElementById('enc-pick-select');
+  encPickPendentes = pendentes;
+  sel.innerHTML = pendentes.length ? pendentes.map(function(e,i){
+    return '<option value="'+i+'">'+escapeHtml(String(e.Descricao||e.Cliente||'Encomenda'))+' — '+escapeHtml(String(e.Cliente||''))+'</option>';
+  }).join('') : '<option value="">Nenhuma encomenda futura pendente</option>';
+  document.getElementById('modal-encomenda-pick').classList.add('open');
+}
+function confirmarAddEncomendaPDV() {
+  var idx = document.getElementById('enc-pick-select').value;
+  if (idx === '' || !encPickPendentes[idx]) { showToast('Selecione uma encomenda', false, 'warn'); return; }
+  var e = encPickPendentes[idx];
+  var nomeItem = e.Descricao || e.Cliente || 'Encomenda';
+  var ref = (e.Cliente||'') + (e.Descricao ? (' — '+e.Descricao) : '');
+  listaCompras.push({Item:nomeItem, Origem:'encomenda', EncomendaRef:ref, Status:'Pendente', Operador:operador||'PDV'});
+  renderListaComprasPDV();
+  enviarParaSheets({tipo:'add_lista_compra', item:nomeItem, origem:'encomenda', encomendaRef:ref, operador:operador||'PDV'});
+  document.getElementById('modal-encomenda-pick').classList.remove('open');
+  showToast('Adicionado à lista!');
 }
 function renderListaComprasPDV() {
   var el = document.getElementById('lista-compras-pdv');
   if (!el) return;
-  var itens = [];
-  (estoque||[]).forEach(function(p){
-    var q=parseInt(p.Qtd||0), m=parseInt(p.Alerta_Minimo||5)||1;
-    if (q<=m) itens.push({nome:p.Nome, origem:q===0?'estoque zerado':'estoque baixo', cor:'#B33A3A', listaItem:null});
-  });
-  (encomendas||[]).filter(function(e){return (e.Tipo||'')==='Futura' && (e.Status||'').toLowerCase().indexOf('conclu')!==0;}).forEach(function(e){
-    itens.push({nome:e.Descricao||e.Cliente||'Encomenda', origem:'encomenda de '+(e.Cliente||'—'), cor:'#3B5BC9', listaItem:null});
-  });
-  (listaCompras||[]).filter(function(i){return (i.Status||'')==='Pendente';}).forEach(function(i){
-    itens.push({nome:i.Item, origem:'pedido de '+(i.Operador||'—'), cor:'#5F5E5A', listaItem:i.Item});
-  });
+  var abertos = (listaCompras||[]).filter(function(i){return (i.Status||'')==='Pendente' && !i.ListaData;});
   var badge = document.getElementById('badge-lista-compras');
-  if (badge) { badge.textContent = itens.length; badge.style.display = itens.length ? 'inline' : 'none'; }
-  if (!itens.length) { el.innerHTML = '<div class="empty-state">📝<br>Nada pendente na lista de compras</div>'; return; }
-  el.innerHTML = itens.map(function(i){
+  if (badge) { badge.textContent = abertos.length; badge.style.display = abertos.length ? 'inline' : 'none'; }
+  if (!abertos.length) { el.innerHTML = '<div class="empty-state">📝<br>Nada pedido ainda nessa lista</div>'; return; }
+  el.innerHTML = abertos.map(function(i){
+    var qtdTxt = i.Quantidade ? ' · '+escapeHtml(String(i.Quantidade)) : '';
+    var origTxt = i.Origem==='encomenda' ? ('encomenda'+(i.EncomendaRef?' · '+escapeHtml(String(i.EncomendaRef)):'')) : 'pedido de '+escapeHtml(String(i.Operador||'—'));
     return '<div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border);">'+
-      '<div style="flex:1;"><div style="font-weight:600;font-size:14px;">'+escapeHtml(String(i.nome||''))+'</div>'+
-      '<div style="font-size:11px;color:'+i.cor+';">'+escapeHtml(i.origem)+'</div></div>'+
-      '<button class="btn btn-primary" style="width:auto;padding:8px 14px;font-size:13px;" onclick="comprarDaLista(\''+escapeHtml(String(i.nome||'')).replace(/'/g,"\\'")+'\','+(i.listaItem?"'"+escapeHtml(i.listaItem).replace(/'/g,"\\'")+"'":'null')+')">Comprar</button>'+
+      '<div style="flex:1;"><div style="font-weight:600;font-size:14px;">'+escapeHtml(String(i.Item||''))+qtdTxt+'</div>'+
+      '<div style="font-size:11px;color:#5F5E5A;">'+origTxt+'</div></div>'+
+      '</div>';
+  }).join('');
+}
+function fecharListaPDV() {
+  var abertos = (listaCompras||[]).filter(function(i){return (i.Status||'')==='Pendente' && !i.ListaData;});
+  if (!abertos.length) { showToast('Nada pra fechar ainda', false, 'warn'); return; }
+  enviarParaSheets({tipo:'fechar_lista_compras', operador:operador||'PDV'}).then(function(ok){
+    if (ok) { showToast('Lista fechada!'); carregarListaComprasPDV(); }
+    else showToast('Erro ao fechar lista', true);
+  });
+}
+function parsePtDataSimples(s) {
+  var p = String(s||'').split('/');
+  return p.length===3 ? new Date(p[2], p[1]-1, p[0]).getTime() : 0;
+}
+function popularSelectListasFechadas() {
+  var sel = document.getElementById('lc-select-data');
+  if (!sel) return;
+  var datas = [];
+  (listaCompras||[]).forEach(function(i){ if (i.ListaData && datas.indexOf(i.ListaData)===-1) datas.push(i.ListaData); });
+  datas.sort(function(a,b){ return parsePtDataSimples(b) - parsePtDataSimples(a); });
+  var atual = sel.value;
+  sel.innerHTML = '<option value="">Selecione uma data…</option>' + datas.map(function(d){return '<option value="'+d+'">Lista de '+d+'</option>';}).join('');
+  if (datas.indexOf(atual)>=0) { sel.value = atual; renderListaFechadaPDV(atual); }
+  else if (datas.length) { sel.value = datas[0]; renderListaFechadaPDV(datas[0]); }
+  else { document.getElementById('lista-fechada-pdv').innerHTML=''; }
+}
+function renderListaFechadaPDV(dataSel) {
+  var el = document.getElementById('lista-fechada-pdv');
+  if (!el) return;
+  if (!dataSel) { el.innerHTML=''; return; }
+  var itens = (listaCompras||[]).filter(function(i){return i.ListaData===dataSel;});
+  if (!itens.length) { el.innerHTML = '<div class="empty-state">Nenhum item nessa lista</div>'; return; }
+  el.innerHTML = itens.map(function(i){
+    var qtdTxt = i.Quantidade ? ' · '+escapeHtml(String(i.Quantidade)) : '';
+    var origTxt = i.Origem==='encomenda' ? ('encomenda'+(i.EncomendaRef?' · '+escapeHtml(String(i.EncomendaRef)):'')) : 'pedido de '+escapeHtml(String(i.Operador||'—'));
+    var statusTag = i.Status==='Comprado' ? ' <span style="color:#2E7D32;font-weight:700;">✓ comprado</span>' : i.Status==='Recusado' ? ' <span style="color:#B33A3A;font-weight:700;">✕ recusado'+(i.Observacao?' — '+escapeHtml(String(i.Observacao)):'')+'</span>' : '';
+    var itemEsc = escapeHtml(String(i.Item||'')).replace(/'/g,"\\'");
+    var acoes = i.Status==='Pendente' ?
+      '<button class="btn btn-primary" style="width:auto;padding:8px 14px;font-size:13px;" onclick="comprarDaLista(\''+itemEsc+'\',\''+itemEsc+'\')">Comprar</button>'+
+      '<button class="btn btn-outline" style="width:auto;padding:8px 14px;font-size:13px;color:#B33A3A;border-color:#B33A3A;" onclick="abrirModalRecusa(\''+itemEsc+'\')">Recusar</button>'
+      : '';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">'+
+      '<div style="flex:1;min-width:140px;"><div style="font-weight:600;font-size:14px;">'+escapeHtml(String(i.Item||''))+qtdTxt+statusTag+'</div>'+
+      '<div style="font-size:11px;color:#5F5E5A;">'+origTxt+'</div></div>'+
+      '<div style="display:flex;gap:6px;">'+acoes+'</div>'+
       '</div>';
   }).join('');
 }
 function comprarDaLista(nome, listaItem) {
   abrirModalCompra(nome);
   cpListaItemRef = listaItem || null;
+}
+var recusaItemAtual = null;
+function abrirModalRecusa(item) {
+  recusaItemAtual = item;
+  document.getElementById('recusa-obs').value = '';
+  document.getElementById('modal-recusa-sub').textContent = item;
+  document.getElementById('modal-recusa').classList.add('open');
+}
+async function confirmarRecusa() {
+  if (!recusaItemAtual) return;
+  var obs = document.getElementById('recusa-obs').value.trim();
+  var ok = await enviarParaSheets({tipo:'recusar_item_lista', item:recusaItemAtual, observacao:obs, operador:operador||'PDV'});
+  document.getElementById('modal-recusa').classList.remove('open');
+  if (ok) { showToast('Item recusado'); carregarListaComprasPDV(); }
+  else showToast('Erro ao recusar', true);
 }
 
 function filtrarEstoque(q) {
