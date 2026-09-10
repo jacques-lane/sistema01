@@ -546,6 +546,19 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
         <div id="cp-sug-lst"><div class="empty">Carregue os dados</div></div>
       </div>
       <div class="cc" style="margin-bottom:20px;">
+        <div class="ch"><div><div class="ct">📝 Montar lista de compras (Mayse)</div><div class="csb">Vá adicionando o que precisa comprar. Ao fechar, vira a "lista do dia" pro Jax ver e comprar.</div></div></div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+          <input type="text" id="lc-dash-item" list="lc-dash-item-list" placeholder="O que você precisa? Ex: antúrio" style="flex:2;min-width:160px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;"><datalist id="lc-dash-item-list"></datalist>
+          <input type="text" id="lc-dash-qtd" placeholder="Qtd (ex: 1 caixa)" style="flex:1;min-width:100px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;">
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <button class="btn-l" style="flex:1;" onclick="adicionarItemListaDash()">+ Pedir</button>
+          <button class="btn-l" style="flex:1;background:#fff;color:var(--vf);border:1px solid var(--vj);" onclick="abrirEscolhaEncomendaDash()">📋 Da encomenda</button>
+        </div>
+        <div id="lc-dash-aberta"><div class="empty">Nada pedido ainda nessa lista</div></div>
+        <button class="btn-l" style="margin-top:14px;background:var(--gold);color:#fff;" onclick="fecharListaDash()">🔒 Fechar lista de hoje</button>
+      </div>
+      <div class="cc" style="margin-bottom:20px;">
         <div class="ch"><div><div class="ct">📝 Pedidos da Mayse</div><div class="csb">Listas que ela fechou · Comprar abre o registro de compra, Recusar marca com observação</div></div></div>
         <select id="cp-lc-select-data" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:10px;" onchange="renderPedidosMayse(this.value)">
           <option value="">Selecione uma data…</option>
@@ -659,9 +672,13 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 <div class="fg2"><div class="fg"><label class="fl">Fornecedor</label><input class="fi" id="fp-forn" type="text" placeholder="Fornecedor"></div><div class="fg"><label class="fl">Alerta mínimo</label><input class="fi" id="fp-alrt" type="number" min="0" placeholder="5" value="5"></div></div>
 <div class="fg2"><div class="fg"><label class="fl">Qtd inicial</label><input class="fi" id="fp-qtd" type="number" min="0" placeholder="0" value="0"></div><div class="fg"><label class="fl">Lote/validade</label><input class="fi" id="fp-lote" type="text" placeholder="Ex: 2025-06"></div></div>
 <div class="fg2"><div class="fg"><label class="fl">Preço custo</label><input class="fi" id="fp-cst" type="number" min="0" step="0.01" placeholder="0,00"></div><div class="fg"><label class="fl">Preço venda</label><input class="fi" id="fp-vnd" type="number" min="0" step="0.01" placeholder="0,00"></div></div>
-<div class="fg" style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--cream);border-radius:8px;margin-bottom:10px;"><div><div style="font-size:13px;">⭐ Prioridade de compra</div><div style="font-size:11px;color:var(--light);">Sempre aparece no topo da lista de compras sugerida</div></div><button class="tog" id="tog-fp-prior" onclick="this.classList.toggle('on')" aria-label="toggle prioridade produto"></button></div>
+<div class="fg"><label class="fl">⭐ Prioridade de compra (opcional)</label><input class="fi" id="fp-prior" type="number" min="1" placeholder="Ex: 1 (menor número = mais prioritário)"></div>
 <div class="fmsg" id="fm-prod"></div><div class="mft"><button class="btn-cn" onclick="fM('produto')">Cancelar</button><button class="btn-sb" id="btn-fp" onclick="subProd()"><div class="msp" id="sp-prod"></div>Salvar</button></div></div></div>
 
+<div class="mov" id="m-lc-enc-dash" onclick="cMov(event,'m-lc-enc-dash')"><div class="mo"><button class="mc" onclick="fM('lc-enc-dash')">×</button><div class="mt">Adicionar da encomenda</div><div class="mst">Encomendas futuras pendentes</div>
+  <div class="fg"><label class="fl">Encomenda</label><select class="fsl" id="lc-enc-pick-dash"><option value="">Selecione…</option></select></div>
+  <button class="btn-l" onclick="confirmarAddEncomendaDash()">Adicionar à lista</button>
+</div></div>
 <div class="mov" id="m-recusa" onclick="cMov(event,'m-recusa')"><div class="mo"><button class="mc" onclick="fM('recusa')">×</button><div class="mt">Recusar item</div><div class="mst" id="recusa-sub">—</div>
   <div class="fg"><label class="fl">Motivo (opcional)</label><input class="fi" type="text" id="recusa-obs-dash" placeholder="Ex: muito caro, em falta…"></div>
   <button class="btn-l" style="background:var(--red);color:#fff;" onclick="confirmarRecusaDash()">Recusar item</button>
@@ -1058,6 +1075,65 @@ function renEstoquePrioritario(){
     var tag=p._status==='zero'?' · ZERADO':p._status==='baixo'?' · abaixo do mínimo':'';
     return'<div class="br"><span class="bl" style="width:130px" title="'+esc(p.Nome)+'">'+esc(p.Nome)+'</span><div class="bt"><div class="bf" style="width:'+pct+'%;background:'+COR[p._status]+'"></div></div><span class="bv" style="color:'+COR[p._status]+'">'+p._q+' un'+tag+'</span></div>';
   }).join('');
+}
+
+// ── MONTAR LISTA DE COMPRAS (Mayse constrói, aqui ou no PDV) ─
+function renderListaAbertaDash(){
+  var el=document.getElementById('lc-dash-aberta');
+  if(!el)return;
+  var abertos=(D.listaCompras||[]).filter(function(i){return (i.Status||'')==='Pendente' && !i.ListaData;});
+  if(!abertos.length){el.innerHTML='<div class="empty">Nada pedido ainda nessa lista</div>';return;}
+  el.innerHTML=abertos.map(function(i){
+    var qtdTxt=i.Quantidade?' · '+esc(String(i.Quantidade)):'';
+    var origTxt=i.Origem==='encomenda'?('encomenda'+(i.EncomendaRef?' · '+esc(String(i.EncomendaRef)):'')):'pedido de '+esc(String(i.Operador||'—'));
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);">'+
+      '<div><div style="font-weight:600;font-size:13px;">'+esc(i.Item||'')+qtdTxt+'</div>'+
+      '<div style="font-size:11px;color:var(--light);">'+origTxt+'</div></div></div>';
+  }).join('');
+}
+function adicionarItemListaDash(){
+  var elItem=document.getElementById('lc-dash-item'),elQtd=document.getElementById('lc-dash-qtd');
+  var v=elItem.value.trim(),qtd=elQtd?elQtd.value.trim():'';
+  if(!v){showToast('Digite o que você precisa','warn');return;}
+  D.listaCompras.push({Item:v,Quantidade:qtd,Origem:'manual',Status:'Pendente',Operador:'Mayse'});
+  renderListaAbertaDash();
+  apiPost({tipo:'add_lista_compra',item:v,quantidade:qtd,origem:'manual',operador:'Mayse'});
+  elItem.value='';if(elQtd)elQtd.value='';
+  showToast('Pedido adicionado à lista!');
+}
+var lcEncPendentesDash=[];
+function abrirEscolhaEncomendaDash(){
+  var pendentes=(D.encomendas||[]).filter(function(e){return (e.Tipo||'')==='Futura' && (e.Status||'').toLowerCase().indexOf('conclu')!==0;});
+  var sel=document.getElementById('lc-enc-pick-dash');
+  lcEncPendentesDash=pendentes;
+  sel.innerHTML=pendentes.length?pendentes.map(function(e,i){
+    return '<option value="'+i+'">'+esc(String(e.Descricao||e.Cliente||'Encomenda'))+' — '+esc(String(e.Cliente||''))+'</option>';
+  }).join(''):'<option value="">Nenhuma encomenda futura pendente</option>';
+  document.getElementById('m-lc-enc-dash').classList.add('open');
+}
+function confirmarAddEncomendaDash(){
+  var idx=document.getElementById('lc-enc-pick-dash').value;
+  if(idx===''||!lcEncPendentesDash[idx]){showToast('Selecione uma encomenda','warn');return;}
+  var e=lcEncPendentesDash[idx];
+  var nomeItem=e.Descricao||e.Cliente||'Encomenda';
+  var ref=(e.Cliente||'')+(e.Descricao?(' — '+e.Descricao):'');
+  D.listaCompras.push({Item:nomeItem,Origem:'encomenda',EncomendaRef:ref,Status:'Pendente',Operador:'Mayse'});
+  renderListaAbertaDash();
+  apiPost({tipo:'add_lista_compra',item:nomeItem,origem:'encomenda',encomendaRef:ref,operador:'Mayse'});
+  fM('lc-enc-dash');
+  showToast('Adicionado à lista!');
+}
+async function fecharListaDash(){
+  var abertos=(D.listaCompras||[]).filter(function(i){return (i.Status||'')==='Pendente' && !i.ListaData;});
+  if(!abertos.length){showToast('Nenhum item pendente pra fechar','warn');return;}
+  var ok=await apiPost({tipo:'fechar_lista_compras',operador:'Mayse'});
+  if(ok){
+    var hoje=new Date().toLocaleDateString('pt-BR');
+    abertos.forEach(function(i){i.ListaData=hoje;});
+    renderListaAbertaDash();
+    popularSelectPedidosMayse();
+    showToast('Lista fechada — "lista de '+hoje+'"');
+  }else showToast('Erro ao fechar lista','warn');
 }
 
 // ── PEDIDOS DA MAYSE (listas de compra fechadas por ela) ────
@@ -1584,13 +1660,34 @@ async function marcarConciliado(idx){
 var cpIdealPreco=null;
 function estComprado(p){return String(p.Fornecedor||'').trim()!=='';}
 function estBaixo(p){var q=parseInt(p.Qtd||0),m=parseInt(p.Alerta_Minimo||5);return q<=m;}
-function ehPrioritario(p){return String(p.Prioridade||'').toLowerCase()==='sim';}
+function ehPrioritario(p){var n=parseInt(p&&p.Prioridade,10);return !isNaN(n)&&n>0;}
+function prioridadeNum(p){var n=parseInt(p&&p.Prioridade,10);return isNaN(n)?Infinity:n;}
 function margemAtual(precoVenda,custo){custo=parseFloat(custo||0);if(!custo)return null;return parseFloat(precoVenda||0)/custo;}
+function popularListaComprasDashDatalist(){
+  var dl=document.getElementById('lc-dash-item-list');
+  if(!dl)return;
+  var lista=gDL(D.estoque).slice().sort(function(a,b){
+    var pra=prioridadeNum(a),prb=prioridadeNum(b);
+    if(pra!==prb)return pra-prb;
+    var qa=parseInt(a.Qtd||0),ma=parseInt(a.Alerta_Minimo||5),qb=parseInt(b.Qtd||0),mb=parseInt(b.Alerta_Minimo||5);
+    var pa=qa===0?0:(qa<=ma?1:2),pb=qb===0?0:(qb<=mb?1:2);
+    if(pa!==pb)return pa-pb;
+    return String(a.Nome||'').localeCompare(String(b.Nome||''));
+  });
+  dl.innerHTML=lista.map(function(p){
+    var qtd=parseInt(p.Qtd||0),alerta=parseInt(p.Alerta_Minimo||5);
+    var tag=qtd===0?' (zerado)':(qtd<=alerta?' (estoque baixo)':'');
+    var prTag=p.Prioridade?' ⭐'+p.Prioridade:'';
+    var nome=String(p.Nome||'');
+    return '<option value="'+nome.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'">'+esc(nome)+prTag+tag+'</option>';
+  }).join('');
+}
 function renCompras(){
   var est=gDL(D.estoque);
+  popularListaComprasDashDatalist();
   var sug=est.filter(function(p){return estComprado(p)&&estBaixo(p);});
   sug.sort(function(a,b){
-    var pa=ehPrioritario(a)?0:1,pb=ehPrioritario(b)?0:1;
+    var pa=prioridadeNum(a),pb=prioridadeNum(b);
     if(pa!==pb)return pa-pb;
     return(parseInt(a.Qtd||0)-parseInt(a.Alerta_Minimo||5))-(parseInt(b.Qtd||0)-parseInt(b.Alerta_Minimo||5));
   });
@@ -1642,6 +1739,7 @@ function renCompras(){
   }
   renGiroCompras();
   popularSelectPedidosMayse();
+  renderListaAbertaDash();
 }
 function parseProdutosVenda(v){
   var out=[];
@@ -2240,9 +2338,9 @@ async function subCli(){var nm=document.getElementById('fcn').value.trim(),tel=d
 
 /* ── MODAL PRODUTO ── */
 var mpEditIdx=null;
-function abMProd(idx,nomePre){mpEditIdx=(idx!==undefined?idx:null);document.getElementById('fm-prod').className='fmsg';var togP=document.getElementById('tog-fp-prior');if(idx!==undefined){var p=D.estoque[idx];sEl('mp-ttl','Editar produto');document.getElementById('fp-em').value=p.Emoji||'🌷';document.getElementById('fp-nm').value=p.Nome||'';document.getElementById('fp-lj').value=lSlug(p.Loja||'juquia');document.getElementById('fp-cat').value=p.Categoria||'';document.getElementById('fp-forn').value=p.Fornecedor||'';document.getElementById('fp-alrt').value=p.Alerta_Minimo||5;document.getElementById('fp-qtd').value=p.Qtd||0;document.getElementById('fp-lote').value=p.Lote||'';document.getElementById('fp-cst').value=p.Preco_Custo||0;document.getElementById('fp-vnd').value=p.Preco_Venda||0;togP.classList.toggle('on',(p.Prioridade||'').toLowerCase()==='sim');}else{sEl('mp-ttl','Cadastrar produto');['fp-em','fp-nm','fp-cat','fp-forn','fp-lote'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fp-alrt').value=5;document.getElementById('fp-qtd').value=0;document.getElementById('fp-cst').value='';document.getElementById('fp-vnd').value='';togP.classList.remove('on');if(nomePre)document.getElementById('fp-nm').value=nomePre;}document.getElementById('m-produto').classList.add('open');}
+function abMProd(idx,nomePre){mpEditIdx=(idx!==undefined?idx:null);document.getElementById('fm-prod').className='fmsg';var togP=document.getElementById('fp-prior');if(idx!==undefined){var p=D.estoque[idx];sEl('mp-ttl','Editar produto');document.getElementById('fp-em').value=p.Emoji||'🌷';document.getElementById('fp-nm').value=p.Nome||'';document.getElementById('fp-lj').value=lSlug(p.Loja||'juquia');document.getElementById('fp-cat').value=p.Categoria||'';document.getElementById('fp-forn').value=p.Fornecedor||'';document.getElementById('fp-alrt').value=p.Alerta_Minimo||5;document.getElementById('fp-qtd').value=p.Qtd||0;document.getElementById('fp-lote').value=p.Lote||'';document.getElementById('fp-cst').value=p.Preco_Custo||0;document.getElementById('fp-vnd').value=p.Preco_Venda||0;togP.value=(p.Prioridade||'');}else{sEl('mp-ttl','Cadastrar produto');['fp-em','fp-nm','fp-cat','fp-forn','fp-lote'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fp-alrt').value=5;document.getElementById('fp-qtd').value=0;document.getElementById('fp-cst').value='';document.getElementById('fp-vnd').value='';togP.value='';if(nomePre)document.getElementById('fp-nm').value=nomePre;}document.getElementById('m-produto').classList.add('open');}
 function edProd(idx){abMProd(idx);}
-async function subProd(){var nm=document.getElementById('fp-nm').value.trim();if(!nm){sFMsg('fm-prod','Informe o nome','err');return;}var prioridade=document.getElementById('tog-fp-prior').classList.contains('on')?'Sim':'Nao';setML('btn-fp','sp-prod',true);var ok=await apiPost({tipo:'upsert_produto',loja:document.getElementById('fp-lj').value,emoji:document.getElementById('fp-em').value||'🌷',nome:nm,categoria:document.getElementById('fp-cat').value,fornecedor:document.getElementById('fp-forn').value,qtd:parseFloat(document.getElementById('fp-qtd').value)||0,alertaMinimo:parseFloat(document.getElementById('fp-alrt').value)||5,precoCusto:parseFloat(document.getElementById('fp-cst').value)||0,precoVenda:parseFloat(document.getElementById('fp-vnd').value)||0,lote:document.getElementById('fp-lote').value,prioridade:prioridade,operador:'Jax'});setML('btn-fp','sp-prod',false);if(ok){var campos={Loja:document.getElementById('fp-lj').value,Nome:nm,Categoria:document.getElementById('fp-cat').value,Emoji:document.getElementById('fp-em').value||'🌷',Qtd:parseFloat(document.getElementById('fp-qtd').value)||0,Preco_Custo:parseFloat(document.getElementById('fp-cst').value)||0,Preco_Venda:parseFloat(document.getElementById('fp-vnd').value)||0,Fornecedor:document.getElementById('fp-forn').value,Alerta_Minimo:parseFloat(document.getElementById('fp-alrt').value)||5,Lote:document.getElementById('fp-lote').value,Prioridade:prioridade};if(mpEditIdx!==null&&D.estoque[mpEditIdx])Object.assign(D.estoque[mpEditIdx],campos);else D.estoque.push(campos);showToast('Produto salvo!');fM('produto');renEst();if(secAtiva==='compras')renCompras();if(document.getElementById('m-orcamento').classList.contains('open')){renOrcProdList();refreshOrcItensProduto();}}else sFMsg('fm-prod','Erro ao salvar','err');}
+async function subProd(){var nm=document.getElementById('fp-nm').value.trim();if(!nm){sFMsg('fm-prod','Informe o nome','err');return;}var prioridade=document.getElementById('fp-prior').value.trim();setML('btn-fp','sp-prod',true);var ok=await apiPost({tipo:'upsert_produto',loja:document.getElementById('fp-lj').value,emoji:document.getElementById('fp-em').value||'🌷',nome:nm,categoria:document.getElementById('fp-cat').value,fornecedor:document.getElementById('fp-forn').value,qtd:parseFloat(document.getElementById('fp-qtd').value)||0,alertaMinimo:parseFloat(document.getElementById('fp-alrt').value)||5,precoCusto:parseFloat(document.getElementById('fp-cst').value)||0,precoVenda:parseFloat(document.getElementById('fp-vnd').value)||0,lote:document.getElementById('fp-lote').value,prioridade:prioridade,operador:'Jax'});setML('btn-fp','sp-prod',false);if(ok){var campos={Loja:document.getElementById('fp-lj').value,Nome:nm,Categoria:document.getElementById('fp-cat').value,Emoji:document.getElementById('fp-em').value||'🌷',Qtd:parseFloat(document.getElementById('fp-qtd').value)||0,Preco_Custo:parseFloat(document.getElementById('fp-cst').value)||0,Preco_Venda:parseFloat(document.getElementById('fp-vnd').value)||0,Fornecedor:document.getElementById('fp-forn').value,Alerta_Minimo:parseFloat(document.getElementById('fp-alrt').value)||5,Lote:document.getElementById('fp-lote').value,Prioridade:prioridade};if(mpEditIdx!==null&&D.estoque[mpEditIdx])Object.assign(D.estoque[mpEditIdx],campos);else D.estoque.push(campos);showToast('Produto salvo!');fM('produto');renEst();if(secAtiva==='compras')renCompras();if(document.getElementById('m-orcamento').classList.contains('open')){renOrcProdList();refreshOrcItensProduto();}}else sFMsg('fm-prod','Erro ao salvar','err');}
 
 /* ── MODAL AJUSTE ── */
 function abAj(idx){ajProd=D.estoque[idx];document.getElementById('aj-sb').textContent=(ajProd.Nome||'')+' · Qtd atual: '+(ajProd.Qtd||0);document.getElementById('aj-val').textContent=parseInt(ajProd.Qtd||0);document.getElementById('aj-mot').value='';document.getElementById('m-ajuste').classList.add('open');}

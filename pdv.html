@@ -20,8 +20,11 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);min-height:100vh;max-width:430px;margin:0 auto;overflow-x:hidden;}
 
+/* ── LOADING (splash neutro enquanto valida o aparelho já configurado) ── */
+#loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:var(--vf);padding:32px 24px;text-align:center;}
+
 /* ── LOCK ── */
-#lock-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:var(--vf);padding:32px 24px;text-align:center;}
+#lock-screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:var(--vf);padding:32px 24px;text-align:center;}
 .lock-logo{font-size:28px;font-weight:700;color:var(--vj);letter-spacing:-1px;margin-bottom:4px;}
 .lock-tagline{font-size:12px;color:rgba(255,255,255,.35);margin-bottom:36px;}
 .lock-ico{font-size:36px;margin-bottom:16px;}
@@ -292,6 +295,12 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 </style>
 </head>
 <body>
+
+<!-- ══ LOADING (splash neutro, evita "piscar" a tela de identificar aparelho em device já configurado) ══ -->
+<div id="loading-screen">
+  <div class="lock-logo">Mayse</div>
+  <div class="lock-tagline">Floricultura & Garden · PDV v3</div>
+</div>
 
 <!-- ══ LOCK ══ -->
 <div id="lock-screen">
@@ -590,7 +599,8 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
   <div class="section-title" style="margin-bottom:4px;">📝 Lista em aberto</div>
   <p style="font-size:12px;color:var(--light);margin:0 0 12px;">Vá adicionando o que precisa comprar. Quando terminar, feche a lista pra virar a "lista do dia".</p>
   <div style="display:flex;gap:8px;margin-bottom:8px;">
-    <input type="text" id="lc-pdv-novo-item" placeholder="O que você precisa? Ex: antúrio" class="form-input" style="flex:2;">
+    <input type="text" id="lc-pdv-novo-item" list="lc-pdv-item-list" placeholder="O que você precisa? Ex: antúrio" class="form-input" style="flex:2;">
+    <datalist id="lc-pdv-item-list"></datalist>
     <input type="text" id="lc-pdv-novo-qtd" placeholder="Qtd (ex: 1 caixa)" class="form-input" style="flex:1;">
   </div>
   <div style="display:flex;gap:8px;margin-bottom:14px;">
@@ -793,11 +803,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
       <div class="form-group" style="margin-bottom:0"><label class="form-label">Preço venda</label><input class="form-input" id="prod-venda" type="number" inputmode="decimal" placeholder="0,00"></div>
     </div>
     <div class="form-group"><label class="form-label">Lote / validade (opcional)</label><input class="form-input" id="prod-lote" type="text" placeholder="Ex: 2025-06"></div>
-    <div class="toggle-row">
-      <div><div class="toggle-lbl">⭐ Prioridade de compra</div><div class="toggle-sub">Sempre no topo da lista de compras do Jax</div></div>
-      <button class="toggle-sw" id="tog-prod-prior" onclick="toggleSw('tog-prod-prior','prod-prior-dummy')" aria-label="toggle prioridade produto"></button>
-    </div>
-    <div id="prod-prior-dummy" style="display:none;"></div>
+    <div class="form-group"><label class="form-label">⭐ Prioridade de compra (opcional)</label><input class="form-input" id="prod-prior" type="number" inputmode="numeric" placeholder="Ex: 1 (menor número = mais prioritário)"></div>
     <button class="btn btn-primary" onclick="salvarProduto()">
       <span id="btn-prod-text">Cadastrar</span>
       <div class="spinner" id="spinner-prod"></div>
@@ -954,12 +960,17 @@ var encTipo = 'Futura';
 // ── INIT ────────────────────────────────────────────────────
 (function init() {
   if (!webhookUrl || !tokenSecreto || !pdvNome) {
+    document.getElementById('loading-screen').style.display = 'none';
     document.getElementById('lock-screen').style.display = 'flex';
     carregarFuncPadraoLock();
     return;
   }
   validarPdv();
 })();
+function hideLoadingScreen() {
+  var el = document.getElementById('loading-screen');
+  if (el) el.style.display = 'none';
+}
 
 function validarPdv() {
   var url = webhookUrl + '?token=' + encodeURIComponent(tokenSecreto) +
@@ -975,6 +986,7 @@ function validarPdv() {
 }
 
 function mostrarBloqueado() {
+  hideLoadingScreen();
   document.getElementById('lock-screen').style.display = 'none';
   document.getElementById('blocked-screen').style.display = 'flex';
   document.getElementById('bl-nome').textContent = pdvNome;
@@ -1015,6 +1027,7 @@ function verificarPonto() {
     } else {
       localStorage.removeItem('mayse_v3_pontodata');
       localStorage.removeItem('mayse_v3_caixaloja');
+      hideLoadingScreen();
       document.getElementById('ponto-screen').style.display = 'flex';
       carregarFuncionarios();
     }
@@ -1025,6 +1038,7 @@ function verificarPonto() {
       mostrarApp();
       if (statusAlmocoHoje()) mostrarAlmocoBloqueado();
     } else {
+      hideLoadingScreen();
       document.getElementById('ponto-screen').style.display = 'flex';
       carregarFuncionarios();
     }
@@ -1192,6 +1206,7 @@ function abrirCaixaGate() {
 }
 
 function mostrarApp() {
+  hideLoadingScreen();
   document.getElementById('ponto-screen').style.display = 'none';
   document.getElementById('caixa-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
@@ -1212,13 +1227,14 @@ function abrirFecharCaixa() {
     if (!linha) { showToast('Nenhum caixa aberto hoje', true); return; }
     Promise.all([
       apiGet('Vendas', 'loja=' + lojaCaixa),
-      apiGet('Gastos', 'loja=' + lojaCaixa)
+      apiGet('Pagamentos', 'loja=' + lojaCaixa)
     ]).then(function(res) {
       var dv = res[0], dg = res[1];
       var totalDinheiro = 0;
       (dv.data || []).forEach(function(v) { if (v.Data === hoje) totalDinheiro += parseFloat(v.Dinheiro || 0); });
       var totalGastos = 0;
-      (dg.data || []).forEach(function(g) { if (g.Data === hoje && g.Forma_Pagamento === 'Dinheiro') totalGastos += parseFloat(g.Valor || 0); });
+      // Gastos em dinheiro agora ficam na aba Pagamentos (Tipo='Gasto'), não mais na aba Gastos legada.
+      (dg.data || []).forEach(function(g) { if (g.Tipo === 'Gasto' && g.Data === hoje && g.Forma_Pagamento === 'Dinheiro') totalGastos += parseFloat(g.Valor || 0); });
       var esperado = parseFloat(linha.Valor_Abertura || 0) + totalDinheiro - totalGastos;
       window._caixaEsperado = esperado;
       document.getElementById('fc-abertura').textContent = 'R$ ' + fmt(linha.Valor_Abertura);
@@ -1341,8 +1357,31 @@ function carregarEstoque() {
       estoqueFiltered = estoque.slice();
       renderEstoque();
       atualizarAlertas();
+      popularListaComprasItemDatalist();
     }
   });
+}
+function prioridadeNum(p) {
+  var n = parseInt(p && p.Prioridade, 10);
+  return isNaN(n) ? Infinity : n;
+}
+function popularListaComprasItemDatalist() {
+  var dl = document.getElementById('lc-pdv-item-list');
+  if (!dl) return;
+  var lista = (estoque||[]).slice().sort(function(a,b){
+    var pra = prioridadeNum(a), prb = prioridadeNum(b);
+    if (pra!==prb) return pra-prb;
+    var qa=parseInt(a.Qtd||0), ma=parseInt(a.Alerta_Minimo||5), qb=parseInt(b.Qtd||0), mb=parseInt(b.Alerta_Minimo||5);
+    var pa = qa===0?0:(qa<=ma?1:2), pb = qb===0?0:(qb<=mb?1:2);
+    if (pa!==pb) return pa-pb;
+    return String(a.Nome||'').localeCompare(String(b.Nome||''));
+  });
+  dl.innerHTML = lista.map(function(p){
+    var qtd=parseInt(p.Qtd||0), alerta=parseInt(p.Alerta_Minimo||5);
+    var tag = qtd===0?' (zerado)':(qtd<=alerta?' (estoque baixo)':'');
+    var prTag = p.Prioridade ? ' ⭐'+p.Prioridade : '';
+    return '<option value="'+escapeHtml(p.Nome||'')+'">'+escapeHtml(p.Nome||'')+prTag+tag+'</option>';
+  }).join('');
 }
 
 function carregarClientes() {
@@ -1853,13 +1892,16 @@ function solicitarItemListaPDV() {
   showToast('Pedido adicionado à lista!');
 }
 function abrirEscolhaEncomendaPDV() {
-  var pendentes = (encomendas||[]).filter(function(e){return (e.Tipo||'')==='Futura' && (e.Status||'').toLowerCase().indexOf('conclu')!==0;});
   var sel = document.getElementById('enc-pick-select');
-  encPickPendentes = pendentes;
-  sel.innerHTML = pendentes.length ? pendentes.map(function(e,i){
-    return '<option value="'+i+'">'+escapeHtml(String(e.Descricao||e.Cliente||'Encomenda'))+' — '+escapeHtml(String(e.Cliente||''))+'</option>';
-  }).join('') : '<option value="">Nenhuma encomenda futura pendente</option>';
+  sel.innerHTML = '<option value="">Carregando…</option>';
   document.getElementById('modal-encomenda-pick').classList.add('open');
+  apiGet('Encomendas', '').then(function(d){
+    var pendentes = (d.data||[]).filter(function(e){return (e.Tipo||'')==='Futura' && (e.Status||'').toLowerCase().indexOf('conclu')!==0;});
+    encPickPendentes = pendentes;
+    sel.innerHTML = pendentes.length ? pendentes.map(function(e,i){
+      return '<option value="'+i+'">'+escapeHtml(String(e.Descricao||e.Cliente||'Encomenda'))+' — '+escapeHtml(String(e.Cliente||''))+'</option>';
+    }).join('') : '<option value="">Nenhuma encomenda futura pendente</option>';
+  });
 }
 function confirmarAddEncomendaPDV() {
   var idx = document.getElementById('enc-pick-select').value;
@@ -2008,7 +2050,7 @@ function abrirModalProduto() {
   document.getElementById('prod-alerta').value='5';
   document.getElementById('prod-custo').value='';
   document.getElementById('prod-venda').value='';
-  document.getElementById('tog-prod-prior').classList.remove('on');
+  document.getElementById('prod-prior').value='';
   document.getElementById('modal-produto').classList.add('open');
 }
 
@@ -2027,7 +2069,7 @@ async function salvarProduto() {
     precoCusto:  parseFloat(document.getElementById('prod-custo').value)||0,
     precoVenda:  parseFloat(document.getElementById('prod-venda').value)||0,
     lote:    document.getElementById('prod-lote').value.trim(),
-    prioridade: document.getElementById('tog-prod-prior').classList.contains('on')?'Sim':'Nao',
+    prioridade: document.getElementById('prod-prior').value.trim(),
     operador: operador||'PDV'
   };
   var ok = await enviarParaSheets(payload);
