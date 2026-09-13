@@ -355,7 +355,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
       </div>
       <div class="g2" style="margin-bottom:20px;">
         <div class="cc"><div class="ch"><div><div class="ct">Despesas por Loja</div></div></div><div class="bc" id="ch-desp-loja"><div class="empty">Carregue os dados</div></div></div>
-        <div class="cc"><div class="ch"><div><div class="ct">Despesas por Grupo</div><div class="csb">Fixas x Variáveis</div></div></div><div class="bc" id="ch-desp-grp"><div class="empty">Carregue os dados</div></div></div>
+        <div class="cc"><div class="ch"><div><div class="ct">Despesas por Grupo</div><div class="csb">Empresa x Pessoal</div></div></div><div class="bc" id="ch-desp-grp"><div class="empty">Carregue os dados</div></div></div>
       </div>
       <div class="g2" style="margin-bottom:20px;">
         <div class="cc"><div class="ch"><div><div class="ct">Despesas por categoria</div></div></div><div class="bc" id="ch-desp-cat"><div class="empty">Carregue os dados</div></div></div>
@@ -366,7 +366,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
         </div><div class="bc" id="ch-desp-sub"><div class="empty">Selecione uma categoria</div></div></div>
       </div>
       <div class="cc">
-        <div class="ch"><div><div class="ct">DRE — Visão completa</div><div class="csb">Receita (Vendas) e despesas por categoria (Pagamentos) · clique numa linha com ▸ pra detalhar · valores esmaecidos = meta ou conta ainda não paga (planejado) · respeita a loja selecionada</div></div>
+        <div class="ch"><div><div class="ct">DRE — Visão completa</div><div class="csb">Empresa (DRE formal) + resumo Pessoal, mês a mês desde jul/2026 · clique numa linha com ▸ pra detalhar · valores esmaecidos = meta ou conta ainda não paga (planejado) · respeita a loja selecionada</div></div>
           <div style="display:flex;gap:6px;align-items:center;">
             <input type="month" id="meta-mes" class="fi-sm" style="width:120px;font-size:11px;padding:5px 8px;">
             <input type="number" id="meta-valor" placeholder="Meta R$" class="fi-sm" style="width:90px;font-size:11px;padding:5px 8px;">
@@ -1300,7 +1300,6 @@ function renderFinanceiro(){
    e a validação de dados na planilha, coluna Categoria da aba Pagamentos).
    Ignora o filtro de período (mostra todos os meses com dado), mas respeita a loja
    selecionada — mesmo padrão do gLojaOnly() usado em "Próximos vencimentos". */
-var CATEGORIAS_DRE=['Compra de Mercadorias','Funcionario','Transporte','Sistemas','Aluguel','Agua, Luz, Internet','Contabilidade','Impostos e Taxas','Marketing','Pro Labore'];
 var dreExpand={};
 function toggleDreExpand(key){dreExpand[key]=!dreExpand[key];renderDREMensal();}
 
@@ -1318,8 +1317,8 @@ function ehMirrorCompraLegado(p){
 function pagtosFundidos(){
   var pagLimpo=(D.pagamentos||[]).filter(function(p){return !ehMirrorCompraLegado(p);});
   var comprasNorm=(D.compras||[]).map(function(c){
-    return {Vencimento:c.Data,Loja:c.Loja,Descricao:(c.Fornecedor||'—')+(c.Produto?' — '+c.Produto:''),Categoria:'Compra de Mercadorias',Subcategoria:'',
-      Valor:c.Valor_Total,Status:'Pago',Observacao:c.Observacao||'',Tipo:'Compra',Data:c.Data,Grupo:'',
+    return {Vencimento:c.Data,Loja:c.Loja,Descricao:(c.Fornecedor||'—')+(c.Produto?' — '+c.Produto:''),Categoria:'Custos/CMV',Subcategoria:'Compra de Mercadorias',
+      Valor:c.Valor_Total,Status:'Pago',Observacao:c.Observacao||'',Tipo:'Compra',Data:c.Data,Grupo:'Empresa',
       Fornecedor:c.Fornecedor,Produto:c.Produto,Qtd:c.Qtd,Valor_Unit:c.Valor_Unit,Valor_Venda:'',
       Forma_Pagamento:c.Forma_Pagamento,Gera_Estoque:c.Gera_Estoque,Operador:c.Operador};
   });
@@ -1334,59 +1333,85 @@ function comprasFundidas(){
   });
   return (D.compras||[]).concat(novas);
 }
+
+/* ── DRE MENSAL — taxonomia Empresa/Pessoal (aba Categorias) ──
+   Empresa: DRE formal (Receita Bruta → Deduções → Receita Líquida → Custos/CMV →
+   Lucro Bruto → Despesas Operacionais → Resultado Operacional → Resultado
+   Financeiro → Resultado Líquido). Pessoal: Receitas x Despesas → Saldo.
+   Só mostra a partir de jul/2026 (taxonomia nova; dado antes disso não foi
+   migrado retroativamente — decisão do Jax). Respeita a loja selecionada
+   (gLojaOnly), igual ao padrão já usado em "Próximos vencimentos". */
 function renderDREMensal(){
   var thead=document.getElementById('tb-dremensal-head'),tbody=document.getElementById('tb-dremensal');
   if(!tbody)return;
   var vendas=gLojaOnly(D.vendas),pagtos=gLojaOnly(pagtosFundidos()),metas=gLojaOnly(D.metas);
-  var mesesSet={};
   function chaveMes(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
-  vendas.forEach(function(v){var d=parsePtD(v.Data);if(d)mesesSet[chaveMes(d)]=true;});
-  pagtos.forEach(function(p){var d=parsePtD(p.Vencimento);if(d)mesesSet[chaveMes(d)]=true;});
-  metas.forEach(function(m){if(m.AnoMes)mesesSet[m.AnoMes]=true;});
-  // Mostra só o semestre atual (Jan-Jun ou Jul-Dez, conforme o mês de hoje) — meses anteriores ficam de fora do DRE.
-  var hoje=new Date(),semestreIni=hoje.getMonth()<6?hoje.getFullYear()+'-01':hoje.getFullYear()+'-07';
-  var meses=Object.keys(mesesSet).filter(function(k){return k>=semestreIni;}).sort();
+  var DRE_INICIO='2026-07';
+  var mesesSet={};
+  vendas.forEach(function(v){var d=parsePtD(v.Data);if(d){var k=chaveMes(d);if(k>=DRE_INICIO)mesesSet[k]=true;}});
+  pagtos.forEach(function(p){var d=parsePtD(p.Vencimento);if(d){var k=chaveMes(d);if(k>=DRE_INICIO)mesesSet[k]=true;}});
+  metas.forEach(function(m){if(m.AnoMes&&m.AnoMes>=DRE_INICIO)mesesSet[m.AnoMes]=true;});
+  var meses=Object.keys(mesesSet).sort();
   if(!meses.length){
-    if(thead)thead.innerHTML='<th>Categoria</th>';
-    tbody.innerHTML='<tr><td><div class="empty">Sem dados</div></td></tr>';
+    if(thead)thead.innerHTML='<th>DRE</th>';
+    tbody.innerHTML='<tr><td><div class="empty">Sem dados a partir de jul/2026</div></td></tr>';
     return;
   }
-  function nomeMes(k){var m=parseInt(k.split('-')[1],10)-1;var n=MESES_PT[m]||'';return n.charAt(0).toUpperCase()+n.slice(1);}
-  if(thead)thead.innerHTML='<th>Categoria</th>'+meses.map(function(k){return '<th style="text-align:right">'+nomeMes(k)+'</th>';}).join('');
+  function nomeMes(k){var p=k.split('-');var n=MESES_PT[parseInt(p[1],10)-1]||'';return n.charAt(0).toUpperCase()+n.slice(1)+'/'+p[0].slice(2);}
+  if(thead)thead.innerHTML='<th>DRE</th>'+meses.map(function(k){return '<th style="text-align:right">'+nomeMes(k)+'</th>';}).join('');
+  function zeroMap(){var o={};meses.forEach(function(k){o[k]=0;});return o;}
 
-  var receitaPorMes={};meses.forEach(function(k){receitaPorMes[k]=0;});
-  vendas.forEach(function(v){var d=parsePtD(v.Data);if(!d)return;var k=chaveMes(d);if(k in receitaPorMes)receitaPorMes[k]+=parseFloat(v.Total||0);});
-
-  // Receita detalhada por categoria (só existe pra vendas manuais da loja "pessoal", ex: Salário, Venda avulsa, Reembolso)
-  var receitaCatSet={},receitaCatPorMes={};
+  // ── Receita Bruta (Empresa) = Vendas, exclui loja "pessoal" ──
+  var receitaPorMes=zeroMap();
   vendas.forEach(function(v){
-    var catRaw=String(v.Categoria||'').trim();
-    if(!catRaw||lSlug(v.Loja||'')!=='pessoal')return;
+    if(lSlug(v.Loja||'')==='pessoal')return;
     var d=parsePtD(v.Data);if(!d)return;var k=chaveMes(d);if(!(k in receitaPorMes))return;
-    receitaCatSet[catRaw]=true;
-    if(!receitaCatPorMes[catRaw])receitaCatPorMes[catRaw]={};
-    receitaCatPorMes[catRaw][k]=(receitaCatPorMes[catRaw][k]||0)+parseFloat(v.Total||0);
+    receitaPorMes[k]+=parseFloat(v.Total||0);
   });
-  var receitaCats=Object.keys(receitaCatSet);
-
-  var metaPorMes={};meses.forEach(function(k){metaPorMes[k]=0;});
+  var metaPorMes=zeroMap();
   metas.forEach(function(m){if(m.AnoMes in metaPorMes)metaPorMes[m.AnoMes]+=parseFloat(m.ValorMeta||0);});
 
-  var TODAS_CAT=CATEGORIAS_DRE.concat(['Não categorizado']);
-  var despPorCatMes={},despPlanPorCatMes={};
-  TODAS_CAT.forEach(function(c){despPorCatMes[c]={};despPlanPorCatMes[c]={};meses.forEach(function(k){despPorCatMes[c][k]=0;despPlanPorCatMes[c][k]=0;});});
-  var subcatPorCatMes={}; // { categoria: { subcategoria: { mes: valor } } } — total pago+planejado, só pra detalhamento
+  // ── Receitas Pessoal = Vendas loja="pessoal", com detalhe por Categoria (Salário/Pro Labore/etc) ──
+  var receitaPesPorMes=zeroMap(),receitaPesCatPorMes={},receitaPesCatSet={};
+  vendas.forEach(function(v){
+    if(lSlug(v.Loja||'')!=='pessoal')return;
+    var d=parsePtD(v.Data);if(!d)return;var k=chaveMes(d);if(!(k in receitaPesPorMes))return;
+    receitaPesPorMes[k]+=parseFloat(v.Total||0);
+    var cat=String(v.Categoria||'Outros').trim()||'Outros';
+    receitaPesCatSet[cat]=true;
+    if(!receitaPesCatPorMes[cat])receitaPesCatPorMes[cat]=zeroMap();
+    receitaPesCatPorMes[cat][k]+=parseFloat(v.Total||0);
+  });
+  var receitaPesCats=Object.keys(receitaPesCatSet);
+
+  // ── Categorias de despesa da Empresa, na ordem formal do DRE ──
+  var CAT_DEDUCOES='Deduções da Receita',CAT_CMV='Custos/CMV',CAT_ADM='Despesas Operacionais - Administrativas',CAT_VENDAS='Despesas Operacionais - Vendas',CAT_FIN='Resultado Financeiro';
+  var CATS_EMP=[CAT_DEDUCOES,CAT_CMV,CAT_ADM,CAT_VENDAS,CAT_FIN];
+  var TODAS_EMP=CATS_EMP.concat(['Não categorizado']);
+  var despEmpPorCatMes={},despEmpPlanPorCatMes={},subEmpPorCatMes={};
+  TODAS_EMP.forEach(function(c){despEmpPorCatMes[c]=zeroMap();despEmpPlanPorCatMes[c]=zeroMap();});
+
+  // ── Despesas Pessoal ──
+  var despPesPorMes=zeroMap(),despPesPlanPorMes=zeroMap(),subPes={};
+
   pagtos.forEach(function(p){
     var d=parsePtD(p.Vencimento);if(!d)return;var k=chaveMes(d);if(!(k in receitaPorMes))return;
+    var grp=p.Grupo||'';
     var catRaw=String(p.Categoria||'').trim();
-    var cat=CATEGORIAS_DRE.indexOf(catRaw)>=0?catRaw:'Não categorizado';
-    if((p.Status||'').toLowerCase()==='pago')despPorCatMes[cat][k]+=parseFloat(p.Valor||0);
-    else despPlanPorCatMes[cat][k]+=parseFloat(p.Valor||0); // ainda não pago = planejado (conta que já sabemos que vem)
     var subRaw=String(p.Subcategoria||'').trim();
+    var pago=(p.Status||'').toLowerCase()==='pago';
+    if(grp==='Pessoal'){
+      if(pago)despPesPorMes[k]+=parseFloat(p.Valor||0);else despPesPlanPorMes[k]+=parseFloat(p.Valor||0);
+      if(subRaw){if(!subPes[subRaw])subPes[subRaw]=zeroMap();subPes[subRaw][k]+=parseFloat(p.Valor||0);}
+      return;
+    }
+    // Empresa (ou Grupo vazio/legado, ex. dado antigo sem Grupo) — cai em "Não categorizado" se a Categoria não bater com nenhuma conhecida
+    var cat=TODAS_EMP.indexOf(catRaw)>=0?catRaw:'Não categorizado';
+    if(pago)despEmpPorCatMes[cat][k]+=parseFloat(p.Valor||0);else despEmpPlanPorCatMes[cat][k]+=parseFloat(p.Valor||0);
     if(subRaw){
-      if(!subcatPorCatMes[cat])subcatPorCatMes[cat]={};
-      if(!subcatPorCatMes[cat][subRaw])subcatPorCatMes[cat][subRaw]={};
-      subcatPorCatMes[cat][subRaw][k]=(subcatPorCatMes[cat][subRaw][k]||0)+parseFloat(p.Valor||0);
+      if(!subEmpPorCatMes[cat])subEmpPorCatMes[cat]={};
+      if(!subEmpPorCatMes[cat][subRaw])subEmpPorCatMes[cat][subRaw]=zeroMap();
+      subEmpPorCatMes[cat][subRaw][k]+=parseFloat(p.Valor||0);
     }
   });
 
@@ -1396,38 +1421,86 @@ function renderDREMensal(){
       return '<td style="text-align:right;font-size:12px;color:'+(v>0?cor:'var(--light)')+';">'+(v>0?fmt(v):'—')+'</td>';
     }).join('')+'</tr>';
   }
+  function linhaSubtotal(label,porMes,top){
+    return '<tr style="'+(top?'border-top:2px solid var(--border);':'')+'"><td style="font-weight:700;">'+esc(label)+'</td>'+meses.map(function(k){
+      var v=porMes[k]||0;
+      return '<td style="text-align:right;font-weight:700;color:'+(v>=0?'var(--vf)':'var(--red)')+';">'+fmt(v)+'</td>';
+    }).join('')+'</tr>';
+  }
+  function linhaCategoria(cat){
+    var subs=subEmpPorCatMes[cat]?Object.keys(subEmpPorCatMes[cat]):[];
+    var key='catE_'+cat,aberto=!!dreExpand[key];
+    var row='<tr'+(subs.length?' style="cursor:pointer;" onclick="toggleDreExpand(\''+key+'\')"':'')+'><td>'+(subs.length?(aberto?'▾ ':'▸ '):'')+esc(cat)+'</td>'+meses.map(function(k){
+      var v=despEmpPorCatMes[cat][k]||0,vp=despEmpPlanPorCatMes[cat][k]||0;
+      return '<td style="text-align:right;color:'+(v>0?'var(--red)':'var(--light)')+';">'+(v>0?'-'+fmt(v):'—')+(vp>0?'<div style="opacity:.45;font-size:10px;">planejado -'+fmt(vp)+'</div>':'')+'</td>';
+    }).join('')+'</tr>';
+    if(aberto)subs.forEach(function(sc){row+=linhaDetalhe(sc,subEmpPorCatMes[cat][sc],'var(--red)');});
+    return row;
+  }
 
   var linhas='';
-  var receitaAberta=!!dreExpand['receita'];
-  linhas+='<tr'+(receitaCats.length?' style="cursor:pointer;" onclick="toggleDreExpand(\'receita\')"':'')+'><td style="font-weight:600;">'+(receitaCats.length?(receitaAberta?'▾ ':'▸ '):'')+'Receita com Vendas</td>'+meses.map(function(k){
+  var ncol=meses.length+1;
+
+  // ── EMPRESA ──
+  linhas+='<tr><td colspan="'+ncol+'" style="font-weight:700;font-size:11px;letter-spacing:.04em;color:var(--mid);padding-top:14px;border-top:2px solid var(--border);">EMPRESA</td></tr>';
+  linhas+='<tr><td style="font-weight:600;">Receita Bruta</td>'+meses.map(function(k){
     var meta=metaPorMes[k];
     return '<td style="text-align:right;color:var(--vj);font-weight:500;">'+fmt(receitaPorMes[k])+(meta>0?'<div style="opacity:.45;font-size:10px;font-weight:400;">meta '+fmt(meta)+'</div>':'')+'</td>';
   }).join('')+'</tr>';
-  if(receitaAberta){
-    receitaCats.forEach(function(rc){linhas+=linhaDetalhe(rc,receitaCatPorMes[rc],'var(--vj)');});
-  }
-  TODAS_CAT.forEach(function(cat){
-    var subs=subcatPorCatMes[cat]?Object.keys(subcatPorCatMes[cat]):[];
-    var aberto=!!dreExpand['cat_'+cat];
-    linhas+='<tr'+(subs.length?' style="cursor:pointer;" onclick="toggleDreExpand(\'cat_'+cat+'\')"':'')+'><td>'+(subs.length?(aberto?'▾ ':'▸ '):'')+esc(cat)+'</td>'+meses.map(function(k){
-      var v=despPorCatMes[cat][k]||0,vp=despPlanPorCatMes[cat][k]||0;
-      return '<td style="text-align:right;color:'+(v>0?'var(--red)':'var(--light)')+';">'+(v>0?'-'+fmt(v):'—')+(vp>0?'<div style="opacity:.45;font-size:10px;">planejado -'+fmt(vp)+'</div>':'')+'</td>';
-    }).join('')+'</tr>';
-    if(aberto){
-      subs.forEach(function(sc){linhas+=linhaDetalhe(sc,subcatPorCatMes[cat][sc],'var(--red)');});
-    }
-  });
 
-  var acumulado=0,resLinha='<tr style="border-top:2px solid var(--border);"><td style="font-weight:700;">Resultado</td>',acLinha='<tr><td style="font-weight:700;">Resultado Acumulado</td>';
-  meses.forEach(function(k){
-    var totalDesp=0;TODAS_CAT.forEach(function(cat){totalDesp+=despPorCatMes[cat][k]||0;});
-    var res=(receitaPorMes[k]||0)-totalDesp;acumulado+=res;
-    resLinha+='<td style="text-align:right;font-weight:700;color:'+(res>=0?'var(--vf)':'var(--red)')+';">'+fmt(res)+'</td>';
-    acLinha+='<td style="text-align:right;font-weight:700;color:'+(acumulado>=0?'var(--vf)':'var(--red)')+';">'+fmt(acumulado)+'</td>';
-  });
-  resLinha+='</tr>';acLinha+='</tr>';
+  linhas+=linhaCategoria(CAT_DEDUCOES);
+  var receitaLiqPorMes=zeroMap();
+  meses.forEach(function(k){receitaLiqPorMes[k]=receitaPorMes[k]-(despEmpPorCatMes[CAT_DEDUCOES][k]||0);});
+  linhas+=linhaSubtotal('= Receita Líquida',receitaLiqPorMes,false);
 
-  tbody.innerHTML=linhas+resLinha+acLinha;
+  linhas+=linhaCategoria(CAT_CMV);
+  var lucroBrutoPorMes=zeroMap();
+  meses.forEach(function(k){lucroBrutoPorMes[k]=receitaLiqPorMes[k]-(despEmpPorCatMes[CAT_CMV][k]||0);});
+  linhas+=linhaSubtotal('= Lucro Bruto',lucroBrutoPorMes,false);
+
+  linhas+=linhaCategoria(CAT_ADM);
+  linhas+=linhaCategoria(CAT_VENDAS);
+  var resOpPorMes=zeroMap();
+  meses.forEach(function(k){resOpPorMes[k]=lucroBrutoPorMes[k]-(despEmpPorCatMes[CAT_ADM][k]||0)-(despEmpPorCatMes[CAT_VENDAS][k]||0);});
+  linhas+=linhaSubtotal('= Resultado Operacional',resOpPorMes,false);
+
+  linhas+=linhaCategoria(CAT_FIN);
+  var temNaoCat=meses.some(function(k){return(despEmpPorCatMes['Não categorizado'][k]||0)>0||(despEmpPlanPorCatMes['Não categorizado'][k]||0)>0;});
+  if(temNaoCat)linhas+=linhaCategoria('Não categorizado');
+  var resLiqEmpPorMes=zeroMap();
+  meses.forEach(function(k){resLiqEmpPorMes[k]=resOpPorMes[k]-(despEmpPorCatMes[CAT_FIN][k]||0)-(despEmpPorCatMes['Não categorizado'][k]||0);});
+  linhas+=linhaSubtotal('= Resultado Líquido (Empresa)',resLiqEmpPorMes,true);
+
+  var acEmp=0,acLinhaEmp='<tr><td style="font-weight:700;">Acumulado (Empresa)</td>';
+  meses.forEach(function(k){acEmp+=resLiqEmpPorMes[k]||0;acLinhaEmp+='<td style="text-align:right;font-weight:700;color:'+(acEmp>=0?'var(--vf)':'var(--red)')+';">'+fmt(acEmp)+'</td>';});
+  acLinhaEmp+='</tr>';
+  linhas+=acLinhaEmp;
+
+  // ── PESSOAL ──
+  linhas+='<tr><td colspan="'+ncol+'" style="font-weight:700;font-size:11px;letter-spacing:.04em;color:var(--mid);padding-top:14px;border-top:2px solid var(--border);">PESSOAL</td></tr>';
+  var keyRP='receitaPes',abertoRP=!!dreExpand[keyRP];
+  linhas+='<tr'+(receitaPesCats.length?' style="cursor:pointer;" onclick="toggleDreExpand(\''+keyRP+'\')"':'')+'><td style="font-weight:600;">'+(receitaPesCats.length?(abertoRP?'▾ ':'▸ '):'')+'Receitas</td>'+meses.map(function(k){
+    return '<td style="text-align:right;color:var(--vj);font-weight:500;">'+fmt(receitaPesPorMes[k])+'</td>';
+  }).join('')+'</tr>';
+  if(abertoRP)receitaPesCats.forEach(function(c){linhas+=linhaDetalhe(c,receitaPesCatPorMes[c],'var(--vj)');});
+
+  var subsPes=Object.keys(subPes),keyDP='despPes',abertoDP=!!dreExpand[keyDP];
+  linhas+='<tr'+(subsPes.length?' style="cursor:pointer;" onclick="toggleDreExpand(\''+keyDP+'\')"':'')+'><td>'+(subsPes.length?(abertoDP?'▾ ':'▸ '):'')+'Despesas</td>'+meses.map(function(k){
+    var v=despPesPorMes[k]||0,vp=despPesPlanPorMes[k]||0;
+    return '<td style="text-align:right;color:'+(v>0?'var(--red)':'var(--light)')+';">'+(v>0?'-'+fmt(v):'—')+(vp>0?'<div style="opacity:.45;font-size:10px;">planejado -'+fmt(vp)+'</div>':'')+'</td>';
+  }).join('')+'</tr>';
+  if(abertoDP)subsPes.forEach(function(sc){linhas+=linhaDetalhe(sc,subPes[sc],'var(--red)');});
+
+  var saldoPesPorMes=zeroMap();
+  meses.forEach(function(k){saldoPesPorMes[k]=(receitaPesPorMes[k]||0)-(despPesPorMes[k]||0);});
+  linhas+=linhaSubtotal('= Saldo Pessoal',saldoPesPorMes,true);
+
+  var acPes=0,acLinhaPes='<tr><td style="font-weight:700;">Acumulado (Pessoal)</td>';
+  meses.forEach(function(k){acPes+=saldoPesPorMes[k]||0;acLinhaPes+='<td style="text-align:right;font-weight:700;color:'+(acPes>=0?'var(--vf)':'var(--red)')+';">'+fmt(acPes)+'</td>';});
+  acLinhaPes+='</tr>';
+  linhas+=acLinhaPes;
+
+  tbody.innerHTML=linhas;
 }
 function salvarMeta(){
   var mes=document.getElementById('meta-mes').value;
