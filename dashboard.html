@@ -386,6 +386,20 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
           <tbody id="tb-dre"></tbody><tfoot id="tf-dre"></tfoot>
         </table></div>
       </div>
+      <div class="cc">
+        <div class="ch"><div><div class="ct">Balanço Patrimonial</div><div class="csb">Ativo × Passivo × Patrimônio Líquido · saldos de banco/imobilizado/empréstimos/capital vêm da aba Patrimonio (lançamento manual) · visão da empresa toda, não filtra por loja</div></div></div>
+        <div class="g2">
+          <div>
+            <div style="font-weight:700;font-size:11px;letter-spacing:.04em;color:var(--mid);margin-bottom:8px;">ATIVO</div>
+            <table class="dt" style="width:100%;"><tbody id="tb-bal-ativo"></tbody></table>
+          </div>
+          <div>
+            <div style="font-weight:700;font-size:11px;letter-spacing:.04em;color:var(--mid);margin-bottom:8px;">PASSIVO + PATRIMÔNIO LÍQUIDO</div>
+            <table class="dt" style="width:100%;"><tbody id="tb-bal-passivo"></tbody></table>
+          </div>
+        </div>
+        <div id="bal-confere" style="margin-top:14px;padding-top:14px;border-top:2px solid var(--border);font-size:13px;"></div>
+      </div>
     </div>
 
     <!-- ENTRADAS (= Recebimentos do v2) -->
@@ -775,7 +789,7 @@ if(parseInt(localStorage.getItem('mayse_dash_urlver')||'0',10)<URL_VERSAO){
   localStorage.setItem('mayse_dash_urlver',String(URL_VERSAO));
 }
 var cfg={url:localStorage.getItem('mayse_dash_url')||URL_ATUAL,token:localStorage.getItem('mayse_dash_token')||SENHA};
-var D={vendas:[],encomendas:[],estoque:[],compras:[],pagamentos:[],clientes:[],pdvs:[],projetos:[],tarefas:[],caminhadas:[],orcamentos:[],orcamentoItens:[],funcionarios:[],ponto:[],caixa:[],metas:[],listaCompras:[],categorias:[],conciliacao:[]};
+var D={vendas:[],encomendas:[],estoque:[],compras:[],pagamentos:[],clientes:[],pdvs:[],projetos:[],tarefas:[],caminhadas:[],orcamentos:[],orcamentoItens:[],funcionarios:[],ponto:[],caixa:[],metas:[],listaCompras:[],categorias:[],conciliacao:[],patrimonio:[]};
 var projTipoFil='todos';
 var lojasAtivas=new Set(['juquia','cambuci']);
 var secAtiva='visao',saiTipo='gasto',encTipoM='Futura',estFil='todos',saiFil='todos',saiStFil='todos';
@@ -1023,7 +1037,7 @@ async function loadData(){
   document.getElementById('btn-lbl').textContent='Carregando…';document.getElementById('btn-sp').style.display='block';
   document.getElementById('lov').classList.add('show');
   try{
-    var rs=await Promise.all([apiGet('Vendas'),apiGet('Encomendas'),apiGet('Estoque'),apiGet('Compras'),apiGet('Pagamentos'),apiGet('Clientes'),apiGet('PDVs'),apiGet('Projetos'),apiGet('ProjetoTarefas'),apiGet('Caminhadas'),apiGet('Orcamentos'),apiGet('OrcamentoItens'),apiGet('Funcionarios'),apiGet('Ponto'),apiGet('Caixa'),apiGet('Metas'),apiGet('ListaCompras'),apiGet('Categorias'),apiGet('Conciliacao')]);
+    var rs=await Promise.all([apiGet('Vendas'),apiGet('Encomendas'),apiGet('Estoque'),apiGet('Compras'),apiGet('Pagamentos'),apiGet('Clientes'),apiGet('PDVs'),apiGet('Projetos'),apiGet('ProjetoTarefas'),apiGet('Caminhadas'),apiGet('Orcamentos'),apiGet('OrcamentoItens'),apiGet('Funcionarios'),apiGet('Ponto'),apiGet('Caixa'),apiGet('Metas'),apiGet('ListaCompras'),apiGet('Categorias'),apiGet('Conciliacao'),apiGet('Patrimonio')]);
     D.vendas=rs[0].data||[];D.encomendas=rs[1].data||[];D.estoque=rs[2].data||[];
     D.compras=rs[3].data||[];D.pagamentos=rs[4].data||[];
     D.clientes=rs[5].data||[];D.pdvs=rs[6].data||[];
@@ -1031,7 +1045,7 @@ async function loadData(){
     D.orcamentos=rs[10].data||[];D.orcamentoItens=rs[11].data||[];
     D.funcionarios=rs[12].data||[];D.ponto=rs[13].data||[];D.caixa=rs[14].data||[];
     D.metas=rs[15].data||[];D.listaCompras=rs[16].data||[];D.categorias=rs[17].data||[];
-    D.conciliacao=rs[18].data||[];
+    D.conciliacao=rs[18].data||[];D.patrimonio=rs[19].data||[];
     var ops={};D.vendas.forEach(function(v){if(v.Operador)ops[v.Operador]=1;});
     var sel=document.getElementById('filt-op');
     if(sel)sel.innerHTML='<option value="">Todos</option>'+Object.keys(ops).map(function(o){return'<option>'+esc(o)+'</option>';}).join('');
@@ -1293,6 +1307,7 @@ function renderFinanceiro(){
   renderSubcatChart();
   renderDRE(vendas,despesas);
   renderDREMensal();
+  renderBalancoPatrimonial();
 }
 
 /* ── DRE MENSAL (Receita de Vendas x Despesas por Categoria da aba Pagamentos) ──
@@ -1501,6 +1516,129 @@ function renderDREMensal(){
   linhas+=acLinhaPes;
 
   tbody.innerHTML=linhas;
+}
+
+/* ── BALANÇO PATRIMONIAL ──
+   Ativo = Passivo + Patrimônio Líquido, visão da empresa toda (não filtra por loja
+   nem por período global — é uma foto de "hoje", não um intervalo).
+   Fontes automáticas (calculadas, não editáveis aqui):
+     - Estoque: soma Qtd×Preco_Custo da aba Estoque (todas as lojas).
+     - Contas a Pagar: Pagamentos/Compras com Status≠Pago e Grupo≠Pessoal.
+     - Contas a Receber (cartão D+1): vendas de ontem pagas em Crédito (ainda não caíram na conta).
+     - Lucros Acumulados: mesmo cálculo do "Acumulado (Empresa)" do DRE mensal (Receita − despesas
+       pagas da Empresa, mês a mês desde jul/2026), só que sem o filtro de loja.
+   Fontes manuais (aba Patrimonio, Jax lança direto na planilha):
+     - Ativo/Circulante: saldo de bancos/caixa da empresa.
+     - Ativo/NaoCirculante: imobilizado (bens).
+     - Passivo/NaoCirculante: empréstimos.
+     - PatrimonioLiquido: Capital Social.
+   Se não bater 100%, normal até o Jax preencher saldo de banco/capital social —
+   a diferença aparece explicada no rodapé em vez de forçar um número falso. */
+function calcularReceberCartaoD1(){
+  var hoje=new Date(),ontem=new Date(hoje.getFullYear(),hoje.getMonth(),hoje.getDate()-1);
+  var total=0;
+  (D.vendas||[]).forEach(function(v){
+    if(lSlug(v.Loja||'')==='pessoal')return;
+    var d=parsePtD(v.Data);if(!d)return;
+    if(d.getFullYear()===ontem.getFullYear()&&d.getMonth()===ontem.getMonth()&&d.getDate()===ontem.getDate()){
+      total+=parseFloat(v.Credito||0);
+    }
+  });
+  return total;
+}
+function calcularLucrosAcumulados(){
+  var DRE_INICIO='2026-07';
+  function chaveMes(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+  var receitaPorMes={},despPorMes={};
+  (D.vendas||[]).forEach(function(v){
+    if(lSlug(v.Loja||'')==='pessoal')return;
+    var d=parsePtD(v.Data);if(!d)return;var k=chaveMes(d);if(k<DRE_INICIO)return;
+    receitaPorMes[k]=(receitaPorMes[k]||0)+parseFloat(v.Total||0);
+  });
+  pagtosFundidos().forEach(function(p){
+    if(p.Grupo==='Pessoal')return;
+    if((p.Status||'').toLowerCase()!=='pago')return;
+    var d=parsePtD(p.Vencimento);if(!d)return;var k=chaveMes(d);if(k<DRE_INICIO)return;
+    despPorMes[k]=(despPorMes[k]||0)+parseFloat(p.Valor||0);
+  });
+  var meses={};Object.keys(receitaPorMes).forEach(function(k){meses[k]=1;});Object.keys(despPorMes).forEach(function(k){meses[k]=1;});
+  var total=0;
+  Object.keys(meses).forEach(function(k){total+=(receitaPorMes[k]||0)-(despPorMes[k]||0);});
+  return total;
+}
+function renderBalancoPatrimonial(){
+  var tbA=document.getElementById('tb-bal-ativo'),tbP=document.getElementById('tb-bal-passivo'),conf=document.getElementById('bal-confere');
+  if(!tbA||!tbP)return;
+  var pat=(D.patrimonio||[]).map(function(r){return{secao:String(r.Secao||'').trim(),grupo:String(r.Grupo||'').trim(),conta:String(r.Conta||'').trim()||'—',valor:parseFloat(r.Valor||0)||0};});
+  function linhasManuais(secao,grupo){return pat.filter(function(r){return r.secao===secao&&r.grupo===grupo;});}
+  function linha(nome,valor){return'<tr><td style="padding-left:18px;font-size:13px;">'+esc(nome)+'</td><td style="text-align:right;font-size:13px;">'+fmt(valor)+'</td></tr>';}
+  function vazio(msg){return'<tr><td colspan="2" style="padding-left:18px;font-size:12px;color:var(--light);">'+esc(msg)+'</td></tr>';}
+  function subtotal(nome,valor){return'<tr style="border-top:1px solid var(--border);"><td style="font-weight:700;font-size:13px;">'+esc(nome)+'</td><td style="text-align:right;font-weight:700;font-size:13px;">'+fmt(valor)+'</td></tr>';}
+  function grupoHeader(nome){return'<tr><td colspan="2" style="font-weight:700;font-size:11px;letter-spacing:.03em;color:var(--mid);padding-top:10px;">'+esc(nome)+'</td></tr>';}
+
+  var estoqueTotal=(D.estoque||[]).reduce(function(s,e){return s+(parseFloat(e.Qtd||0)*parseFloat(e.Preco_Custo||0));},0);
+  var receberCartao=calcularReceberCartaoD1();
+  var contasPagar=pagtosFundidos().filter(function(p){return p.Grupo!=='Pessoal'&&(p.Status||'').toLowerCase()!=='pago';}).reduce(function(s,p){return s+parseFloat(p.Valor||0);},0);
+  var lucrosAcum=calcularLucrosAcumulados();
+
+  // ── ATIVO ──
+  var ativoCirc=linhasManuais('Ativo','Circulante');
+  var htmlA=grupoHeader('Circulante'),totCirc=0;
+  if(!ativoCirc.length)htmlA+=vazio('Nenhum saldo de banco/caixa lançado na aba Patrimonio');
+  ativoCirc.forEach(function(r){htmlA+=linha(r.conta,r.valor);totCirc+=r.valor;});
+  htmlA+=linha('Contas a Receber — Cartão a receber (D+1)',receberCartao);totCirc+=receberCartao;
+  htmlA+=linha('Estoque (a custo)',estoqueTotal);totCirc+=estoqueTotal;
+  htmlA+=subtotal('Total Circulante',totCirc);
+
+  var ativoNC=linhasManuais('Ativo','NaoCirculante');
+  htmlA+=grupoHeader('Não Circulante');
+  var totNC=0;
+  if(!ativoNC.length)htmlA+=vazio('Nenhum bem lançado na aba Patrimonio');
+  ativoNC.forEach(function(r){htmlA+=linha(r.conta,r.valor);totNC+=r.valor;});
+  htmlA+=subtotal('Total Não Circulante',totNC);
+
+  var totalAtivo=totCirc+totNC;
+  htmlA+=subtotal('TOTAL ATIVO',totalAtivo);
+  tbA.innerHTML=htmlA;
+
+  // ── PASSIVO ──
+  var passCirc=linhasManuais('Passivo','Circulante');
+  var htmlP=grupoHeader('Circulante'),totPCirc=0;
+  htmlP+=linha('Contas a Pagar',contasPagar);totPCirc+=contasPagar;
+  passCirc.forEach(function(r){htmlP+=linha(r.conta,r.valor);totPCirc+=r.valor;});
+  htmlP+=subtotal('Total Circulante',totPCirc);
+
+  var passNC=linhasManuais('Passivo','NaoCirculante');
+  htmlP+=grupoHeader('Não Circulante');
+  var totPNC=0;
+  if(!passNC.length)htmlP+=vazio('Nenhum empréstimo lançado na aba Patrimonio');
+  passNC.forEach(function(r){htmlP+=linha(r.conta,r.valor);totPNC+=r.valor;});
+  htmlP+=subtotal('Total Não Circulante',totPNC);
+
+  var totalPassivo=totPCirc+totPNC;
+  htmlP+=subtotal('TOTAL PASSIVO',totalPassivo);
+
+  // ── PATRIMÔNIO LÍQUIDO ──
+  var pl=linhasManuais('PatrimonioLiquido','');
+  htmlP+=grupoHeader('Patrimônio Líquido');
+  var totPL=0;
+  if(!pl.length)htmlP+=vazio('Capital Social ainda não lançado na aba Patrimonio');
+  pl.forEach(function(r){htmlP+=linha(r.conta,r.valor);totPL+=r.valor;});
+  htmlP+=linha('Lucros Acumulados (desde jul/2026)',lucrosAcum);totPL+=lucrosAcum;
+  htmlP+=subtotal('Total Patrimônio Líquido',totPL);
+
+  var totalPassivoPL=totalPassivo+totPL;
+  htmlP+=subtotal('TOTAL PASSIVO + PL',totalPassivoPL);
+  tbP.innerHTML=htmlP;
+
+  // ── Confere? ──
+  var dif=totalAtivo-totalPassivoPL;
+  var linha1='Total Ativo: <strong>'+fmt(totalAtivo)+'</strong> &nbsp;|&nbsp; Total Passivo + PL: <strong>'+fmt(totalPassivoPL)+'</strong><br>';
+  if(Math.abs(dif)<0.01){
+    conf.innerHTML=linha1+'<strong style="color:var(--vf);">✓ Confere</strong> — Ativo = Passivo + Patrimônio Líquido.';
+  }else{
+    conf.innerHTML=linha1+'<strong style="color:var(--gold);">⚠ Diferença de '+fmt(Math.abs(dif))+'</strong> ('+(dif>0?'Ativo maior':'Passivo+PL maior')+') — normal enquanto faltar preencher saldo de banco/caixa e Capital Social na aba Patrimonio, ou por lucro acumulado antes de jul/2026 (não capturado pelo sistema novo).';
+  }
 }
 function salvarMeta(){
   var mes=document.getElementById('meta-mes').value;
