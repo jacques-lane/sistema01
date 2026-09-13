@@ -1114,6 +1114,37 @@ function checkPinCriarForm() {
   document.getElementById('pt-criar-err').style.display = 'none';
 }
 
+// Guarda anti-duplicidade de ponto: evita que duplo-toque, tela travada ou
+// reenvio de rede gerem duas batidas do MESMO tipo pro MESMO funcionário em
+// sequência. Regra do Jax: batida repetida do mesmo tipo só é aceita depois
+// de passar no mínimo 40 minutos da anterior — dentro desse intervalo, o app
+// avisa que já tem uma batida feita e NÃO envia de novo pro backend (mas
+// segue o fluxo visual normal, como se tivesse batido).
+var PONTO_MIN_INTERVALO_MIN = 40;
+function chaveUltimaBatida(nome, tipoPonto) {
+  return 'mayse_v3_ultbatida_' + String(tipoPonto).replace(/\s+/g, '_') + '_' + nome;
+}
+function verificarBatidaRecente(nome, tipoPonto, minutos) {
+  minutos = minutos || PONTO_MIN_INTERVALO_MIN;
+  var chave = chaveUltimaBatida(nome, tipoPonto);
+  var ultimo = parseInt(localStorage.getItem(chave) || '0', 10);
+  var agora = Date.now();
+  if (ultimo && (agora - ultimo) < minutos * 60 * 1000) {
+    return false;
+  }
+  localStorage.setItem(chave, String(agora));
+  return true;
+}
+function baterPontoSeguro(nome, loja, tipoPonto, dispositivo, minutos) {
+  if (verificarBatidaRecente(nome, tipoPonto, minutos)) {
+    enviarParaSheets({ tipo: 'bater_ponto', funcionario: nome, loja: loja, tipoPonto: tipoPonto, dispositivo: dispositivo });
+    return true;
+  } else {
+    showToast('Já existe uma batida de "' + tipoPonto + '" de ' + nome + ' há menos de ' + (minutos || PONTO_MIN_INTERVALO_MIN) + ' min. Ignorada para evitar duplicidade.', false, 'warn');
+    return false;
+  }
+}
+
 // Grava o novo PIN no backend (definir_pin serve tanto pro primeiro
 // cadastro quanto pro reset — é um "set" incondicional, sem checar o PIN antigo).
 function salvarNovoPin() {
@@ -1154,7 +1185,7 @@ function baterPontoEntrada() {
   operador = nome;
   localStorage.setItem('mayse_v3_op', nome);
   localStorage.setItem('mayse_v3_pontodata', new Date().toLocaleDateString('pt-BR'));
-  enviarParaSheets({ tipo: 'bater_ponto', funcionario: nome, loja: pdvLoja, tipoPonto: 'Entrada', dispositivo: pdvNome });
+  baterPontoSeguro(nome, pdvLoja, 'Entrada', pdvNome);
   document.getElementById('ponto-screen').style.display = 'none';
   showToast('Ponto batido: ' + nome);
   verificarCaixa();
@@ -1255,7 +1286,7 @@ function confirmarFecharCaixa() {
   var dif = contado - esperado;
   var lojaCaixa = sessaoLoja || pdvLoja;
   enviarParaSheets({ tipo: 'fechar_caixa', funcionario: operador, loja: lojaCaixa, valorFechamento: contado, valorEsperado: esperado, diferenca: dif });
-  enviarParaSheets({ tipo: 'bater_ponto', funcionario: operador, loja: lojaCaixa, tipoPonto: 'Saida', dispositivo: pdvNome });
+  baterPontoSeguro(operador, lojaCaixa, 'Saida', pdvNome);
   document.getElementById('modal-fechar-caixa').classList.remove('open');
   localStorage.removeItem('mayse_v3_pontodata');
   localStorage.removeItem('mayse_v3_caixaloja');
@@ -2564,7 +2595,7 @@ function toggleAlmoco() {
   var hoje = new Date().toLocaleDateString('pt-BR');
   document.getElementById('modal-config').classList.remove('open');
   if (statusAlmocoHoje()) { mostrarAlmocoBloqueado(); return; }
-  enviarParaSheets({ tipo: 'bater_ponto', funcionario: operador, loja: sessaoLoja || pdvLoja, tipoPonto: 'Saida Almoco', dispositivo: pdvNome });
+  baterPontoSeguro(operador, sessaoLoja || pdvLoja, 'Saida Almoco', pdvNome);
   localStorage.setItem('mayse_v3_almoco', hoje);
   mostrarAlmocoBloqueado();
 }
@@ -2574,7 +2605,7 @@ function mostrarAlmocoBloqueado() {
   atualizarBtnAlmoco();
 }
 function voltarAlmoco() {
-  enviarParaSheets({ tipo: 'bater_ponto', funcionario: operador, loja: sessaoLoja || pdvLoja, tipoPonto: 'Retorno Almoco', dispositivo: pdvNome });
+  baterPontoSeguro(operador, sessaoLoja || pdvLoja, 'Retorno Almoco', pdvNome);
   localStorage.removeItem('mayse_v3_almoco');
   document.getElementById('almoco-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';

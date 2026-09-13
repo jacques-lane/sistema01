@@ -243,7 +243,8 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 .qav{font-size:26px;font-weight:700;color:var(--vf);min-width:40px;text-align:center;}
 #lsc{display:none;position:fixed;inset:0;background:var(--vf);z-index:500;align-items:center;justify-content:center;}
 @media(max-width:900px){.sb{transform:translateX(-100%);width:220px!important;}.sb.mob{transform:translateX(0);}.main{margin-left:0!important;}.kgrid,.kgrid-3{grid-template-columns:1fr 1fr;}.g2,.g3{grid-template-columns:1fr;}.fg2,.fg3{grid-template-columns:1fr;}.content{padding:14px;}.topbar{padding:10px 14px;}.hamburger{display:flex!important;align-items:center;}}
-@media print{body *{visibility:hidden;}#folha-ponto-print,#folha-ponto-print *{visibility:visible;}#folha-ponto-print{position:absolute;left:0;top:0;width:100%;}}
+@media print{body *{visibility:hidden;}#folha-ponto-print,#folha-ponto-print *{visibility:visible;}#folha-ponto-print{position:absolute;left:0;top:0;width:100%;padding:20px;}#folha-ponto-cabecalho{display:block !important;}}
+#folha-ponto-cabecalho{display:none;}
 </style>
 </head>
 <body>
@@ -353,6 +354,15 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
         <div class="ch"><div><div class="ct">Fluxo de caixa diário</div><div class="csb">Entradas, saídas e saldo acumulado</div></div><div class="cleg" id="fluxo-leg"></div></div>
         <div style="height:200px;"><canvas id="c-fluxo"></canvas></div>
       </div>
+      <div class="cc" style="margin-bottom:20px;">
+        <div class="ch"><div><div class="ct">Fluxo de caixa — Detalhe diário</div><div class="csb">Entradas, saídas e saldo acumulado, dia a dia — do primeiro lançamento até o consolidado (antigo "Resultado dia a dia")</div></div>
+          <button onclick="exportarDRE()" style="padding:5px 12px;background:var(--vf);color:white;border:none;border-radius:8px;font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;">⬇ CSV</button>
+        </div>
+        <div class="tw"><table class="dt">
+          <thead><tr><th>Data</th><th style="text-align:right;color:var(--vj)">Entradas</th><th style="text-align:right;color:var(--red)">Saídas</th><th style="text-align:right">Resultado</th><th style="text-align:right">Saldo acum.</th></tr></thead>
+          <tbody id="tb-dre"></tbody><tfoot id="tf-dre"></tfoot>
+        </table></div>
+      </div>
       <div class="g2" style="margin-bottom:20px;">
         <div class="cc"><div class="ch"><div><div class="ct">Despesas por Loja</div></div></div><div class="bc" id="ch-desp-loja"><div class="empty">Carregue os dados</div></div></div>
         <div class="cc"><div class="ch"><div><div class="ct">Despesas por Grupo</div><div class="csb">Empresa x Pessoal</div></div></div><div class="bc" id="ch-desp-grp"><div class="empty">Carregue os dados</div></div></div>
@@ -366,24 +376,18 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
         </div><div class="bc" id="ch-desp-sub"><div class="empty">Selecione uma categoria</div></div></div>
       </div>
       <div class="cc">
-        <div class="ch"><div><div class="ct">DRE — Visão completa</div><div class="csb">Empresa (DRE formal) + resumo Pessoal, mês a mês desde jul/2026 · clique numa linha com ▸ pra detalhar · valores esmaecidos = meta ou conta ainda não paga (planejado) · respeita a loja selecionada</div></div>
-          <div style="display:flex;gap:6px;align-items:center;">
+        <div class="ch"><div><div class="ct">DRE — Visão completa</div><div class="csb">Empresa (DRE formal), mês a mês desde jul/2026 · clique numa linha com ▸ pra detalhar · valores esmaecidos = meta ou conta ainda não paga (planejado) · respeita a loja selecionada</div></div>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <button id="btn-dre-pessoal" onclick="toggleDrePessoal()" style="padding:5px 10px;background:#fff;color:var(--mid);border:1px solid var(--border);border-radius:8px;font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;">👤 Ver Pessoal</button>
             <input type="month" id="meta-mes" class="fi-sm" style="width:120px;font-size:11px;padding:5px 8px;">
             <input type="number" id="meta-valor" placeholder="Meta R$" class="fi-sm" style="width:90px;font-size:11px;padding:5px 8px;">
             <button onclick="salvarMeta()" style="padding:5px 10px;background:var(--vf);color:white;border:none;border-radius:8px;font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;">Salvar meta</button>
           </div>
         </div>
+        <div class="csb" style="margin:-6px 0 10px;">Por padrão mostra só as lojas da empresa (Cambuci e Juquiá). Clique em "👤 Ver Pessoal" pra alternar e ver o resumo Pessoal separado.</div>
         <div class="tw"><table class="dt">
           <thead><tr id="tb-dremensal-head"><th>Categoria</th></tr></thead>
           <tbody id="tb-dremensal"></tbody>
-        </table></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--border);">
-          <div><div class="ct" style="font-size:14px;">Resultado dia a dia</div><div class="csb">Entradas, saídas e saldo acumulado — do primeiro lançamento até o consolidado</div></div>
-          <button onclick="exportarDRE()" style="padding:5px 12px;background:var(--vf);color:white;border:none;border-radius:8px;font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;">⬇ CSV</button>
-        </div>
-        <div class="tw"><table class="dt">
-          <thead><tr><th>Data</th><th style="text-align:right;color:var(--vj)">Entradas</th><th style="text-align:right;color:var(--red)">Saídas</th><th style="text-align:right">Resultado</th><th style="text-align:right">Saldo acum.</th></tr></thead>
-          <tbody id="tb-dre"></tbody><tfoot id="tf-dre"></tfoot>
         </table></div>
       </div>
       <div class="cc">
@@ -618,16 +622,22 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <!-- EQUIPE -->
     <div id="sec-equipe" class="section">
       <div class="cc" style="margin-bottom:16px;">
-        <div class="ch"><div><div class="ct">Funcionários</div><div class="csb">Nome + PIN usados para bater o ponto no PDV</div></div><button class="btn-l" onclick="abMFunc()">+ Novo funcionário</button></div>
-        <div id="func-lst"><div class="empty">Carregue os dados</div></div>
-      </div>
-      <div class="cc" style="margin-bottom:16px;">
-        <div class="ch"><div><div class="ct">Folha de ponto</div><div class="csb">Entrada, saída para almoço, retorno e saída do dia · horas trabalhadas e diferença vs. 44h semanais (sábado só o período da manhã conta) · respeita loja e período selecionados</div></div></div>
+        <div class="ch"><div><div class="ct">Folha de ponto</div><div class="csb">Entrada, saída para almoço, retorno e saída do dia · horas trabalhadas, diferença vs. meta e banco de horas · respeita loja e período selecionados</div></div>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <select class="fi-sm" id="ponto-func-sel" onchange="renPontoLst()" style="width:140px;font-size:11px;padding:5px 8px;"></select>
+            <button class="btn-l" onclick="imprimirFolhaPonto()">🖨️ Imprimir folha</button>
+          </div>
+        </div>
+        <div class="kgrid" id="ponto-kpis" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px;"></div>
         <div id="ponto-lst"><div class="empty">Carregue os dados</div></div>
       </div>
-      <div class="cc">
-        <div class="ch"><div><div class="ct">Caixa</div><div class="csb">Abertura e fechamento por dia/loja · respeita loja e período selecionados</div></div></div>
+      <div class="cc" style="margin-bottom:16px;">
+        <div class="ch"><div><div class="ct">Caixa</div><div class="csb">Composição do valor esperado (abertura + vendas em dinheiro − gastos em dinheiro) por dia/loja · respeita loja e período selecionados</div></div></div>
         <div id="caixa-lst"><div class="empty">Carregue os dados</div></div>
+      </div>
+      <div class="cc">
+        <div class="ch"><div><div class="ct">Funcionários</div><div class="csb">Nome + PIN usados para bater o ponto no PDV</div></div><button class="btn-l" onclick="abMFunc()">+ Novo funcionário</button></div>
+        <div id="func-lst"><div class="empty">Carregue os dados</div></div>
       </div>
     </div>
 
@@ -1491,31 +1501,44 @@ function renderDREMensal(){
   acLinhaEmp+='</tr>';
   linhas+=acLinhaEmp;
 
-  // ── PESSOAL ──
-  linhas+='<tr><td colspan="'+ncol+'" style="font-weight:700;font-size:11px;letter-spacing:.04em;color:var(--mid);padding-top:14px;border-top:2px solid var(--border);">PESSOAL</td></tr>';
-  var keyRP='receitaPes',abertoRP=!!dreExpand[keyRP];
-  linhas+='<tr'+(receitaPesCats.length?' style="cursor:pointer;" onclick="toggleDreExpand(\''+keyRP+'\')"':'')+'><td style="font-weight:600;">'+(receitaPesCats.length?(abertoRP?'▾ ':'▸ '):'')+'Receitas</td>'+meses.map(function(k){
-    return '<td style="text-align:right;color:var(--vj);font-weight:500;">'+fmt(receitaPesPorMes[k])+'</td>';
-  }).join('')+'</tr>';
-  if(abertoRP)receitaPesCats.forEach(function(c){linhas+=linhaDetalhe(c,receitaPesCatPorMes[c],'var(--vj)');});
+  // ── PESSOAL (só renderiza quando o botão "Ver Pessoal" está ativado) ──
+  if(dreShowPessoal){
+    linhas+='<tr><td colspan="'+ncol+'" style="font-weight:700;font-size:11px;letter-spacing:.04em;color:var(--mid);padding-top:14px;border-top:2px solid var(--border);">PESSOAL</td></tr>';
+    var keyRP='receitaPes',abertoRP=!!dreExpand[keyRP];
+    linhas+='<tr'+(receitaPesCats.length?' style="cursor:pointer;" onclick="toggleDreExpand(\''+keyRP+'\')"':'')+'><td style="font-weight:600;">'+(receitaPesCats.length?(abertoRP?'▾ ':'▸ '):'')+'Receitas</td>'+meses.map(function(k){
+      return '<td style="text-align:right;color:var(--vj);font-weight:500;">'+fmt(receitaPesPorMes[k])+'</td>';
+    }).join('')+'</tr>';
+    if(abertoRP)receitaPesCats.forEach(function(c){linhas+=linhaDetalhe(c,receitaPesCatPorMes[c],'var(--vj)');});
 
-  var subsPes=Object.keys(subPes),keyDP='despPes',abertoDP=!!dreExpand[keyDP];
-  linhas+='<tr'+(subsPes.length?' style="cursor:pointer;" onclick="toggleDreExpand(\''+keyDP+'\')"':'')+'><td>'+(subsPes.length?(abertoDP?'▾ ':'▸ '):'')+'Despesas</td>'+meses.map(function(k){
-    var v=despPesPorMes[k]||0,vp=despPesPlanPorMes[k]||0;
-    return '<td style="text-align:right;color:'+(v>0?'var(--red)':'var(--light)')+';">'+(v>0?'-'+fmt(v):'—')+(vp>0?'<div style="opacity:.45;font-size:10px;">planejado -'+fmt(vp)+'</div>':'')+'</td>';
-  }).join('')+'</tr>';
-  if(abertoDP)subsPes.forEach(function(sc){linhas+=linhaDetalhe(sc,subPes[sc],'var(--red)');});
+    var subsPes=Object.keys(subPes),keyDP='despPes',abertoDP=!!dreExpand[keyDP];
+    linhas+='<tr'+(subsPes.length?' style="cursor:pointer;" onclick="toggleDreExpand(\''+keyDP+'\')"':'')+'><td>'+(subsPes.length?(abertoDP?'▾ ':'▸ '):'')+'Despesas</td>'+meses.map(function(k){
+      var v=despPesPorMes[k]||0,vp=despPesPlanPorMes[k]||0;
+      return '<td style="text-align:right;color:'+(v>0?'var(--red)':'var(--light)')+';">'+(v>0?'-'+fmt(v):'—')+(vp>0?'<div style="opacity:.45;font-size:10px;">planejado -'+fmt(vp)+'</div>':'')+'</td>';
+    }).join('')+'</tr>';
+    if(abertoDP)subsPes.forEach(function(sc){linhas+=linhaDetalhe(sc,subPes[sc],'var(--red)');});
 
-  var saldoPesPorMes=zeroMap();
-  meses.forEach(function(k){saldoPesPorMes[k]=(receitaPesPorMes[k]||0)-(despPesPorMes[k]||0);});
-  linhas+=linhaSubtotal('= Saldo Pessoal',saldoPesPorMes,true);
+    var saldoPesPorMes=zeroMap();
+    meses.forEach(function(k){saldoPesPorMes[k]=(receitaPesPorMes[k]||0)-(despPesPorMes[k]||0);});
+    linhas+=linhaSubtotal('= Saldo Pessoal',saldoPesPorMes,true);
 
-  var acPes=0,acLinhaPes='<tr><td style="font-weight:700;">Acumulado (Pessoal)</td>';
-  meses.forEach(function(k){acPes+=saldoPesPorMes[k]||0;acLinhaPes+='<td style="text-align:right;font-weight:700;color:'+(acPes>=0?'var(--vf)':'var(--red)')+';">'+fmt(acPes)+'</td>';});
-  acLinhaPes+='</tr>';
-  linhas+=acLinhaPes;
+    var acPes=0,acLinhaPes='<tr><td style="font-weight:700;">Acumulado (Pessoal)</td>';
+    meses.forEach(function(k){acPes+=saldoPesPorMes[k]||0;acLinhaPes+='<td style="text-align:right;font-weight:700;color:'+(acPes>=0?'var(--vf)':'var(--red)')+';">'+fmt(acPes)+'</td>';});
+    acLinhaPes+='</tr>';
+    linhas+=acLinhaPes;
+  }
 
   tbody.innerHTML=linhas;
+}
+var dreShowPessoal=false;
+function toggleDrePessoal(){
+  dreShowPessoal=!dreShowPessoal;
+  var btn=document.getElementById('btn-dre-pessoal');
+  if(btn){
+    btn.textContent=dreShowPessoal?'👤 Ocultar Pessoal':'👤 Ver Pessoal';
+    btn.style.background=dreShowPessoal?'var(--vf)':'#fff';
+    btn.style.color=dreShowPessoal?'#fff':'var(--mid)';
+  }
+  renderDREMensal();
 }
 
 /* ── BALANÇO PATRIMONIAL ──
@@ -2838,18 +2861,18 @@ function atualizarStatusOrc(idx,status){
 }
 
 /* ── EQUIPE (funcionários / ponto / caixa) ── */
-function renEquipe(){renFuncLst();renPontoLst();renCaixaLst();}
+function renEquipe(){renPontoLst();renCaixaLst();renFuncLst();}
 function renFuncLst(){
   var lst=document.getElementById('func-lst');if(!lst)return;
   if(!D.funcionarios.length){lst.innerHTML='<div class="empty">Nenhum funcionário cadastrado</div>';return;}
-  lst.innerHTML=D.funcionarios.map(function(f){
+  lst.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:8px;">'+D.funcionarios.map(function(f){
     var ativo=(f.Ativo||'Sim')==='Sim';
-    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">'+
-      '<div><div style="font-weight:600;font-size:13px;">'+esc(f.Nome)+(ativo?'':' <span style="font-weight:400;color:var(--light);">(inativo)</span>')+'</div>'+
-      '<div style="font-size:11px;color:var(--light);">'+(f.PIN?'PIN definido':'Aguardando 1º acesso (funcionário define o PIN no PDV)')+' · desde '+esc(f.Criado_Em||'—')+'</div></div>'+
-      '<button style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid '+(ativo?'#e53935':'var(--vj)')+';color:'+(ativo?'#e53935':'var(--vf)')+';background:'+(ativo?'#ffebee':'var(--vj-pale)')+';cursor:pointer;font-family:Sora,sans-serif;" onclick=\'toggleFuncionario('+JSON.stringify(f.Nome)+','+(!ativo)+')\'>'+(ativo?'Desativar':'Ativar')+'</button>'+
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:'+(ativo?'var(--vj-pale)':'#f2f2f2')+';font-size:12px;">'+
+      '<span style="font-weight:600;'+(ativo?'':'color:var(--light);')+'">'+esc(f.Nome)+'</span>'+
+      '<span style="font-size:10px;color:var(--light);">'+(f.PIN?'PIN ok':'sem PIN')+'</span>'+
+      '<button style="font-size:10px;padding:3px 8px;border-radius:999px;border:1px solid '+(ativo?'#e53935':'var(--vj)')+';color:'+(ativo?'#e53935':'var(--vf)')+';background:#fff;cursor:pointer;font-family:Sora,sans-serif;" onclick=\'toggleFuncionario('+JSON.stringify(f.Nome)+','+(!ativo)+')\'>'+(ativo?'Desativar':'Ativar')+'</button>'+
       '</div>';
-  }).join('');
+  }).join('')+'</div>';
 }
 function isoWeekKey(d){
   var date=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
@@ -2868,30 +2891,79 @@ function metaHorasDiaJS(dataStr){
   return 8;
 }
 function imprimirFolhaPonto(){ window.print(); }
+function chaveMesPonto(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function nomeMesPonto(k){var p=k.split('-');var n=MESES_PT[parseInt(p[1],10)-1]||'';return n.charAt(0).toUpperCase()+n.slice(1)+'/'+p[0].slice(2);}
+function popularFiltroFuncPonto(){
+  var sel=document.getElementById('ponto-func-sel');
+  if(!sel)return;
+  var atual=sel.value;
+  var nomes=D.funcionarios.map(function(f){return f.Nome;});
+  sel.innerHTML='<option value="">Todos</option>'+nomes.map(function(n){return '<option value="'+esc(n)+'">'+esc(n)+'</option>';}).join('');
+  if(atual&&(atual===''||nomes.indexOf(atual)>-1))sel.value=atual;
+  else if(nomes.indexOf('Marina')>-1)sel.value='Marina';
+  else if(nomes.length)sel.value=nomes[0];
+}
 function renPontoLst(){
-  var lst=document.getElementById('ponto-lst');if(!lst)return;
-  var rows=gDL(D.ponto).slice().sort(function(a,b){
+  var lst=document.getElementById('ponto-lst'),kpisEl=document.getElementById('ponto-kpis');
+  if(!lst)return;
+  popularFiltroFuncPonto();
+  var sel=document.getElementById('ponto-func-sel');
+  var func=sel?sel.value:'';
+
+  var rows=gDL(D.ponto).slice();
+  if(func)rows=rows.filter(function(p){return p.Funcionario===func;});
+  rows.sort(function(a,b){
     var da=parsePtD(a.Data),db=parsePtD(b.Data);
     var ta=da?da.getTime():0, tb=db?db.getTime():0;
     if(ta!==tb)return tb-ta;
     return String(a.Funcionario||'').localeCompare(String(b.Funcionario||''));
   });
-  if(!rows.length){lst.innerHTML='<div class="empty">Nenhum registro de ponto</div>';return;}
-  var porSemana={};
-  rows.forEach(function(p){
-    var d=parsePtD(p.Data);
-    if(!d)return;
-    var wk=isoWeekKey(d)+'|'+p.Funcionario;
-    if(!porSemana[wk])porSemana[wk]={semana:isoWeekKey(d),funcionario:p.Funcionario,horas:0,meta:0};
-    porSemana[wk].horas+=parseFloat(p.Horas_Trabalhadas||0);
-    porSemana[wk].meta+=metaHorasDiaJS(p.Data);
+
+  // Banco de horas e mês atual: usam todo o histórico (ignoram o período do
+  // dashboard, só respeitam loja + funcionário), pra não "sumir" saldo acumulado
+  // quando o Jax filtra um período curto.
+  var historico=gLojaOnly(D.ponto).filter(function(p){return !func||p.Funcionario===func;});
+  var bancoAcum=0;
+  historico.forEach(function(p){
+    if(p.Horas_Trabalhadas!==undefined&&p.Horas_Trabalhadas!=='' &&p.Horas_Trabalhadas!==null){
+      bancoAcum+=(parseFloat(p.Horas_Trabalhadas||0)-metaHorasDiaJS(p.Data));
+    }
   });
-  var resumoHtml=Object.keys(porSemana).sort().reverse().map(function(k){
-    var s=porSemana[k];
+  var hoje=new Date(),kAtual=chaveMesPonto(hoje),horasMes=0,metaMes=0;
+  historico.forEach(function(p){
+    var d=parsePtD(p.Data);if(!d||chaveMesPonto(d)!==kAtual)return;
+    if(p.Horas_Trabalhadas!==undefined&&p.Horas_Trabalhadas!=='' &&p.Horas_Trabalhadas!==null){
+      horasMes+=parseFloat(p.Horas_Trabalhadas||0);
+      metaMes+=metaHorasDiaJS(p.Data);
+    }
+  });
+  var difMes=horasMes-metaMes;
+  if(kpisEl){
+    var corDif=difMes>=0?'var(--vf)':'#c62828',corBanco=bancoAcum>=0?'var(--vf)':'#c62828';
+    kpisEl.innerHTML=
+      '<div class="kpi gn"><div class="ki">⏱️</div><div class="kl">Horas no mês'+(func?' — '+esc(func):'')+'</div><div class="kv">'+horasMes.toFixed(1)+'h</div><div class="ks">meta '+metaMes.toFixed(1)+'h</div></div>'+
+      '<div class="kpi" style="background:'+(difMes>=0?'#eef7e3':'#fdeceb')+';"><div class="ki">📐</div><div class="kl">Diferença no mês</div><div class="kv" style="color:'+corDif+';">'+(difMes>=0?'+':'')+difMes.toFixed(1)+'h</div><div class="ks">horas − meta do dia</div></div>'+
+      '<div class="kpi" style="background:'+(bancoAcum>=0?'#eef7e3':'#fdeceb')+';"><div class="ki">🏦</div><div class="kl">Banco de horas acumulado</div><div class="kv" style="color:'+corBanco+';">'+(bancoAcum>=0?'+':'')+bancoAcum.toFixed(1)+'h</div><div class="ks">todo o histórico</div></div>';
+  }
+
+  if(!rows.length){lst.innerHTML='<div class="empty">Nenhum registro de ponto'+(func?' para '+esc(func):'')+' no período</div>';return;}
+
+  var porMes={};
+  historico.forEach(function(p){
+    var d=parsePtD(p.Data);if(!d)return;
+    var k=chaveMesPonto(d)+'|'+p.Funcionario;
+    if(!porMes[k])porMes[k]={mes:chaveMesPonto(d),funcionario:p.Funcionario,horas:0,meta:0};
+    if(p.Horas_Trabalhadas!==undefined&&p.Horas_Trabalhadas!=='' &&p.Horas_Trabalhadas!==null){
+      porMes[k].horas+=parseFloat(p.Horas_Trabalhadas||0);
+      porMes[k].meta+=metaHorasDiaJS(p.Data);
+    }
+  });
+  var resumoHtml=Object.keys(porMes).sort().reverse().slice(0,12).map(function(k){
+    var s=porMes[k];
     var diff=s.horas-s.meta;
     var difCor=diff>=0?'var(--vj)':'#e53935';
     return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:var(--vj-pale);border-radius:8px;margin-bottom:6px;font-size:12px;">'+
-      '<div><b>'+esc(s.funcionario)+'</b> <span style="color:var(--light);">· semana '+esc(s.semana)+'</span></div>'+
+      '<div><b>'+esc(s.funcionario)+'</b> <span style="color:var(--light);">· '+esc(nomeMesPonto(s.mes))+'</span></div>'+
       '<div>'+s.horas.toFixed(2)+'h de '+s.meta.toFixed(2)+'h · <span style="color:'+difCor+';font-weight:600;">'+(diff>=0?'+':'')+diff.toFixed(2)+'h</span></div>'+
       '</div>';
   }).join('');
@@ -2906,30 +2978,63 @@ function renPontoLst(){
       '<td>'+horasTxt+'</td><td style="color:'+difCor+';font-weight:600;">'+difTxt+'</td></tr>';
   }).join('');
   lst.innerHTML=
-    '<div style="display:flex;justify-content:flex-end;margin-bottom:10px;">'+
-      '<button class="btn-l" onclick="imprimirFolhaPonto()">🖨️ Imprimir folha de ponto</button>'+
-    '</div>'+
     '<div id="folha-ponto-print">'+
+    '<div id="folha-ponto-cabecalho"><h2 style="margin:0 0 4px;">Folha de ponto'+(func?' — '+esc(func):'')+'</h2><div style="font-size:12px;color:#555;margin-bottom:14px;">Emitida em '+new Date().toLocaleDateString('pt-BR')+'</div></div>'+
     '<div style="margin-bottom:12px;">'+resumoHtml+'</div>'+
     '<table class="dt dt-compact"><thead><tr><th>Data</th><th>Funcionário</th><th>Loja</th><th>Entrada</th><th>Saída almoço</th><th>Retorno almoço</th><th>Saída</th><th>Horas</th><th>Diferença</th></tr></thead>'+
     '<tbody>'+linhasHtml+'</tbody></table>'+
     '</div>';
 }
+function calcVendasDinheiroDia(dataBR,loja){
+  var slug=lSlug(loja||''),total=0;
+  (D.vendas||[]).forEach(function(v){
+    if(v.Data!==dataBR)return;
+    if(lSlug(v.Loja||'')!==slug)return;
+    total+=parseFloat(v.Dinheiro||0);
+  });
+  return total;
+}
+function calcGastosDinheiroDia(dataBR,loja){
+  var slug=lSlug(loja||''),total=0;
+  pagtosFundidos().forEach(function(p){
+    if(p.Tipo!=='Gasto')return;
+    if((p.Forma_Pagamento||'')!=='Dinheiro')return;
+    var dt=p.Data||p.Vencimento;
+    if(dt!==dataBR)return;
+    if(lSlug(p.Loja||'')!==slug)return;
+    total+=parseFloat(p.Valor||0);
+  });
+  return total;
+}
 function renCaixaLst(){
   var lst=document.getElementById('caixa-lst');if(!lst)return;
   var rows=gDL(D.caixa).slice().reverse().slice(0,30);
   if(!rows.length){lst.innerHTML='<div class="empty">Nenhum caixa registrado</div>';return;}
-  lst.innerHTML=rows.map(function(c){
+  var linhas=rows.map(function(c){
     var aberto=!c.Hora_Fechamento;
-    var dif=parseFloat(c.Diferenca||0);
-    var difCor=dif===0?'var(--light)':(dif>0?'var(--vj)':'#e53935');
-    return '<div style="padding:10px 0;border-bottom:1px solid var(--border);font-size:12px;">'+
-      '<div style="display:flex;justify-content:space-between;"><div style="font-weight:600;">'+esc(c.Data)+' · '+lojaNome(lSlug(c.Loja))+'</div>'+
-      '<div>'+(aberto?'<span style="color:var(--vj);font-weight:600;">Aberto</span>':'<span style="color:var(--light);">Fechado</span>')+'</div></div>'+
-      '<div style="color:var(--light);margin-top:2px;">Abertura '+fmt(c.Valor_Abertura)+' ('+esc(c.Funcionario_Abertura||'—')+' '+fmtHora(c.Hora_Abertura)+')'+
-      (aberto?'':' · Fechamento '+fmt(c.Valor_Fechamento)+' ('+esc(c.Funcionario_Fechamento||'—')+' '+fmtHora(c.Hora_Fechamento)+') · Diferença <span style="color:'+difCor+';font-weight:600;">'+fmt(c.Diferenca)+'</span>')+
-      '</div></div>';
+    var abertura=parseFloat(c.Valor_Abertura||0);
+    var vendasDin=calcVendasDinheiroDia(c.Data,c.Loja);
+    var gastosDin=calcGastosDinheiroDia(c.Data,c.Loja);
+    var esperado=abertura+vendasDin-gastosDin;
+    var contado=aberto?null:parseFloat(c.Valor_Fechamento||0);
+    var dif=aberto?null:(c.Diferenca!==undefined&&c.Diferenca!==''?parseFloat(c.Diferenca):(contado-esperado));
+    var difCor=dif===null?'var(--light)':(Math.abs(dif)<0.01?'var(--light)':(dif>0?'var(--vj)':'#e53935'));
+    var difTxt=dif===null?'—':(dif>=0?'+':'')+fmt(dif);
+    return '<tr>'+
+      '<td>'+esc(c.Data)+'</td>'+
+      '<td>'+esc(lojaNome(lSlug(c.Loja)))+'</td>'+
+      '<td style="text-align:right;">'+fmt(abertura)+'</td>'+
+      '<td style="text-align:right;color:var(--vj);">+ '+fmt(vendasDin)+'</td>'+
+      '<td style="text-align:right;color:#e53935;">− '+fmt(gastosDin)+'</td>'+
+      '<td style="text-align:right;font-weight:700;">'+fmt(esperado)+'</td>'+
+      '<td style="text-align:right;">'+(aberto?'<span style="color:var(--vj);font-weight:600;">Aberto</span>':fmt(contado))+'</td>'+
+      '<td style="text-align:right;font-weight:600;color:'+difCor+';">'+(aberto?'—':difTxt)+'</td>'+
+      '<td style="font-size:11px;color:var(--light);">'+esc(c.Funcionario_Abertura||'—')+' '+fmtHora(c.Hora_Abertura)+(aberto?'':' → '+esc(c.Funcionario_Fechamento||'—')+' '+fmtHora(c.Hora_Fechamento))+'</td>'+
+    '</tr>';
   }).join('');
+  lst.innerHTML='<div class="tw"><table class="dt dt-compact">'+
+    '<thead><tr><th>Data</th><th>Loja</th><th style="text-align:right;">Abertura</th><th style="text-align:right;">Vendas dinheiro</th><th style="text-align:right;">Gastos dinheiro</th><th style="text-align:right;">= Esperado</th><th style="text-align:right;">Contado</th><th style="text-align:right;">Diferença</th><th>Responsáveis</th></tr></thead>'+
+    '<tbody>'+linhas+'</tbody></table></div>';
 }
 function abMFunc(){document.getElementById('ffn').value='';document.getElementById('fm-func').className='fmsg';document.getElementById('m-funcionario').classList.add('open');}
 async function subFuncionario(){
