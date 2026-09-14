@@ -1053,7 +1053,7 @@ async function loadData(){
     D.clientes=rs[5].data||[];D.pdvs=rs[6].data||[];
     D.projetos=rs[7].data||[];D.tarefas=rs[8].data||[];D.caminhadas=rs[9].data||[];
     D.orcamentos=rs[10].data||[];D.orcamentoItens=rs[11].data||[];
-    D.funcionarios=rs[12].data||[];D.ponto=rs[13].data||[];D.caixa=rs[14].data||[];
+    D.funcionarios=rs[12].data||[];D.ponto=consolidarPontoPorDia(rs[13].data||[]);D.caixa=rs[14].data||[];
     D.metas=rs[15].data||[];D.listaCompras=rs[16].data||[];D.categorias=rs[17].data||[];
     D.conciliacao=rs[18].data||[];D.patrimonio=rs[19].data||[];
     var ops={};D.vendas.forEach(function(v){if(v.Operador)ops[v.Operador]=1;});
@@ -2861,6 +2861,62 @@ function atualizarStatusOrc(idx,status){
 }
 
 /* ── EQUIPE (funcionários / ponto / caixa) ── */
+// Consolida o Ponto em 1 linha por Data+Funcionario, aqui no dashboard.
+// O backend (bater_ponto, script.gs ao vivo) ainda grava 1 linha NOVA a cada
+// batida em vez de atualizar a linha do dia (mesmo a aba já tendo as colunas
+// do schema "1 linha por dia" — Hora_Entrada/Hora_Saida_Almoco/etc — o upsert
+// em si não está acontecendo no backend). Enquanto isso não é corrigido lá,
+// consolidamos aqui logo depois de carregar os dados, pra toda tela que usa
+// D.ponto (folha de ponto, KPIs, banco de horas) já ver 1 linha por dia.
+function horaParaMinutos(h){
+  if(!h)return null;
+  var p=String(h).split(':');
+  if(p.length<2)return null;
+  var hh=parseInt(p[0],10),mm=parseInt(p[1],10);
+  if(isNaN(hh)||isNaN(mm))return null;
+  return hh*60+mm;
+}
+function calcularHorasTrabalhadasDia(row){
+  var ent=horaParaMinutos(row.Hora_Entrada), sai=horaParaMinutos(row.Hora_Saida);
+  if(ent===null||sai===null)return null;
+  var total=sai-ent;
+  if(total<0)total+=24*60;
+  var saiAlm=horaParaMinutos(row.Hora_Saida_Almoco), retAlm=horaParaMinutos(row.Hora_Retorno_Almoco);
+  if(saiAlm!==null&&retAlm!==null){
+    var almoco=retAlm-saiAlm;
+    if(almoco<0)almoco+=24*60;
+    total-=almoco;
+  }
+  return total>0?total/60:0;
+}
+function consolidarPontoPorDia(rows){
+  var porDia={},ordem=[];
+  (rows||[]).forEach(function(p){
+    var chave=(p.Data||'')+'|'+(p.Funcionario||'');
+    if(!porDia[chave]){
+      porDia[chave]={Data:p.Data,Loja:p.Loja,Funcionario:p.Funcionario,Hora_Entrada:'',Hora_Saida_Almoco:'',Hora_Retorno_Almoco:'',Hora_Saida:'',Horas_Trabalhadas:'',Diferenca:'',Dispositivo:p.Dispositivo};
+      ordem.push(chave);
+    }
+    var row=porDia[chave];
+    if(p.Loja)row.Loja=p.Loja;
+    if(p.Dispositivo)row.Dispositivo=p.Dispositivo;
+    // Mantém a PRIMEIRA batida de cada tipo no dia (não sobrescreve se já tinha
+    // valor) — se teve batida duplicada do mesmo tipo (ex.: duplo toque antes
+    // do guard de 40min existir), o primeiro horário é o real.
+    ['Hora_Entrada','Hora_Saida_Almoco','Hora_Retorno_Almoco','Hora_Saida'].forEach(function(campo){
+      if(p[campo]&&!row[campo])row[campo]=p[campo];
+    });
+  });
+  return ordem.map(function(k){
+    var row=porDia[k];
+    var horas=calcularHorasTrabalhadasDia(row);
+    if(horas!==null){
+      row.Horas_Trabalhadas=horas.toFixed(2);
+      row.Diferenca=(horas-metaHorasDiaJS(row.Data)).toFixed(2);
+    }
+    return row;
+  });
+}
 function renEquipe(){renPontoLst();renCaixaLst();renFuncLst();}
 function renFuncLst(){
   var lst=document.getElementById('func-lst');if(!lst)return;
