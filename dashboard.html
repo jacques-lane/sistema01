@@ -409,6 +409,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <!-- ENTRADAS (= Recebimentos do v2) -->
     <div id="sec-entradas" class="section">
       <div style="display:flex;justify-content:flex-end;margin-bottom:16px;gap:8px;">
+        <button class="btn-l" onclick="abMAnalise()">📊 Análise</button>
         <button class="btn-l" onclick="exportCSV()">⬇ CSV</button>
         <button class="btn-l" onclick="abMEnt()">+ Novo recebimento</button>
       </div>
@@ -657,6 +658,40 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 </div>
 
 <!-- MODAIS -->
+<div class="mov" id="m-analise" onclick="cMov(event,'m-analise')"><div class="mo" style="width:960px;max-width:97vw;">
+  <button class="mc" onclick="fM('analise')">×</button>
+  <div class="mt">📊 Análise de Vendas</div>
+  <div class="mst">Resumo e ranking de produtos, agrupados pelo De-Para de nomes · respeita a loja e o período selecionados no topo</div>
+  <div class="fbtns" style="margin:14px 0 18px;">
+    <button class="fbtn active" id="an-tab-resumo" onclick="anTab('resumo')">Resumo &amp; Ranking</button>
+    <button class="fbtn" id="an-tab-depara" onclick="anTab('depara')">De-Para de produtos</button>
+  </div>
+  <div id="an-pane-resumo">
+    <div class="kgrid" id="an-kpis" style="grid-template-columns:repeat(4,1fr);"></div>
+    <div id="an-alerta" style="display:none;margin-bottom:14px;"></div>
+    <div class="cc">
+      <div class="ch"><div><div class="ct">Ranking de produtos</div><div class="csb">Ordenado por receita · custo unitário vem do preço médio de custo no Estoque</div></div>
+        <input class="fi-sm" id="an-busca" type="text" placeholder="Buscar produto…" style="width:180px;" oninput="renRankingProdutos()">
+      </div>
+      <div class="tw"><table class="dt">
+        <thead><tr><th>Produto</th><th style="text-align:right;">Qtd.</th><th style="text-align:right;">Receita</th><th style="text-align:right;">Custo unit.</th><th style="text-align:right;">Custo total</th><th style="text-align:right;">Lucro</th><th style="text-align:right;">Margem</th></tr></thead>
+        <tbody id="an-tb-ranking"></tbody>
+      </table></div>
+    </div>
+  </div>
+  <div id="an-pane-depara" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+      <input class="fi-sm" id="dp-busca" type="text" placeholder="Buscar produto original ou canônico…" style="width:280px;" oninput="renDePara()">
+      <span style="font-size:12px;color:var(--light);" id="dp-count">—</span>
+    </div>
+    <div class="csb" style="margin:-4px 0 10px;">Ajuste o "Nome canônico" pra padronizar grafias diferentes do mesmo produto — a Análise agrupa por esse nome. Itens marcados "Sugerido" foram detectados automaticamente e ainda precisam da sua confirmação.</div>
+    <div class="tw" style="max-height:56vh;"><table class="dt dt-compact">
+      <thead><tr><th>Produto (original)</th><th>Nome canônico</th><th>Categoria</th><th>Status</th><th></th></tr></thead>
+      <tbody id="dp-tb"></tbody>
+    </table></div>
+  </div>
+</div></div>
+
 <div class="mov" id="m-cli-det" onclick="cMov(event,'m-cli-det')"><div class="mo"><button class="mc" onclick="fM('cli-det')">×</button><div class="mt" id="cd-nm">Cliente</div><div class="mst" id="cd-sb"></div><div class="fg2" id="cd-mt" style="margin-bottom:16px;"></div><div class="ct" style="margin-bottom:10px;font-size:13px;">Últimas compras</div><div id="cd-hist"></div><div class="mft"><button class="btn-cn" onclick="fM('cli-det')">Fechar</button><button class="btn-sb" onclick="edCli()">Editar</button></div></div></div>
 
 <div class="mov" id="m-cliente" onclick="cMov(event,'m-cliente')"><div class="mo"><button class="mc" onclick="fM('cliente')">×</button><div class="mt" id="m-cli-ttl">Cadastrar cliente</div><div class="mst">Salvo na aba Clientes.</div><div class="fg2"><div class="fg"><label class="fl">Nome *</label><input class="fi" id="fcn" type="text" placeholder="Nome completo"></div><div class="fg"><label class="fl">Telefone *</label><input class="fi" id="fct" type="tel" placeholder="(XX) XXXXX-XXXX"></div></div><div class="fg"><label class="fl">Loja</label><select class="fsl" id="fcl"><option value="juquia">Juquiá</option><option value="cambuci">Cambuci</option><option value="pessoal">Pessoal</option></select></div><div class="fmsg" id="fm-cli"></div><div class="mft"><button class="btn-cn" onclick="fM('cliente')">Cancelar</button><button class="btn-sb" id="btn-fcli" onclick="subCli()"><div class="msp" id="sp-cli"></div>Salvar</button></div></div></div>
@@ -799,7 +834,7 @@ if(parseInt(localStorage.getItem('mayse_dash_urlver')||'0',10)<URL_VERSAO){
   localStorage.setItem('mayse_dash_urlver',String(URL_VERSAO));
 }
 var cfg={url:localStorage.getItem('mayse_dash_url')||URL_ATUAL,token:localStorage.getItem('mayse_dash_token')||SENHA};
-var D={vendas:[],encomendas:[],estoque:[],compras:[],pagamentos:[],clientes:[],pdvs:[],projetos:[],tarefas:[],caminhadas:[],orcamentos:[],orcamentoItens:[],funcionarios:[],ponto:[],caixa:[],metas:[],listaCompras:[],categorias:[],conciliacao:[],patrimonio:[]};
+var D={vendas:[],encomendas:[],estoque:[],compras:[],pagamentos:[],clientes:[],pdvs:[],projetos:[],tarefas:[],caminhadas:[],orcamentos:[],orcamentoItens:[],funcionarios:[],ponto:[],caixa:[],metas:[],listaCompras:[],categorias:[],conciliacao:[],patrimonio:[],depara:[]};
 var projTipoFil='todos';
 var lojasAtivas=new Set(['juquia','cambuci']);
 var secAtiva='visao',saiTipo='gasto',encTipoM='Futura',estFil='todos',saiFil='todos',saiStFil='todos';
@@ -1047,7 +1082,7 @@ async function loadData(){
   document.getElementById('btn-lbl').textContent='Carregando…';document.getElementById('btn-sp').style.display='block';
   document.getElementById('lov').classList.add('show');
   try{
-    var rs=await Promise.all([apiGet('Vendas'),apiGet('Encomendas'),apiGet('Estoque'),apiGet('Compras'),apiGet('Pagamentos'),apiGet('Clientes'),apiGet('PDVs'),apiGet('Projetos'),apiGet('ProjetoTarefas'),apiGet('Caminhadas'),apiGet('Orcamentos'),apiGet('OrcamentoItens'),apiGet('Funcionarios'),apiGet('Ponto'),apiGet('Caixa'),apiGet('Metas'),apiGet('ListaCompras'),apiGet('Categorias'),apiGet('Conciliacao'),apiGet('Patrimonio')]);
+    var rs=await Promise.all([apiGet('Vendas'),apiGet('Encomendas'),apiGet('Estoque'),apiGet('Compras'),apiGet('Pagamentos'),apiGet('Clientes'),apiGet('PDVs'),apiGet('Projetos'),apiGet('ProjetoTarefas'),apiGet('Caminhadas'),apiGet('Orcamentos'),apiGet('OrcamentoItens'),apiGet('Funcionarios'),apiGet('Ponto'),apiGet('Caixa'),apiGet('Metas'),apiGet('ListaCompras'),apiGet('Categorias'),apiGet('Conciliacao'),apiGet('Patrimonio'),apiGet('ProdutoDePara')]);
     D.vendas=rs[0].data||[];D.encomendas=rs[1].data||[];D.estoque=rs[2].data||[];
     D.compras=rs[3].data||[];D.pagamentos=rs[4].data||[];
     D.clientes=rs[5].data||[];D.pdvs=rs[6].data||[];
@@ -1055,7 +1090,8 @@ async function loadData(){
     D.orcamentos=rs[10].data||[];D.orcamentoItens=rs[11].data||[];
     D.funcionarios=rs[12].data||[];D.ponto=consolidarPontoPorDia(rs[13].data||[]);D.caixa=rs[14].data||[];
     D.metas=rs[15].data||[];D.listaCompras=rs[16].data||[];D.categorias=rs[17].data||[];
-    D.conciliacao=rs[18].data||[];D.patrimonio=rs[19].data||[];
+    D.conciliacao=rs[18].data||[];D.patrimonio=rs[19].data||[];D.depara=rs[20].data||[];
+    buildDeparaMap();
     var ops={};D.vendas.forEach(function(v){if(v.Operador)ops[v.Operador]=1;});
     var sel=document.getElementById('filt-op');
     if(sel)sel.innerHTML='<option value="">Todos</option>'+Object.keys(ops).map(function(o){return'<option>'+esc(o)+'</option>';}).join('');
@@ -1719,6 +1755,251 @@ function renEntradas(){
   aplicarFiltrosAnalitica();
 }
 function exportCSV(){var vnd=gDL(D.vendas);var hdr=['Loja','Data','Hora','Cliente','Telefone','Produtos','Dinheiro','Pix','Credito','Debito','Troco','Total','Operador'];var rows=vnd.map(function(v){return[LNOMES[lSlug(v.Loja||'')]||v.Loja,v.Data,v.Hora,v.Cliente,v.Telefone,'"'+(v.Produtos||'').replace(/"/g,'')+'\"',v.Dinheiro||0,v.Pix||0,v.Credito||0,v.Debito||0,v.Troco||0,v.Total,v.Operador].join(',');});var csv=[hdr.join(','),...rows].join('\n');var blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download='mayse-entradas.csv';a.click();URL.revokeObjectURL(url);}
+
+/* \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550
+   AN\u00C1LISE DE VENDAS (Resumo + Ranking de produtos + De-Para)
+   \u2014 adicionado 14/09/2026. Agrupa os itens de cada venda pelo nome
+   can\u00F4nico definido na aba ProdutoDePara (D.depara). Produto n\u00E3o
+   encontrado no De-Para ganha uma sugest\u00E3o autom\u00E1tica de nome/categoria,
+   \u00E9 usado assim na an\u00E1lise deste carregamento, e \u00E9 enviado em lote
+   pra aba (Status='Sugerido') pra Jax revisar depois na aba De-Para. \u2500 */
+
+/* stripAcentos/normKeyProd: chave de compara\u00E7\u00E3o sem acento/mai\u00FAscula/espa\u00E7o duplo \u2014 usada
+   pra casar nome can\u00F4nico com Estoque.Nome e pra reconhecer palavras-chave de taxa/servi\u00E7o */
+function stripAcentos(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036F]/g,'');}
+function normKeyProd(s){return stripAcentos(String(s||'')).toLowerCase().trim().replace(/\s+/g,' ');}
+
+var TAXA_KEYWORDS=['taxa','cartao','frete','entrega','mao de obra'];
+/* classificarNovoProduto: s\u00F3 usado pra produto NOVO (ainda n\u00E3o est\u00E1 no De-Para) \u2014
+   itens j\u00E1 confirmados/sugeridos usam a Categoria j\u00E1 salva na aba */
+function classificarNovoProduto(raw){
+  var nk=normKeyProd(raw);
+  if(nk==='embalagem')return'Taxa/Servi\u00E7o';
+  for(var i=0;i<TAXA_KEYWORDS.length;i++){var kw=TAXA_KEYWORDS[i];if(nk===kw||nk.indexOf(kw+' ')===0)return'Taxa/Servi\u00E7o';}
+  return'Produto';
+}
+function sugerirNomeCanonico(raw){
+  var s=String(raw||'').trim().replace(/\s+/g,' ');
+  if(!s)return s;
+  return s.charAt(0).toUpperCase()+s.slice(1);
+}
+
+/* buildDeparaMap: reconstr\u00F3i o mapa Produto_Original(trim) -> {canon,categoria,status} \u2014
+   chamado depois de todo loadData() e depois de qualquer edi\u00E7\u00E3o no De-Para */
+function buildDeparaMap(){
+  var map={};
+  (D.depara||[]).forEach(function(r){
+    var key=String(r.Produto_Original||'').trim();
+    if(!key)return;
+    map[key]={canon:r.Nome_Canonico||key,categoria:r.Categoria||'Produto',status:r.Status||'Confirmado'};
+  });
+  window._deparaMap=map;
+  return map;
+}
+
+var _pendentesNovos={}; // raw (trim) -> {produtoOriginal,nomeCanonico,categoria} descobertos nesta an\u00E1lise
+function resolverProduto(raw){
+  var map=window._deparaMap||{};
+  var hit=map[raw];
+  if(hit)return hit;
+  if(!_pendentesNovos[raw]){
+    _pendentesNovos[raw]={produtoOriginal:raw,nomeCanonico:sugerirNomeCanonico(raw),categoria:classificarNovoProduto(raw)};
+  }
+  var pend=_pendentesNovos[raw];
+  return{canon:pend.nomeCanonico,categoria:pend.categoria,status:'Sugerido'};
+}
+
+/* parseNumBR: "1.234,56" -> 1234.56 / "15,00" -> 15 / "8" -> 8 */
+function parseNumBR(s){return parseFloat(String(s||'0').replace(/\./g,'').replace(',','.'))||0;}
+
+var RE_ITEM_PRECO=/^(.*?)\s*\(\s*([\d.,]+)\s*x\s*R\$\s*([\d.,]+)\s*\)\s*$/i;
+/* parseItensVenda: quebra o campo Produtos ("Nome (Qtdx R$ Pre\u00E7o) | Nome2 (...)")
+   em itens {raw,qtd,preco,receita}. Item sem "(Qtdx R$Pre\u00E7o)" reconhec\u00EDvel
+   vem com preco:null e \u00E9 ignorado no ranking (mas contado no resumo). */
+function parseItensVenda(v){
+  var txt=String(v.Produtos||'').trim();
+  if(!txt)return[];
+  return txt.split('|').map(function(p){return p.trim();}).filter(Boolean).map(function(p){
+    var m=p.match(RE_ITEM_PRECO);
+    if(!m)return{raw:p,qtd:1,preco:null,receita:null};
+    var qtd=parseNumBR(m[2]),preco=parseNumBR(m[3]);
+    return{raw:m[1].trim(),qtd:qtd,preco:preco,receita:qtd*preco};
+  });
+}
+
+/* buildCustoMap: pre\u00E7o m\u00E9dio de custo por produto (normKeyProd), a partir da aba Estoque \u2014
+   v\u00E1rias lojas podem ter o mesmo produto com custos diferentes; usa a m\u00E9dia */
+function buildCustoMap(){
+  var soma={},cont={};
+  (D.estoque||[]).forEach(function(e){
+    var k=normKeyProd(e.Nome);
+    if(!k)return;
+    var c=parseFloat(e.Preco_Custo||0);
+    if(!c)return;
+    soma[k]=(soma[k]||0)+c;cont[k]=(cont[k]||0)+1;
+  });
+  var map={};
+  Object.keys(soma).forEach(function(k){map[k]=soma[k]/cont[k];});
+  return map;
+}
+
+var _anResumo=null,_anRanking=[];
+/* calcularAnalise: agrega gDL(D.vendas) (respeita loja/per\u00EDodo do topo) por nome can\u00F4nico.
+   Linhas de Categoria='Taxa/Servi\u00E7o' (frete, cart\u00E3o de mensagem, etc.) n\u00E3o entram no
+   ranking de produtos \u2014 s\u00F3 produtos de verdade. */
+function calcularAnalise(){
+  _pendentesNovos={};
+  var vnd=gDL(D.vendas);
+  var custoMap=buildCustoMap();
+  var porProduto={};
+  var itensSemPreco=0;
+  vnd.forEach(function(v){
+    parseItensVenda(v).forEach(function(it){
+      if(it.preco===null){itensSemPreco++;return;}
+      var info=resolverProduto(it.raw);
+      if(info.categoria!=='Produto')return;
+      var canon=info.canon;
+      if(!porProduto[canon])porProduto[canon]={qtd:0,receita:0};
+      porProduto[canon].qtd+=it.qtd;
+      porProduto[canon].receita+=it.receita;
+    });
+  });
+  var ranking=Object.keys(porProduto).map(function(nome){
+    var p=porProduto[nome];
+    var custoUnit=custoMap[normKeyProd(nome)];
+    custoUnit=(custoUnit===undefined)?null:custoUnit;
+    var custoTotal=(custoUnit!==null)?custoUnit*p.qtd:null;
+    var lucro=(custoTotal!==null)?p.receita-custoTotal:null;
+    var margem=(lucro!==null&&p.receita>0)?lucro/p.receita:null;
+    return{nome:nome,qtd:p.qtd,receita:p.receita,custoUnit:custoUnit,custoTotal:custoTotal,lucro:lucro,margem:margem};
+  });
+  ranking.sort(function(a,b){return b.receita-a.receita;});
+  var faturamentoTotal=vnd.reduce(function(s,v){return s+parseFloat(v.Total||0);},0);
+  var custoTotalGeral=ranking.reduce(function(s,r){return s+(r.custoTotal||0);},0);
+  var temCustoDesconhecido=ranking.some(function(r){return r.custoUnit===null;});
+  var lucroTotal=faturamentoTotal-custoTotalGeral;
+  var margemTotal=faturamentoTotal>0?lucroTotal/faturamentoTotal:0;
+  var pendentesArr=Object.keys(_pendentesNovos).map(function(k){return _pendentesNovos[k];});
+  _anResumo={faturamentoTotal:faturamentoTotal,custoTotal:custoTotalGeral,lucroTotal:lucroTotal,margemTotal:margemTotal,numVendas:vnd.length,produtosDistintos:ranking.length,itensSemPreco:itensSemPreco,pendentes:pendentesArr,temCustoDesconhecido:temCustoDesconhecido};
+  _anRanking=ranking;
+  if(pendentesArr.length)submitPendentesLote(pendentesArr);
+  return _anResumo;
+}
+
+/* submitPendentesLote: manda os produtos novos pro De-Para (Status='Sugerido') em lote,
+   e recarrega D.depara depois pra j\u00E1 refletir na aba De-Para \u2014 1x por produto por sess\u00E3o */
+var _pendentesEnviados={};
+function submitPendentesLote(pendentes){
+  var novos=pendentes.filter(function(p){return!_pendentesEnviados[p.produtoOriginal];});
+  if(!novos.length)return;
+  novos.forEach(function(p){_pendentesEnviados[p.produtoOriginal]=true;});
+  apiPost({tipo:'adicionar_depara_lote',itens:novos});
+  setTimeout(async function(){
+    try{
+      var r=await apiGet('ProdutoDePara');
+      if(r&&r.data){D.depara=r.data;buildDeparaMap();}
+      var painel=document.getElementById('an-pane-depara');
+      if(painel&&painel.style.display!=='none')renDePara();
+    }catch(e){}
+  },1800);
+}
+
+function fmtMargem(m){if(m===null||m===undefined)return'\u2014';return(m*100).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';}
+function fmtQtd(n){n=parseFloat(n||0);return Number.isInteger(n)?String(n):n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+function abMAnalise(){
+  if(!D.vendas.length){showToast('Carregue os dados primeiro','warn');return;}
+  document.getElementById('m-analise').classList.add('open');
+  anTab('resumo');
+}
+function anTab(which){
+  document.getElementById('an-tab-resumo').classList.toggle('active',which==='resumo');
+  document.getElementById('an-tab-depara').classList.toggle('active',which==='depara');
+  document.getElementById('an-pane-resumo').style.display=which==='resumo'?'':'none';
+  document.getElementById('an-pane-depara').style.display=which==='depara'?'':'none';
+  if(which==='resumo')renderAnalise();else renDePara();
+}
+
+function renderAnalise(){
+  var r=calcularAnalise();
+  document.getElementById('an-kpis').innerHTML=
+    '<div class="kpi gn"><div class="ki">\uD83D\uDCB0</div><div class="kl">Faturamento</div><div class="kv">'+fmt(r.faturamentoTotal)+'</div><div class="ks">'+r.numVendas+' venda'+(r.numVendas!==1?'s':'')+'</div></div>'+
+    '<div class="kpi ro"><div class="ki">\uD83D\uDCE6</div><div class="kl">Custo (produtos)</div><div class="kv ro">'+fmt(r.custoTotal)+'</div><div class="ks">'+r.produtosDistintos+' produto'+(r.produtosDistintos!==1?'s':'')+' distinto'+(r.produtosDistintos!==1?'s':'')+'</div></div>'+
+    '<div class="kpi dk"><div class="ki">\uD83D\uDCCA</div><div class="kl">Lucro bruto</div><div class="kv" style="font-size:22px;">'+fmt(r.lucroTotal)+'</div><div class="ks">faturamento \u2212 custo de produtos</div></div>'+
+    '<div class="kpi go"><div class="ki">\uD83D\uDCC9</div><div class="kl">Margem bruta</div><div class="kv go">'+fmtMargem(r.margemTotal)+'</div><div class="ks">lucro / faturamento</div></div>';
+  var avisos=[];
+  if(r.pendentes.length)avisos.push('\uD83C\uDD95 <b>'+r.pendentes.length+'</b> produto'+(r.pendentes.length!==1?'s':'')+' novo'+(r.pendentes.length!==1?'s':'')+' identificado'+(r.pendentes.length!==1?'s':'')+' nas vendas e adicionado'+(r.pendentes.length!==1?'s':'')+' \u00E0 aba De-Para como "a revisar" \u2014 <a href="javascript:void(0)" onclick="anTab(\'depara\')" style="color:#7a5c00;font-weight:700;">conferir agora</a>');
+  if(r.temCustoDesconhecido)avisos.push('\u2139\uFE0F Alguns produtos do ranking n\u00E3o t\u00EAm custo cadastrado no Estoque (aparecem com "\u2014")');
+  if(r.itensSemPreco)avisos.push('\u2139\uFE0F '+r.itensSemPreco+' item'+(r.itensSemPreco!==1?'ns':'')+' de venda sem pre\u00E7o identific\u00E1vel no texto (ignorado'+(r.itensSemPreco!==1?'s':'')+' no ranking, mas contado no faturamento)');
+  var alertaEl=document.getElementById('an-alerta');
+  if(avisos.length){alertaEl.style.display='block';alertaEl.innerHTML='<div style="background:#fff8e6;border:1px solid #e8d28a;border-radius:10px;padding:10px 14px;font-size:12px;color:#7a5c00;line-height:1.7;">'+avisos.join('<br>')+'</div>';}
+  else{alertaEl.style.display='none';}
+  renRankingProdutos();
+}
+
+function renRankingProdutos(){
+  var termo=nStr((document.getElementById('an-busca')||{}).value||'').trim();
+  var lista=_anRanking.filter(function(r){return!termo||nStr(r.nome).indexOf(termo)>=0;});
+  var tb=document.getElementById('an-tb-ranking');
+  if(!lista.length){tb.innerHTML='<tr><td colspan="7" class="empty">Nenhum produto encontrado</td></tr>';return;}
+  tb.innerHTML=lista.map(function(r){
+    return'<tr><td>'+esc(r.nome)+'</td><td style="text-align:right;">'+fmtQtd(r.qtd)+'</td><td style="text-align:right;">'+fmt(r.receita)+'</td>'+
+      '<td style="text-align:right;">'+(r.custoUnit!==null?fmt(r.custoUnit):'<span style="color:var(--light);">\u2014</span>')+'</td>'+
+      '<td style="text-align:right;">'+(r.custoTotal!==null?fmt(r.custoTotal):'<span style="color:var(--light);">\u2014</span>')+'</td>'+
+      '<td style="text-align:right;'+(r.lucro!==null&&r.lucro<0?'color:var(--red);':'')+'">'+(r.lucro!==null?fmt(r.lucro):'\u2014')+'</td>'+
+      '<td style="text-align:right;">'+fmtMargem(r.margem)+'</td></tr>';
+  }).join('');
+}
+
+/* \u2500\u2500 De-Para: tabela edit\u00E1vel (Produto_Original \u00E9 a chave, nunca edit\u00E1vel) \u2500\u2500 */
+function dpRowId(orig){return'dp_'+String(orig).split('').reduce(function(h,c){h=((h<<5)-h+c.charCodeAt(0))|0;return h;},0).toString(36).replace('-','n');}
+
+function renDePara(){
+  var termo=nStr((document.getElementById('dp-busca')||{}).value||'').trim();
+  var lista=(D.depara||[]).filter(function(r){
+    if(!termo)return true;
+    return nStr(r.Produto_Original||'').indexOf(termo)>=0||nStr(r.Nome_Canonico||'').indexOf(termo)>=0;
+  });
+  lista=lista.slice().sort(function(a,b){
+    var sa=(a.Status==='Sugerido')?0:1,sb=(b.Status==='Sugerido')?0:1;
+    if(sa!==sb)return sa-sb;
+    return String(a.Nome_Canonico||'').localeCompare(String(b.Nome_Canonico||''),'pt-BR');
+  });
+  sEl('dp-count',lista.length+' de '+(D.depara||[]).length);
+  var tb=document.getElementById('dp-tb');
+  if(!lista.length){tb.innerHTML='<tr><td colspan="5" class="empty">Nenhum produto encontrado</td></tr>';return;}
+  tb.innerHTML=lista.map(function(r){
+    var orig=String(r.Produto_Original||'');
+    var rid=dpRowId(orig);
+    var stBadge=r.Status==='Sugerido'?'<span class="bdg b-pnd">Sugerido</span>':'<span class="bdg b-ok">Confirmado</span>';
+    return'<tr>'+
+      '<td style="max-width:220px;font-size:12px;" title="'+esc(orig)+'">'+esc(orig)+'</td>'+
+      '<td><input class="fi-sm" data-orig="'+esc(orig)+'" id="'+rid+'_canon" value="'+esc(r.Nome_Canonico||'')+'" oninput="dpMarkDirty(\''+rid+'\')"></td>'+
+      '<td><select class="fi-sm" id="'+rid+'_cat" onchange="dpMarkDirty(\''+rid+'\')"><option value="Produto"'+(r.Categoria!=='Taxa/Servi\u00E7o'?' selected':'')+'>Produto</option><option value="Taxa/Servi\u00E7o"'+(r.Categoria==='Taxa/Servi\u00E7o'?' selected':'')+'>Taxa/Servi\u00E7o</option></select></td>'+
+      '<td>'+stBadge+'</td>'+
+      '<td><button class="btn-l" id="'+rid+'_btn" style="display:none;padding:5px 10px;font-size:11px;" onclick="salvarDeParaRow(\''+rid+'\')">\uD83D\uDCBE Salvar</button></td>'+
+      '</tr>';
+  }).join('');
+}
+function dpMarkDirty(rid){var b=document.getElementById(rid+'_btn');if(b)b.style.display='inline-block';}
+async function salvarDeParaRow(rid){
+  var origInput=document.getElementById(rid+'_canon');
+  if(!origInput)return;
+  var orig=origInput.dataset.orig;
+  var novoCanon=origInput.value.trim();
+  if(!novoCanon){showToast('Informe o nome can\u00F4nico','warn');return;}
+  var novaCat=document.getElementById(rid+'_cat').value;
+  var btn=document.getElementById(rid+'_btn');
+  btn.textContent='Salvando\u2026';btn.disabled=true;
+  await apiPost({tipo:'salvar_depara',produtoOriginal:orig,nomeCanonico:novoCanon,categoria:novaCat,status:'Confirmado',operador:'Jax'});
+  var row=(D.depara||[]).find(function(r){return String(r.Produto_Original||'')===orig;});
+  if(row){row.Nome_Canonico=novoCanon;row.Categoria=novaCat;row.Status='Confirmado';}
+  buildDeparaMap();
+  showToast('De-Para atualizado!');
+  renDePara();
+  var painelResumo=document.getElementById('an-pane-resumo');
+  if(painelResumo&&painelResumo.style.display!=='none')renderAnalise();
+}
 
 /* ── SAÍDAS ── */
 var _saiL=[];
