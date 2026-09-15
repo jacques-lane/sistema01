@@ -565,7 +565,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
         <div id="cp-sug-lst"><div class="empty">Carregue os dados</div></div>
       </div>
       <div class="cc" style="margin-bottom:20px;">
-        <div class="ch"><div><div class="ct">📝 Montar lista de compras (Mayse)</div><div class="csb">Vá adicionando o que precisa comprar. Ao fechar, vira a "lista do dia" pro Jax ver e comprar.</div></div></div>
+        <div class="ch"><div><div class="ct">📝 Montar lista de compras (Mayse)</div><div class="csb">Vá adicionando o que precisa comprar — já aparece aqui com Comprar/Recusar pro Jax agir na hora. "Fechar lista" é opcional, só agrupa os itens do dia pra consultar depois.</div></div></div>
         <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
           <input type="text" id="lc-dash-item" list="lc-dash-item-list" placeholder="O que você precisa? Ex: antúrio" style="flex:2;min-width:160px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;"><datalist id="lc-dash-item-list"></datalist>
           <input type="text" id="lc-dash-qtd" placeholder="Qtd (ex: 1 caixa)" style="flex:1;min-width:100px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;">
@@ -658,7 +658,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 </div>
 
 <!-- MODAIS -->
-<div class="mov" id="m-analise" onclick="cMov(event,'m-analise')"><div class="mo" style="width:960px;max-width:97vw;">
+<div class="mov" id="m-analise" onclick="cMov(event,'m-analise')"><div class="mo" style="width:96vw;max-width:1600px;max-height:94vh;">
   <button class="mc" onclick="fM('analise')">×</button>
   <div class="mt">📊 Análise de Vendas</div>
   <div class="mst">Resumo e ranking de produtos, agrupados pelo De-Para de nomes · respeita a loja e o período selecionados no topo</div>
@@ -674,7 +674,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
         <input class="fi-sm" id="an-busca" type="text" placeholder="Buscar produto…" style="width:180px;" oninput="renRankingProdutos()">
       </div>
       <div class="tw"><table class="dt">
-        <thead><tr><th>Produto</th><th style="text-align:right;">Qtd.</th><th style="text-align:right;">Receita</th><th style="text-align:right;">Custo unit.</th><th style="text-align:right;">Custo total</th><th style="text-align:right;">Lucro</th><th style="text-align:right;">Margem</th></tr></thead>
+        <thead id="an-thead-ranking"></thead>
         <tbody id="an-tb-ranking"></tbody>
       </table></div>
     </div>
@@ -742,16 +742,13 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
   <div class="fg"><label class="fl">Motivo (opcional)</label><input class="fi" type="text" id="recusa-obs-dash" placeholder="Ex: muito caro, em falta…"></div>
   <button class="btn-l" style="background:var(--red);color:#fff;" onclick="confirmarRecusaDash()">Recusar item</button>
 </div></div>
-<div class="mov" id="m-compra" onclick="cMov(event,'m-compra')"><div class="mo"><button class="mc" onclick="fM('compra')">×</button><div class="mt">Registrar compra</div><div class="mst">Atualiza o estoque e o custo do produto automaticamente.</div>
+<div class="mov" id="m-compra" onclick="cMov(event,'m-compra')"><div class="mo"><button class="mc" onclick="fM('compra')">×</button><div class="mt">Registrar compra</div><div class="mst">Compra em caixa/maço, venda fracionada — informe o fracionamento pra calcular o custo por unidade vendida automaticamente. Mesmo formulário e mesma regra do PDV.</div>
 <div class="fg2"><div class="fg"><label class="fl">Data *</label><input class="fi" id="cp-dt" type="date"></div><div class="fg"><label class="fl">Loja *</label><select class="fsl" id="cp-lj"><option value="juquia">Juquiá</option><option value="cambuci">Cambuci</option><option value="pessoal">Pessoal</option><option value="viveiro">Viveiro</option></select></div></div>
-<div class="fg2"><div class="fg"><label class="fl">Produto *</label><input class="fi" id="cp-prod" type="text" placeholder="Nome do produto" list="cp-prod-list" oninput="onCpProdChange()"><datalist id="cp-prod-list"></datalist></div><div class="fg"><label class="fl">Fornecedor</label><input class="fi" id="cp-forn" type="text" placeholder="Ex: Ceagesp"></div></div>
-<div class="fg2"><div class="fg"><label class="fl">Quantidade *</label><input class="fi" id="cp-qtd" type="number" min="1" placeholder="0" oninput="calcCpMargem()"></div><div class="fg"><label class="fl">Valor unitário (R$) *</label><input class="fi" id="cp-vu" type="number" min="0" step="0.01" placeholder="0,00" oninput="calcCpMargem()"></div></div>
-<div class="fg2"><div class="fg"><label class="fl">Valor total</label><input class="fi" id="cp-vt" type="text" disabled style="background:var(--cream);"></div><div class="fg"><label class="fl">NF / Ref.</label><input class="fi" id="cp-nf" type="text" placeholder="Opcional"></div></div>
-<div class="fg2"><div class="fg"><label class="fl">Forma de pagamento</label><select class="fsl" id="cp-pag" onchange="onCpPagChange()"><option>Dinheiro</option><option>Pix</option><option>Crédito</option><option>Débito</option><option>Boleto</option><option>Transferência</option></select></div><div class="fg"><label class="fl">Observação</label><input class="fi" id="cp-obs" type="text" placeholder="Opcional"></div></div>
-<div id="cp-venc-wrap" style="display:none;"><div class="fg"><label class="fl">Vencimento *</label><input class="fi" id="cp-venc" type="date"></div></div>
-<div id="cp-boleto-toggle-wrap" style="display:none;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--cream);border-radius:8px;"><div><div style="font-size:13px;">Parcelar em vários boletos?</div><div style="font-size:11px;color:var(--light);">Cada parcela pode ter valor e vencimento diferente</div></div><button class="tog" id="tog-cp-boleto" onclick="onToggleCpBoleto()" aria-label="toggle boleto parcelado"></button></div></div>
-<div id="cp-boletos-box" style="display:none;margin-bottom:12px;"><div id="cp-boletos-lista"></div><button type="button" class="btn-cn" style="font-size:12px;padding:6px 12px;" onclick="addBoleto('cp')">+ Adicionar parcela</button><div id="cp-boletos-total" style="font-size:12px;margin-top:6px;color:var(--light);"></div></div>
-<div id="cp-marg-box" style="display:none;margin-bottom:12px;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.5;"></div>
+<div class="fg2"><div class="fg"><label class="fl">Produto *</label><input class="fi" id="cp-prod" type="text" placeholder="Nome do produto" list="cp-prod-list" oninput="onCpProdChange()"><datalist id="cp-prod-list"></datalist></div><div class="fg"><label class="fl">Formato *</label><select class="fsl" id="cp-formato"><option>Caixa</option><option>Maço</option><option>Unidade</option><option>Cuia</option></select></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Fornecedor</label><input class="fi" id="cp-forn" type="text" placeholder="Ex: Ceagesp"></div><div class="fg"><label class="fl">Fracionado (unid. de venda por 1 comprada) *</label><input class="fi" id="cp-frac" type="number" min="1" placeholder="Ex: 8" oninput="calcCpMargem()"></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Quantidade comprada *</label><input class="fi" id="cp-qtd" type="number" min="1" placeholder="0" oninput="calcCpMargem()"></div><div class="fg"><label class="fl">Valor pago (por unidade comprada) (R$) *</label><input class="fi" id="cp-vu" type="number" min="0" step="0.01" placeholder="0,00" oninput="calcCpMargem()"></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Custo unitário (calculado)</label><input class="fi" id="cp-custo" type="text" disabled style="background:var(--cream);"></div><div class="fg"><label class="fl">Venda sugerida (R$, editável)</label><input class="fi" id="cp-venda" type="number" min="0" step="0.01" placeholder="0,00"></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Forma de pagamento</label><select class="fsl" id="cp-pag"><option value="Dinheiro">Dinheiro</option><option value="Debito">Débito</option><option value="CartaoC6">Cartão C6 (fecha 03, vence 10)</option><option value="CartaoItau">Cartão Itaú (fecha 02, vence 09)</option></select></div><div class="fg"><label class="fl">Observação</label><input class="fi" id="cp-obs" type="text" placeholder="Opcional"></div></div>
 <div class="fmsg" id="fm-compra"></div><div class="mft"><button class="btn-cn" onclick="fM('compra')">Cancelar</button><button class="btn-sb" id="btn-fcp" onclick="subCompra()"><div class="msp" id="sp-cp"></div>Registrar compra</button></div></div></div>
 
 <div class="mov" id="m-ajuste" onclick="cMov(event,'m-ajuste')"><div class="mo" style="max-width:380px;"><button class="mc" onclick="fM('ajuste')">×</button><div class="mt">Ajustar quantidade</div><div class="mst" id="aj-sb"></div><label class="fl" style="margin-bottom:6px;">Nova quantidade</label><div class="qa"><button class="qab" onclick="adjAj(-1)">−</button><span class="qav" id="aj-val">0</span><button class="qab" onclick="adjAj(1)">+</button></div><div class="fg"><label class="fl">Motivo (opcional)</label><input class="fi" id="aj-mot" type="text" placeholder="Ex: contagem física…"></div><div class="mft"><button class="btn-cn" onclick="fM('ajuste')">Cancelar</button><button class="btn-sb" onclick="subAj()">Salvar</button></div></div></div>
@@ -1146,9 +1143,13 @@ function renderListaAbertaDash(){
   el.innerHTML=abertos.map(function(i){
     var qtdTxt=i.Quantidade?' · '+esc(String(i.Quantidade)):'';
     var origTxt=i.Origem==='encomenda'?('encomenda'+(i.EncomendaRef?' · '+esc(String(i.EncomendaRef)):'')):'pedido de '+esc(String(i.Operador||'—'));
-    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);">'+
+    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">'+
       '<div><div style="font-weight:600;font-size:13px;">'+esc(i.Item||'')+qtdTxt+'</div>'+
-      '<div style="font-size:11px;color:var(--light);">'+origTxt+'</div></div></div>';
+      '<div style="font-size:11px;color:var(--light);">'+origTxt+'</div></div>'+
+      '<div style="display:flex;gap:6px;">'+
+      '<button class="btn-l" style="padding:4px 10px;font-size:12px;" onclick=\'comprarPedidoMayse('+JSON.stringify(i.Item||'')+')\'>Comprar</button>'+
+      '<button class="btn-l" style="padding:4px 10px;font-size:12px;background:#fff;color:var(--red);border:1px solid var(--red);" onclick=\'abrirRecusaDash('+JSON.stringify(i.Item||'')+')\'>Recusar</button>'+
+      '</div></div>';
   }).join('');
 }
 function adicionarItemListaDash(){
@@ -1222,8 +1223,8 @@ function renderPedidosMayse(dataSel){
     var origTxt=i.Origem==='encomenda'?('encomenda'+(i.EncomendaRef?' · '+esc(String(i.EncomendaRef)):'')):'pedido de '+esc(String(i.Operador||'—'));
     var statusTag=i.Status==='Comprado'?' <span style="color:var(--vf);font-weight:700;">✓ comprado</span>':i.Status==='Recusado'?' <span style="color:var(--red);font-weight:700;">✕ recusado'+(i.Observacao?' — '+esc(String(i.Observacao)):'')+'</span>':'';
     var acoes=i.Status==='Pendente'?
-      '<button class="btn-l" style="padding:4px 10px;font-size:12px;" onclick="comprarPedidoMayse('+JSON.stringify(i.Item||'')+')">Comprar</button>'+
-      '<button class="btn-l" style="padding:4px 10px;font-size:12px;background:#fff;color:var(--red);border:1px solid var(--red);" onclick="abrirRecusaDash('+JSON.stringify(i.Item||'')+')">Recusar</button>'
+      '<button class="btn-l" style="padding:4px 10px;font-size:12px;" onclick=\'comprarPedidoMayse('+JSON.stringify(i.Item||'')+')\'>Comprar</button>'+
+      '<button class="btn-l" style="padding:4px 10px;font-size:12px;background:#fff;color:var(--red);border:1px solid var(--red);" onclick=\'abrirRecusaDash('+JSON.stringify(i.Item||'')+')\'>Recusar</button>'
       :'';
     return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">'+
       '<div><div style="font-weight:600;font-size:13px;">'+esc(i.Item||'')+qtdTxt+statusTag+'</div>'+
@@ -1252,6 +1253,7 @@ async function confirmarRecusaDash(){
     var it=(D.listaCompras||[]).find(function(x){return x.Item===recusaItemDash&&x.Status==='Pendente';});
     if(it){it.Status='Recusado';it.Observacao=obs;}
     showToast('Item recusado');
+    renderListaAbertaDash();
     renderPedidosMayse(document.getElementById('cp-lc-select-data').value);
   }else showToast('Erro ao recusar','err');
 }
@@ -1847,10 +1849,28 @@ var _anResumo=null,_anRanking=[];
 /* calcularAnalise: agrega gDL(D.vendas) (respeita loja/per\u00EDodo do topo) por nome can\u00F4nico.
    Linhas de Categoria='Taxa/Servi\u00E7o' (frete, cart\u00E3o de mensagem, etc.) n\u00E3o entram no
    ranking de produtos \u2014 s\u00F3 produtos de verdade. */
+function buildCategoriaMap(){
+  var cont={};
+  (D.estoque||[]).forEach(function(e){
+    var k=normKeyProd(e.Nome);
+    var cat=String(e.Categoria||'').trim();
+    if(!k||!cat)return;
+    cont[k]=cont[k]||{};
+    cont[k][cat]=(cont[k][cat]||0)+1;
+  });
+  var map={};
+  Object.keys(cont).forEach(function(k){
+    var best=null,bestN=0;
+    Object.keys(cont[k]).forEach(function(cat){if(cont[k][cat]>bestN){best=cat;bestN=cont[k][cat];}});
+    map[k]=best;
+  });
+  return map;
+}
 function calcularAnalise(){
   _pendentesNovos={};
   var vnd=gDL(D.vendas);
   var custoMap=buildCustoMap();
+  var catMap=buildCategoriaMap();
   var porProduto={};
   var itensSemPreco=0;
   vnd.forEach(function(v){
@@ -1859,9 +1879,10 @@ function calcularAnalise(){
       var info=resolverProduto(it.raw);
       if(info.categoria!=='Produto')return;
       var canon=info.canon;
-      if(!porProduto[canon])porProduto[canon]={qtd:0,receita:0};
+      if(!porProduto[canon])porProduto[canon]={qtd:0,receita:0,precos:[]};
       porProduto[canon].qtd+=it.qtd;
       porProduto[canon].receita+=it.receita;
+      porProduto[canon].precos.push(it.preco); // preço unitário de venda desta linha (não multiplicado pela qtd)
     });
   });
   var ranking=Object.keys(porProduto).map(function(nome){
@@ -1871,7 +1892,11 @@ function calcularAnalise(){
     var custoTotal=(custoUnit!==null)?custoUnit*p.qtd:null;
     var lucro=(custoTotal!==null)?p.receita-custoTotal:null;
     var margem=(lucro!==null&&p.receita>0)?lucro/p.receita:null;
-    return{nome:nome,qtd:p.qtd,receita:p.receita,custoUnit:custoUnit,custoTotal:custoTotal,lucro:lucro,margem:margem};
+    var precoMedio=p.precos.length?p.precos.reduce(function(s,x){return s+x;},0)/p.precos.length:null;
+    var precoMin=p.precos.length?Math.min.apply(null,p.precos):null;
+    var precoMax=p.precos.length?Math.max.apply(null,p.precos):null;
+    var categoria=catMap[normKeyProd(nome)]||null;
+    return{nome:nome,categoria:categoria,qtd:p.qtd,receita:p.receita,precoMedio:precoMedio,precoMin:precoMin,precoMax:precoMax,custoUnit:custoUnit,custoTotal:custoTotal,lucro:lucro,margem:margem};
   });
   ranking.sort(function(a,b){return b.receita-a.receita;});
   var faturamentoTotal=vnd.reduce(function(s,v){return s+parseFloat(v.Total||0);},0);
@@ -1937,13 +1962,55 @@ function renderAnalise(){
   renRankingProdutos();
 }
 
+/* Ranking de produtos: colunas + ordena\u00e7\u00e3o clic\u00e1vel (clique de novo na mesma coluna
+   inverte a dire\u00e7\u00e3o). Coluna/dire\u00e7\u00e3o atual fica em _anSortCol/_anSortDir. */
+var AN_RANK_COLS=[
+  {key:'nome',label:'Produto',align:'left',tipo:'str'},
+  {key:'categoria',label:'Categoria',align:'left',tipo:'str'},
+  {key:'qtd',label:'Qtd.',align:'right',tipo:'num'},
+  {key:'receita',label:'Receita',align:'right',tipo:'num'},
+  {key:'precoMedio',label:'Pre\u00e7o m\u00e9dio',align:'right',tipo:'num'},
+  {key:'precoMin',label:'Pre\u00e7o m\u00edn.',align:'right',tipo:'num'},
+  {key:'precoMax',label:'Pre\u00e7o m\u00e1x.',align:'right',tipo:'num'},
+  {key:'custoUnit',label:'Custo unit.',align:'right',tipo:'num'},
+  {key:'custoTotal',label:'Custo total',align:'right',tipo:'num'},
+  {key:'lucro',label:'Lucro',align:'right',tipo:'num'},
+  {key:'margem',label:'Margem',align:'right',tipo:'num'}
+];
+var _anSortCol='receita',_anSortDir='desc';
+function anSort(col){
+  if(_anSortCol===col){_anSortDir=_anSortDir==='asc'?'desc':'asc';}
+  else{_anSortCol=col;var cfg=AN_RANK_COLS.find(function(c){return c.key===col;});_anSortDir=(cfg&&cfg.tipo==='str')?'asc':'desc';}
+  renRankingProdutos();
+}
+function renRankingHeader(){
+  document.getElementById('an-thead-ranking').innerHTML='<tr>'+AN_RANK_COLS.map(function(c){
+    var seta=(_anSortCol===c.key)?(_anSortDir==='asc'?' \u25b2':' \u25bc'):'';
+    return'<th style="text-align:'+c.align+';cursor:pointer;user-select:none;" onclick="anSort(\''+c.key+'\')" title="Clique pra ordenar">'+esc(c.label)+seta+'</th>';
+  }).join('')+'</tr>';
+}
 function renRankingProdutos(){
+  renRankingHeader();
   var termo=nStr((document.getElementById('an-busca')||{}).value||'').trim();
   var lista=_anRanking.filter(function(r){return!termo||nStr(r.nome).indexOf(termo)>=0;});
+  lista=lista.slice().sort(function(a,b){
+    var va=a[_anSortCol],vb=b[_anSortCol];
+    var isStr=(typeof va==='string')||(typeof vb==='string');
+    var cmp;
+    if(isStr)cmp=String(va||'').localeCompare(String(vb||''),'pt-BR');
+    else cmp=(va===null||va===undefined?-Infinity:va)-(vb===null||vb===undefined?-Infinity:vb);
+    return _anSortDir==='asc'?cmp:-cmp;
+  });
   var tb=document.getElementById('an-tb-ranking');
-  if(!lista.length){tb.innerHTML='<tr><td colspan="7" class="empty">Nenhum produto encontrado</td></tr>';return;}
+  if(!lista.length){tb.innerHTML='<tr><td colspan="'+AN_RANK_COLS.length+'" class="empty">Nenhum produto encontrado</td></tr>';return;}
   tb.innerHTML=lista.map(function(r){
-    return'<tr><td>'+esc(r.nome)+'</td><td style="text-align:right;">'+fmtQtd(r.qtd)+'</td><td style="text-align:right;">'+fmt(r.receita)+'</td>'+
+    return'<tr><td>'+esc(r.nome)+'</td>'+
+      '<td>'+(r.categoria?esc(r.categoria):'<span style="color:var(--light);">\u2014</span>')+'</td>'+
+      '<td style="text-align:right;">'+fmtQtd(r.qtd)+'</td>'+
+      '<td style="text-align:right;">'+fmt(r.receita)+'</td>'+
+      '<td style="text-align:right;">'+(r.precoMedio!==null?fmt(r.precoMedio):'\u2014')+'</td>'+
+      '<td style="text-align:right;">'+(r.precoMin!==null?fmt(r.precoMin):'\u2014')+'</td>'+
+      '<td style="text-align:right;">'+(r.precoMax!==null?fmt(r.precoMax):'\u2014')+'</td>'+
       '<td style="text-align:right;">'+(r.custoUnit!==null?fmt(r.custoUnit):'<span style="color:var(--light);">\u2014</span>')+'</td>'+
       '<td style="text-align:right;">'+(r.custoTotal!==null?fmt(r.custoTotal):'<span style="color:var(--light);">\u2014</span>')+'</td>'+
       '<td style="text-align:right;'+(r.lucro!==null&&r.lucro<0?'color:var(--red);':'')+'">'+(r.lucro!==null?fmt(r.lucro):'\u2014')+'</td>'+
@@ -2308,33 +2375,11 @@ function abMCompra(nome,loja){
   document.getElementById('cp-dt').value=new Date().toISOString().split('T')[0];
   document.getElementById('cp-lj').value=loja||'juquia';
   document.getElementById('cp-prod').value=nome||'';
-  document.getElementById('cp-forn').value='';document.getElementById('cp-qtd').value='';document.getElementById('cp-vu').value='';document.getElementById('cp-vt').value='';document.getElementById('cp-nf').value='';document.getElementById('cp-obs').value='';
-  document.getElementById('cp-marg-box').style.display='none';cpIdealPreco=null;
+  document.getElementById('cp-formato').value='Caixa';
+  document.getElementById('cp-forn').value='';document.getElementById('cp-frac').value='';document.getElementById('cp-qtd').value='';document.getElementById('cp-vu').value='';document.getElementById('cp-custo').value='';document.getElementById('cp-venda').value='';document.getElementById('cp-obs').value='';
   document.getElementById('cp-pag').value='Dinheiro';
-  document.getElementById('cp-venc-wrap').style.display='none';document.getElementById('cp-venc').value='';
-  document.getElementById('cp-boleto-toggle-wrap').style.display='none';document.getElementById('cp-boletos-box').style.display='none';
-  document.getElementById('tog-cp-boleto').classList.remove('on');cpBoletos=[];
   if(nome)onCpProdChange();
   document.getElementById('m-compra').classList.add('open');
-}
-// Boleto (à vista, uma parcela) precisa de vencimento; parcelado usa a lista abaixo.
-function onCpPagChange(){
-  var isBoleto=document.getElementById('cp-pag').value==='Boleto';
-  document.getElementById('cp-boleto-toggle-wrap').style.display=isBoleto?'block':'none';
-  var parcelado=document.getElementById('tog-cp-boleto').classList.contains('on');
-  document.getElementById('cp-venc-wrap').style.display=(isBoleto&&!parcelado)?'block':'none';
-  if(!isBoleto){document.getElementById('tog-cp-boleto').classList.remove('on');document.getElementById('cp-boletos-box').style.display='none';cpBoletos=[];}
-}
-function onToggleCpBoleto(){
-  var t=document.getElementById('tog-cp-boleto');t.classList.toggle('on');
-  var on=t.classList.contains('on');
-  document.getElementById('cp-boletos-box').style.display=on?'block':'none';
-  document.getElementById('cp-venc-wrap').style.display=on?'none':'block';
-  cpBoletos=[];
-  if(on){
-    var qtd=parseFloat(document.getElementById('cp-qtd').value)||0,vu=parseFloat(document.getElementById('cp-vu').value)||0;
-    addBoleto('cp',qtd*vu);
-  }else renderBoletos('cp');
 }
 /* ── Parcelas de boleto (reutilizado nos modais Compra e Saída) ── */
 var cpBoletos=[],fsBoletos=[];
@@ -2362,73 +2407,42 @@ function onCpProdChange(){
   if(p&&!document.getElementById('cp-forn').value)document.getElementById('cp-forn').value=p.Fornecedor||'';
   calcCpMargem();
 }
+// Mesma conta do PDV: custo unitário = valor pago (por unidade comprada) / fracionamento; venda sugerida = custo×3 (markup ideal).
 function calcCpMargem(){
-  var qtd=parseFloat(document.getElementById('cp-qtd').value)||0,vu=parseFloat(document.getElementById('cp-vu').value)||0;
-  var vt=qtd*vu;
-  document.getElementById('cp-vt').value=vt?fmt(vt):'';
-  var nome=document.getElementById('cp-prod').value.trim(),loja=document.getElementById('cp-lj').value;
-  var box=document.getElementById('cp-marg-box');
-  cpIdealPreco=null;
-  if(!vu||!nome){box.style.display='none';return;}
-  var p=D.estoque.find(function(x){return x.Nome===nome&&lSlug(x.Loja||'')===loja;});
-  if(!p){box.style.display='none';return;}
-  var pvAtual=parseFloat(p.Preco_Venda||0),ideal=vu*3;
-  if(pvAtual>=ideal){
-    box.style.display='block';box.style.background='var(--vj-pale)';box.style.color='var(--vf)';
-    box.innerHTML='✅ Margem saudável: preço de venda atual (R$ '+fmt(pvAtual)+') cobre 3x o novo custo (R$ '+fmt(ideal)+').';
-  }else{
-    box.style.display='block';box.style.background='#fff5e6';box.style.color='#a15c00';
-    cpIdealPreco=ideal;
-    box.innerHTML='⚠️ Margem abaixo do ideal: com esse custo, o preço de venda deveria ser <b>R$ '+fmt(ideal)+'</b> (atual: R$ '+fmt(pvAtual)+').<br><label style="display:flex;align-items:center;gap:6px;margin-top:6px;cursor:pointer;"><input type="checkbox" id="cp-aceitar-novo" checked> Atualizar preço de venda para R$ '+fmt(ideal)+'</label>';
-  }
+  var vp=parseFloat(document.getElementById('cp-vu').value)||0;
+  var frac=parseFloat(document.getElementById('cp-frac').value)||0;
+  var custo=frac>0?vp/frac:0;
+  document.getElementById('cp-custo').value=custo?fmt(custo):'';
+  document.getElementById('cp-venda').value=custo?(custo*3).toFixed(2):'';
 }
 async function subCompra(){
   var dt=document.getElementById('cp-dt').value,lj=document.getElementById('cp-lj').value,prod=document.getElementById('cp-prod').value.trim();
-  var qtd=parseFloat(document.getElementById('cp-qtd').value)||0,vu=parseFloat(document.getElementById('cp-vu').value)||0;
-  if(!dt||!prod||!qtd||!vu){sFMsg('fm-compra','Preencha data, produto, quantidade e valor unitário','err');return;}
-  var vt=qtd*vu,forn=document.getElementById('cp-forn').value.trim();
-  var chk=document.getElementById('cp-aceitar-novo');
-  var novoPreco=(chk&&chk.checked&&cpIdealPreco)?cpIdealPreco:null;
-  var forma=document.getElementById('cp-pag').value;
-  var parcelado=forma==='Boleto'&&document.getElementById('tog-cp-boleto').classList.contains('on');
-  var boletosPayload=null;
-  if(parcelado){
-    if(!cpBoletos.length){sFMsg('fm-compra','Adicione ao menos uma parcela','err');return;}
-    for(var i=0;i<cpBoletos.length;i++){
-      if(!cpBoletos[i].valor||!cpBoletos[i].vencimento){sFMsg('fm-compra','Preencha valor e vencimento de todas as parcelas','err');return;}
-    }
-    boletosPayload=cpBoletos.map(function(b){return{valor:b.valor,vencimento:isoToDateBR(b.vencimento)};});
-  }else if(forma==='Boleto'&&!document.getElementById('cp-venc').value){
-    sFMsg('fm-compra','Informe o vencimento do boleto','err');return;
-  }
-  var pl={tipo:'compra',loja:lj,data:isoToDateBR(dt),fornecedor:forn,produto:prod,qtd:qtd,valorUnit:vu,valorTotal:vt,formaPagamento:forma,nf:document.getElementById('cp-nf').value,observacao:document.getElementById('cp-obs').value,operador:'Jax'};
-  if(forma==='Boleto'&&!parcelado)pl.vencimento=isoToDateBR(document.getElementById('cp-venc').value);
-  if(boletosPayload)pl.boletos=boletosPayload;
-  if(novoPreco)pl.novoPrecoVenda=novoPreco;
+  var qtd=parseFloat(document.getElementById('cp-qtd').value)||0,vp=parseFloat(document.getElementById('cp-vu').value)||0;
+  var frac=parseFloat(document.getElementById('cp-frac').value)||0;
+  if(!dt||!prod||!qtd||!vp||!frac){sFMsg('fm-compra','Preencha data, produto, quantidade, valor pago e fracionado','err');return;}
+  var forn=document.getElementById('cp-forn').value.trim(),forma=document.getElementById('cp-pag').value;
+  var venda=parseFloat(document.getElementById('cp-venda').value)||0;
+  var pl={tipo:'registrar_compra_estoque',loja:lj,data:isoToDateBR(dt),
+    produto:prod,formato:document.getElementById('cp-formato').value,fornecedor:forn,
+    quantidade:qtd,valorPago:vp,fracionado:frac,valorVenda:venda,
+    formaPagamento:forma,observacao:document.getElementById('cp-obs').value,operador:'Jax'};
+  if(cpListaItemRefDash)pl.listaItem=cpListaItemRefDash;
   setML('btn-fcp','sp-cp',true);var ok=await apiPost(pl);setML('btn-fcp','sp-cp',false);
   if(ok){
-    // Vai pra Pagamentos (esquema unificado) — não mais pra aba legada Compras.
-    if(boletosPayload){
-      boletosPayload.forEach(function(b,i){
-        D.pagamentos.push({Vencimento:b.vencimento,Loja:lj,Descricao:'Compra'+(forn?' - '+forn:''),Categoria:'Compra de Mercadorias',Subcategoria:'',
-          Valor:b.valor,Status:'Pendente',Observacao:pl.observacao||'',Tipo:'Compra',Data:pl.data,Grupo:'',
-          Fornecedor:forn,Produto:prod,Qtd:i===0?qtd:'',Valor_Unit:i===0?vu:'',Valor_Venda:'',Forma_Pagamento:forma,Gera_Estoque:i===0?'Sim':'Nao',Operador:'Jax'});
-      });
-    }else{
-      var statusLocal=(forma==='CartaoC6'||forma==='CartaoItau'||forma==='Boleto')?'Pendente':'Pago';
-      D.pagamentos.push({Vencimento:pl.vencimento||pl.data,Loja:lj,Descricao:'Compra'+(forn?' - '+forn:''),Categoria:'Compra de Mercadorias',Subcategoria:'',
-        Valor:vt,Status:statusLocal,Observacao:pl.observacao||'',Tipo:'Compra',Data:pl.data,Grupo:'',
-        Fornecedor:forn,Produto:prod,Qtd:qtd,Valor_Unit:vu,Valor_Venda:'',Forma_Pagamento:forma,Gera_Estoque:'Sim',Operador:'Jax'});
-    }
+    var custoUnit=frac>0?vp/frac:0;
+    var statusLocal=(forma==='CartaoC6'||forma==='CartaoItau')?'Pendente':'Pago';
+    D.pagamentos.push({Vencimento:pl.data,Loja:lj,Descricao:'Compra'+(forn?' - '+forn:''),Categoria:'Compra de Mercadorias',Subcategoria:'',
+      Valor:qtd*vp,Status:statusLocal,Observacao:pl.observacao||'',Tipo:'Compra',Data:pl.data,Grupo:'',
+      Fornecedor:forn,Produto:prod,Qtd:qtd,Valor_Unit:custoUnit,Valor_Venda:venda,Forma_Pagamento:forma,Gera_Estoque:'Sim',Operador:'Jax'});
     var p=D.estoque.find(function(x){return x.Nome===prod&&lSlug(x.Loja||'')===lj;});
-    if(p){p.Qtd=(parseInt(p.Qtd||0)+qtd);p.Preco_Custo=vu;if(novoPreco)p.Preco_Venda=novoPreco;}
+    if(p){p.Qtd=(parseInt(p.Qtd||0)+qtd*frac);p.Preco_Custo=custoUnit;if(venda)p.Preco_Venda=venda;}
     if(cpListaItemRefDash){
       var itLC=(D.listaCompras||[]).find(function(x){return x.Item===cpListaItemRefDash&&x.Status==='Pendente';});
       if(itLC)itLC.Status='Comprado';
       apiPost({tipo:'marcar_item_lista_comprado',item:cpListaItemRefDash,operador:'Jax'});
       cpListaItemRefDash=null;
     }
-    showToast('Compra registrada!');fM('compra');renCompras();if(secAtiva==='estoque')renEst();
+    showToast('Compra registrada, estoque atualizado!');fM('compra');renCompras();if(secAtiva==='estoque')renEst();
   }else sFMsg('fm-compra','Erro ao salvar','err');
 }
 
