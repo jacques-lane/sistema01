@@ -1253,31 +1253,36 @@ function abrirFecharCaixa() {
   document.getElementById('modal-config').classList.remove('open');
   var lojaCaixa = sessaoLoja || pdvLoja;
   var hoje = new Date().toLocaleDateString('pt-BR');
-  apiGet('Caixa', 'loja=' + lojaCaixa).then(function(d) {
-    var linha = (d.data || []).filter(function(c) { return c.Data === hoje && !c.Hora_Fechamento; })[0];
+  // Feedback imediato: sem isso a tela fica "parada" por alguns segundos enquanto
+  // busca os dados, dando impressão de travado. As 3 chamadas agora saem em paralelo
+  // (antes eram encadeadas) e já filtram por data no servidor (antes baixavam o
+  // historico inteiro de Vendas/Pagamentos da loja e filtravam no navegador).
+  showToast('Calculando fechamento…', false);
+  Promise.all([
+    apiGet('Caixa', 'loja=' + lojaCaixa + '&data=' + hoje),
+    apiGet('Vendas', 'loja=' + lojaCaixa + '&data=' + hoje),
+    apiGet('Pagamentos', 'loja=' + lojaCaixa + '&data=' + hoje)
+  ]).then(function(res) {
+    var dc = res[0], dv = res[1], dg = res[2];
+    var linha = (dc.data || []).filter(function(c) { return !c.Hora_Fechamento; })[0];
     if (!linha) { showToast('Nenhum caixa aberto hoje', true); return; }
-    Promise.all([
-      apiGet('Vendas', 'loja=' + lojaCaixa),
-      apiGet('Pagamentos', 'loja=' + lojaCaixa)
-    ]).then(function(res) {
-      var dv = res[0], dg = res[1];
-      var totalDinheiro = 0;
-      (dv.data || []).forEach(function(v) { if (v.Data === hoje) totalDinheiro += parseFloat(v.Dinheiro || 0); });
-      var totalGastos = 0;
-      // Gastos em dinheiro agora ficam na aba Pagamentos (Tipo='Gasto'), não mais na aba Gastos legada.
-      (dg.data || []).forEach(function(g) { if (g.Tipo === 'Gasto' && g.Data === hoje && g.Forma_Pagamento === 'Dinheiro') totalGastos += parseFloat(g.Valor || 0); });
-      var esperado = parseFloat(linha.Valor_Abertura || 0) + totalDinheiro - totalGastos;
-      window._caixaEsperado = esperado;
-      document.getElementById('fc-abertura').textContent = 'R$ ' + fmt(linha.Valor_Abertura);
-      document.getElementById('fc-vendas').textContent = 'R$ ' + fmt(totalDinheiro);
-      document.getElementById('fc-gastos').textContent = '- R$ ' + fmt(totalGastos);
-      document.getElementById('fc-esperado').textContent = 'R$ ' + fmt(esperado);
-      document.getElementById('fc-val').value = '';
-      document.getElementById('modal-fechar-caixa').classList.add('open');
-    });
+    var totalDinheiro = 0;
+    (dv.data || []).forEach(function(v) { totalDinheiro += parseFloat(v.Dinheiro || 0); });
+    var totalGastos = 0;
+    // Gastos em dinheiro agora ficam na aba Pagamentos (Tipo='Gasto'), não mais na aba Gastos legada.
+    (dg.data || []).forEach(function(g) { if (g.Tipo === 'Gasto' && g.Forma_Pagamento === 'Dinheiro') totalGastos += parseFloat(g.Valor || 0); });
+    var esperado = parseFloat(linha.Valor_Abertura || 0) + totalDinheiro - totalGastos;
+    window._caixaEsperado = esperado;
+    document.getElementById('fc-abertura').textContent = 'R$ ' + fmt(linha.Valor_Abertura);
+    document.getElementById('fc-vendas').textContent = 'R$ ' + fmt(totalDinheiro);
+    document.getElementById('fc-gastos').textContent = '- R$ ' + fmt(totalGastos);
+    document.getElementById('fc-esperado').textContent = 'R$ ' + fmt(esperado);
+    document.getElementById('fc-val').value = '';
+    document.getElementById('modal-fechar-caixa').classList.add('open');
+  }).catch(function() {
+    showToast('Erro ao calcular fechamento, tente novamente', true);
   });
 }
-
 function confirmarFecharCaixa() {
   var contadoStr = document.getElementById('fc-val').value;
   if (contadoStr === '') { showToast('Informe o valor contado', true); return; }
