@@ -196,6 +196,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 .alert-tag.low{background:var(--gold-pale);color:var(--gold);}
 .alert-tag.zero{background:var(--red-pale);color:var(--red);}
 .perda-btn{font-size:10px;padding:3px 8px;border-radius:10px;border:1px solid #ffcdd2;background:var(--red-pale);color:var(--red);cursor:pointer;font-family:'Sora',sans-serif;margin-top:4px;}
+.lista-btn{font-size:10px;padding:3px 8px;border-radius:10px;border:1px solid var(--vj-pale);background:var(--vj-pale);color:var(--vf);cursor:pointer;font-family:'Sora',sans-serif;margin-top:4px;margin-left:6px;}
 .alert-banner{background:var(--red-pale);border:1px solid #ffcdd2;border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px;display:none;}
 .alert-banner.show{display:block;}
 .alert-banner-title{font-size:12px;font-weight:600;color:var(--red);margin-bottom:6px;}
@@ -1283,6 +1284,7 @@ function abrirFecharCaixa() {
     showToast('Erro ao calcular fechamento, tente novamente', true);
   });
 }
+
 function confirmarFecharCaixa() {
   var contadoStr = document.getElementById('fc-val').value;
   if (contadoStr === '') { showToast('Informe o valor contado', true); return; }
@@ -1927,6 +1929,14 @@ function solicitarItemListaPDV() {
   el.value=''; if (elQtd) elQtd.value='';
   showToast('Pedido adicionado à lista!');
 }
+// Botão "🛒 Lista de compras" no card do Estoque: adiciona o produto direto,
+// sem precisar abrir a aba "Lista de compras" e digitar o nome de novo.
+function addEstoqueListaCompra(nome) {
+  listaCompras.push({Item:nome, Quantidade:'', Origem:'estoque', Status:'Pendente', Operador:operador||'PDV'});
+  renderListaComprasPDV();
+  enviarParaSheets({tipo:'add_lista_compra', item:nome, quantidade:'', origem:'estoque', operador:operador||'PDV'});
+  showToast(nome+': adicionado à lista de compras!');
+}
 function abrirEscolhaEncomendaPDV() {
   var sel = document.getElementById('enc-pick-select');
   sel.innerHTML = '<option value="">Carregando…</option>';
@@ -2057,17 +2067,19 @@ function renderEstoque() {
     var cls=qtd===0?'zero':qtd<=min?'low':'';
     var qtdCls=qtd===0?'zero':qtd<=min?'low':'';
     var tag=qtd===0?'<span class="alert-tag zero">Zerado</span>':qtd<=min?'<span class="alert-tag low">Estoque baixo</span>':'';
+    var nomeSeg=escapeHtml(String(p.Nome||'')).replace(/'/g,"\\'");
     return '<div class="estoque-item '+cls+'">'+
       '<div class="estoque-emoji">'+(p.Emoji||'🌷')+'</div>'+
       '<div class="estoque-info">'+
         '<div class="estoque-nome">'+escapeHtml(String(p.Nome||''))+'</div>'+
         '<div class="estoque-cat">'+(p.Categoria||'—')+' · R$ '+fmt(p.Preco_Venda)+' '+tag+'</div>'+
-        '<button class="perda-btn" onclick="abrirModalPerda(\''+escapeHtml(String(p.Nome||''))+'\')">Registrar perda</button>'+
+        '<button class="perda-btn" onclick="abrirModalPerda(\''+nomeSeg+'\')">Registrar perda</button>'+
+        '<button class="lista-btn" onclick="addEstoqueListaCompra(\''+nomeSeg+'\')">🛒 Lista de compras</button>'+
       '</div>'+
       '<div class="estoque-qtd-wrap">'+
-        '<button class="qtd-btn" onclick="ajustarQtd(\''+escapeHtml(String(p.Nome||''))+'\', -1)">−</button>'+
+        '<button class="qtd-btn" onclick="ajustarQtd(\''+nomeSeg+'\', -1)">−</button>'+
         '<div class="qtd-num '+qtdCls+'">'+qtd+'</div>'+
-        '<button class="qtd-btn" onclick="ajustarQtd(\''+escapeHtml(String(p.Nome||''))+'\', 1)">+</button>'+
+        '<button class="qtd-btn" onclick="ajustarQtd(\''+nomeSeg+'\', 1)">+</button>'+
       '</div></div>';
   }).join('');
 }

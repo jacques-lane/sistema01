@@ -1162,6 +1162,16 @@ function adicionarItemListaDash(){
   elItem.value='';if(elQtd)elQtd.value='';
   showToast('Pedido adicionado à lista!');
 }
+// Botão "🛒 Lista" no card do Estoque: adiciona o produto direto na lista de
+// compras, sem precisar ir na tela de Visão Geral e digitar o nome de novo.
+function addEstoqueListaCompraDash(idx){
+  var p=D.estoque[idx];if(!p)return;
+  var nome=p.Nome||'';
+  D.listaCompras.push({Item:nome,Quantidade:'',Origem:'estoque',Status:'Pendente',Operador:'Mayse'});
+  renderListaAbertaDash();
+  apiPost({tipo:'add_lista_compra',item:nome,quantidade:'',origem:'estoque',operador:'Mayse'});
+  showToast(nome+': adicionado à lista de compras!');
+}
 var lcEncPendentesDash=[];
 function abrirEscolhaEncomendaDash(){
   var pendentes=(D.encomendas||[]).filter(function(e){return (e.Tipo||'')==='Futura' && (e.Status||'').toLowerCase().indexOf('conclu')!==0;});
@@ -2752,7 +2762,7 @@ function renEst(){
     var al=q===0?'<span class="ec-al zero">Zerado</span>':q<=mn?'<span class="ec-al low">Baixo</span>':'';
     var lj=lSlug(p.Loja||''),ri=D.estoque.indexOf(p);
     var mg=parseFloat(p.Preco_Custo||0)>0?Math.round((parseFloat(p.Preco_Venda||0)-parseFloat(p.Preco_Custo||0))/parseFloat(p.Preco_Custo)*100):0;
-    return'<div class="ec '+cl+'"><span class="ec-lj"><span class="lb '+LPILL[lj]+'">'+(LNOMES[lj]||p.Loja||'')+'</span></span><div class="ec-em">'+(p.Emoji||'🌷')+'</div><div class="ec-nm">'+(ehPrioritario(p)?'⭐ ':'')+esc(p.Nome||'')+'</div><div class="ec-ct">'+(p.Categoria||'—')+'</div><div class="ec-q '+qc+'">'+q+'</div>'+al+'<div class="ec-pr">R$ '+fmtN(p.Preco_Venda)+(p.Lote?'  ·  '+esc(p.Lote):'')+'</div>'+(mg>0?'<div class="ec-mg">Margem +'+mg+'%</div>':'')+'<div class="ec-ac"><button class="ec-btn" onclick="abAj('+ri+')">Ajustar</button><button class="ec-btn" onclick="edProd('+ri+')">Editar</button><button class="ec-btn tf" onclick="abMTf('+ri+')">⇄</button><button class="ec-btn dn" onclick="abPd('+ri+')">Perda</button></div></div>';
+    return'<div class="ec '+cl+'"><span class="ec-lj"><span class="lb '+LPILL[lj]+'">'+(LNOMES[lj]||p.Loja||'')+'</span></span><div class="ec-em">'+(p.Emoji||'🌷')+'</div><div class="ec-nm">'+(ehPrioritario(p)?'⭐ ':'')+esc(p.Nome||'')+'</div><div class="ec-ct">'+(p.Categoria||'—')+'</div><div class="ec-q '+qc+'">'+q+'</div>'+al+'<div class="ec-pr">R$ '+fmtN(p.Preco_Venda)+(p.Lote?'  ·  '+esc(p.Lote):'')+'</div>'+(mg>0?'<div class="ec-mg">Margem +'+mg+'%</div>':'')+'<div class="ec-ac"><button class="ec-btn" onclick="abAj('+ri+')">Ajustar</button><button class="ec-btn" onclick="edProd('+ri+')">Editar</button><button class="ec-btn tf" onclick="abMTf('+ri+')">⇄</button><button class="ec-btn dn" onclick="abPd('+ri+')">Perda</button><button class="ec-btn" onclick="addEstoqueListaCompraDash('+ri+')">🛒 Lista</button></div></div>';
   }).join('');
 }
 function setEF(f,b){estFil=f;document.querySelectorAll('#sec-estoque .fbtn').forEach(function(x){x.classList.remove('active');});b.classList.add('active');renEst();}
