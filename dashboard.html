@@ -338,7 +338,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
       </div>
       <div class="g2">
         <div class="cc"><div class="ch"><div><div class="ct">🕐 Horários de pico</div><div class="csb">8h–19h · fora agrupadas nas extremidades</div></div></div><div class="bc" id="ch-pico"><div class="empty">Carregue os dados</div></div></div>
-        <div class="cc"><div class="ch"><div><div class="ct">📦 Estoque prioritário</div><div class="csb">Produtos marcados como prioridade · ordenado por prioridade · vermelho mais escuro = mais perto de zero · zerado esmaecido</div></div></div><div class="bc" id="ch-est-prior"><div class="empty">Carregue os dados</div></div></div>
+        <div class="cc"><div class="ch"><div><div class="ct">📦 Estoque prioritário</div><div class="csb">Produtos marcados como prioridade · ordenado por prioridade · barra proporcional (10un = cheia) · laranja abaixo do mínimo · vermelho esmaecido = zerado</div></div></div><div class="bc" id="ch-est-prior"><div class="empty">Carregue os dados</div></div></div>
       </div>
       <div class="g2" style="margin-top:20px;">
         <div class="cc"><div class="ch"><div><div class="ct">🕓 Linha do tempo de hoje</div><div class="csb">Caixa e ponto da equipe</div></div></div><div class="tl" id="tl-hoje" style="max-height:280px;overflow-y:auto;"><div class="empty">Carregue os dados</div></div></div>
@@ -572,17 +572,20 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
         <div class="cc-body"><div id="cp-sug-lst"><div class="empty">Carregue os dados</div></div></div>
       </div>
       <div class="cc" style="margin-bottom:20px;">
-        <div class="ch"><div><div class="ct">📝 Montar lista de compras (Mayse)</div><div class="csb">Vá adicionando o que precisa comprar — já aparece aqui com Comprar/Recusar pro Jax agir na hora. "Fechar lista" é opcional, só agrupa os itens do dia pra consultar depois.</div></div></div>
+        <div class="ch ch-tgl" onclick="toggleCC(this)"><div><div class="ct">📝 Montar lista de compras (Mayse)</div><div class="csb">Vá adicionando o que precisa comprar — já aparece aqui com Comprar/Recusar pro Jax agir na hora. "Fechar lista" é opcional, só agrupa os itens do dia pra consultar depois.</div></div><span class="cc-tgl">▾</span></div>
+        <div class="cc-body">
         <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
           <input type="text" id="lc-dash-item" list="lc-dash-item-list" placeholder="O que você precisa? Ex: antúrio" style="flex:2;min-width:160px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;"><datalist id="lc-dash-item-list"></datalist>
           <input type="text" id="lc-dash-qtd" placeholder="Qtd (ex: 1 caixa)" style="flex:1;min-width:100px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;">
+          <input type="text" id="lc-dash-forn" placeholder="Fornecedor (opcional)" style="flex:1;min-width:140px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;">
         </div>
         <div style="display:flex;gap:8px;margin-bottom:14px;">
           <button class="btn-l" style="flex:1;" onclick="adicionarItemListaDash()">+ Pedir</button>
           <button class="btn-l" style="flex:1;background:#fff;color:var(--vf);border:1px solid var(--vj);" onclick="abrirEscolhaEncomendaDash()">📋 Da encomenda</button>
         </div>
         <div id="lc-dash-aberta"><div class="empty">Nada pedido ainda nessa lista</div></div>
-        <button class="btn-l" style="margin-top:14px;background:var(--gold);color:#fff;" onclick="fecharListaDash()">🔒 Fechar lista de hoje</button>
+        <button class="btn-l" id="btn-fechar-lista" style="margin-top:14px;background:var(--gold);color:#fff;" onclick="fecharListaDash()"><div class="msp" id="sp-fechar-lista"></div>🔒 Fechar lista de hoje</button>
+        </div>
       </div>
       <div class="cc cc-collapsed" style="margin-bottom:20px;">
         <div class="ch ch-tgl" onclick="toggleCC(this)"><div><div class="ct">📝 Pedidos da Mayse</div><div class="csb">Listas que ela fechou · Comprar abre o registro de compra, Recusar marca com observação</div></div><span class="cc-tgl">▾</span></div>
@@ -757,7 +760,10 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 <div class="fg2"><div class="fg"><label class="fl">Fornecedor</label><input class="fi" id="cp-forn" type="text" placeholder="Ex: Ceagesp"></div><div class="fg"><label class="fl">Fracionado (unid. de venda por 1 comprada) *</label><input class="fi" id="cp-frac" type="number" min="1" placeholder="Ex: 8" oninput="calcCpMargem()"></div></div>
 <div class="fg2"><div class="fg"><label class="fl">Quantidade comprada *</label><input class="fi" id="cp-qtd" type="number" min="1" placeholder="0" oninput="calcCpMargem()"></div><div class="fg"><label class="fl">Valor pago (por unidade comprada) (R$) *</label><input class="fi" id="cp-vu" type="number" min="0" step="0.01" placeholder="0,00" oninput="calcCpMargem()"></div></div>
 <div class="fg2"><div class="fg"><label class="fl">Custo unitário (calculado)</label><input class="fi" id="cp-custo" type="text" disabled style="background:var(--cream);"></div><div class="fg"><label class="fl">Venda sugerida (R$, editável)</label><input class="fi" id="cp-venda" type="number" min="0" step="0.01" placeholder="0,00"></div></div>
-<div class="fg2"><div class="fg"><label class="fl">Forma de pagamento</label><select class="fsl" id="cp-pag"><option value="Dinheiro">Dinheiro</option><option value="Debito">Débito</option><option value="CartaoC6">Cartão C6 (fecha 03, vence 10)</option><option value="CartaoItau">Cartão Itaú (fecha 02, vence 09)</option></select></div><div class="fg"><label class="fl">Observação</label><input class="fi" id="cp-obs" type="text" placeholder="Opcional"></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Forma de pagamento</label><select class="fsl" id="cp-pag" onchange="onCpPagChange()"><option value="Dinheiro">Dinheiro</option><option value="Debito">Débito</option><option value="CartaoC6">Cartão C6 (fecha 03, vence 10)</option><option value="CartaoItau">Cartão Itaú (fecha 02, vence 09)</option><option value="Boleto">Boleto</option></select></div><div class="fg"><label class="fl">Observação</label><input class="fi" id="cp-obs" type="text" placeholder="Opcional"></div></div>
+<div id="cp-venc-wrap" style="display:none;"><div class="fg"><label class="fl">Vencimento *</label><input class="fi" id="cp-venc" type="date"></div></div>
+<div id="cp-boleto-toggle-wrap" style="display:none;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--cream);border-radius:8px;"><div><div style="font-size:13px;">Parcelar em vários boletos?</div><div style="font-size:11px;color:var(--light);">Cada parcela pode ter valor e vencimento diferente</div></div><button class="tog" id="tog-cp-boleto" onclick="onToggleCpBoleto()" aria-label="toggle boleto parcelado compra"></button></div></div>
+<div id="cp-boletos-box" style="display:none;margin-bottom:12px;"><div id="cp-boletos-lista"></div><button type="button" class="btn-cn" style="font-size:12px;padding:6px 12px;" onclick="addBoleto('cp')">+ Adicionar parcela</button><div id="cp-boletos-total" style="font-size:12px;margin-top:6px;color:var(--light);"></div></div>
 <div class="fmsg" id="fm-compra"></div><div class="mft"><button class="btn-cn" onclick="fM('compra')">Cancelar</button><button class="btn-sb" id="btn-fcp" onclick="subCompra()"><div class="msp" id="sp-cp"></div>Registrar compra</button></div></div></div>
 
 <div class="mov" id="m-ajuste" onclick="cMov(event,'m-ajuste')"><div class="mo" style="max-width:380px;"><button class="mc" onclick="fM('ajuste')">×</button><div class="mt">Ajustar quantidade</div><div class="mst" id="aj-sb"></div><label class="fl" style="margin-bottom:6px;">Nova quantidade</label><div class="qa"><button class="qab" onclick="adjAj(-1)">−</button><span class="qav" id="aj-val">0</span><button class="qab" onclick="adjAj(1)">+</button></div><div class="fg"><label class="fl">Motivo (opcional)</label><input class="fi" id="aj-mot" type="text" placeholder="Ex: contagem física…"></div><div class="mft"><button class="btn-cn" onclick="fM('ajuste')">Cancelar</button><button class="btn-sb" onclick="subAj()">Salvar</button></div></div></div>
@@ -1158,26 +1164,22 @@ function renEstoquePrioritario(){
   if(!est.length){el.innerHTML='<div class="empty">Nenhum produto marcado como prioridade na aba Estoque</div>';return;}
   est.forEach(function(p){
     p._q=parseInt(p.Qtd||0);p._m=parseInt(p.Alerta_Minimo||5)||1;
-    /* Faixas relativas ao proprio minimo do produto (nao da pra comparar
-       quantidade bruta entre produtos diferentes: 9 sacos de terra e 9 vasos
-       grandes nao significam a mesma coisa). Dentro do vermelho ainda ha
-       dois tons -- critico (bem perto de zero) fica mais escuro que baixo
-       (perto do minimo, mas ainda nao zerou) -- pra 2 unidades nao parecer
-       igual a 9 so porque as duas estao "abaixo do minimo". */
-    p._status = p._q===0 ? 'zero'
-      : p._q<=p._m*0.5 ? 'critico'
-      : p._q<=p._m ? 'baixo'
-      : p._q<=p._m*2 ? 'pouco' : 'ok';
+    /* 3 estados, mais simples que antes: zerado (vermelho, mais urgente),
+       abaixo do minimo (laranja) e normal (verde). A barra abaixo ja mostra
+       a diferenca entre quantidades -- as cores nao precisam mais fazer isso. */
+    p._status = p._q===0 ? 'zero' : p._q<=p._m ? 'baixo' : 'ok';
   });
   /* Ordena pela coluna Prioridade da aba Estoque (menor numero = mais
      prioritario, mesma convencao usada no resto do app). Empate: menos
      unidades em estoque primeiro. */
   est.sort(function(a,b){ return prioridadeNum(a)-prioridadeNum(b) || a._q-b._q; });
-  var COR={zero:'#999',critico:'#7A1F1F',baixo:'#B33A3A',pouco:'#D9A22D',ok:'#3B6D11'};
+  var COR={zero:'#e53935',baixo:'#E07B22',ok:'#3B6D11'};
   el.innerHTML=est.map(function(p){
-    var alvo=p._m*2;
-    var pct = p._status==='zero' ? 0 : Math.max(4,Math.min(100,Math.round(p._q/alvo*100)));
-    var tag = p._status==='zero' ? ' · ZERADO' : p._status==='critico' ? ' · crítico' : p._status==='baixo' ? ' · abaixo do mínimo' : '';
+    /* Barra proporcional a quantidade real, travada em 10un=100% -- 4un fica
+       visivelmente menor que 5, que fica menor que 6, e assim por diante, em
+       vez de qualquer quantidade "abaixo do minimo" parecer igual as outras. */
+    var pct = p._status==='zero' ? 0 : Math.min(100,Math.round(p._q/10*100));
+    var tag = p._status==='zero' ? ' · ZERADO' : p._status==='baixo' ? ' · abaixo do mínimo' : '';
     var rowStyle = p._status==='zero' ? ' style="opacity:.45"' : '';
     return '<div class="br"'+rowStyle+'><span class="bl" style="width:130px" title="'+esc(p.Nome)+'">'+esc(p.Nome)+'</span><div class="bt"><div class="bf" style="width:'+pct+'%;background:'+COR[p._status]+'"></div></div><span class="bv" style="color:'+COR[p._status]+'">'+p._q+' un'+tag+'</span></div>';
   }).join('');
@@ -1191,9 +1193,10 @@ function renderListaAbertaDash(){
   if(!abertos.length){el.innerHTML='<div class="empty">Nada pedido ainda nessa lista</div>';return;}
   el.innerHTML=abertos.map(function(i){
     var qtdTxt=i.Quantidade?' · '+esc(String(i.Quantidade)):'';
+    var fornTxt=i.Fornecedor?' · '+esc(String(i.Fornecedor)):'';
     var origTxt=i.Origem==='encomenda'?('encomenda'+(i.EncomendaRef?' · '+esc(String(i.EncomendaRef)):'')):'pedido de '+esc(String(i.Operador||'—'));
     return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">'+
-      '<div><div style="font-weight:600;font-size:13px;">'+esc(i.Item||'')+qtdTxt+'</div>'+
+      '<div><div style="font-weight:600;font-size:13px;">'+esc(i.Item||'')+qtdTxt+fornTxt+'</div>'+
       '<div style="font-size:11px;color:var(--light);">'+origTxt+'</div></div>'+
       '<div style="display:flex;gap:6px;">'+
       '<button class="btn-l" style="padding:4px 10px;font-size:12px;" onclick=\'comprarPedidoMayse('+JSON.stringify(i.Item||'')+')\'>Comprar</button>'+
@@ -1202,13 +1205,13 @@ function renderListaAbertaDash(){
   }).join('');
 }
 function adicionarItemListaDash(){
-  var elItem=document.getElementById('lc-dash-item'),elQtd=document.getElementById('lc-dash-qtd');
-  var v=elItem.value.trim(),qtd=elQtd?elQtd.value.trim():'';
+  var elItem=document.getElementById('lc-dash-item'),elQtd=document.getElementById('lc-dash-qtd'),elForn=document.getElementById('lc-dash-forn');
+  var v=elItem.value.trim(),qtd=elQtd?elQtd.value.trim():'',forn=elForn?elForn.value.trim():'';
   if(!v){showToast('Digite o que você precisa','warn');return;}
-  D.listaCompras.push({Item:v,Quantidade:qtd,Origem:'manual',Status:'Pendente',Operador:'Mayse'});
+  D.listaCompras.push({Item:v,Quantidade:qtd,Fornecedor:forn,Origem:'manual',Status:'Pendente',Operador:'Mayse'});
   renderListaAbertaDash();
-  apiPost({tipo:'add_lista_compra',item:v,quantidade:qtd,origem:'manual',operador:'Mayse'});
-  elItem.value='';if(elQtd)elQtd.value='';
+  apiPost({tipo:'add_lista_compra',item:v,quantidade:qtd,fornecedor:forn,origem:'manual',operador:'Mayse'});
+  elItem.value='';if(elQtd)elQtd.value='';if(elForn)elForn.value='';
   showToast('Pedido adicionado à lista!');
 }
 // Botão "🛒 Lista" no card do Estoque: adiciona o produto direto na lista de
@@ -1246,19 +1249,27 @@ function confirmarAddEncomendaDash(){
 async function fecharListaDash(){
   var abertos=(D.listaCompras||[]).filter(function(i){return (i.Status||'')==='Pendente' && !i.ListaData;});
   if(!abertos.length){showToast('Nenhum item pendente pra fechar','warn');return;}
-  var ok=await apiPost({tipo:'fechar_lista_compras',operador:'Mayse'});
+  // Feedback visual imediato (botao trava + spinner) -- antes disso o clique
+  // parecia nao ter feito nada enquanto esperava a resposta do servidor.
+  setML('btn-fechar-lista','sp-fechar-lista',true);
+  // Gera o carimbo aqui (data+hora) e manda pro backend gravar exatamente esse
+  // valor -- inclui a hora pra diferenciar duas listas fechadas no mesmo dia,
+  // que antes ficavam com o mesmo carimbo (so a data) e apareciam juntas.
+  var agora=new Date();
+  var carimbo=agora.toLocaleDateString('pt-BR')+' '+String(agora.getHours()).padStart(2,'0')+':'+String(agora.getMinutes()).padStart(2,'0');
+  var ok=await apiPost({tipo:'fechar_lista_compras',operador:'Mayse',dataHoraFechamento:carimbo});
+  setML('btn-fechar-lista','sp-fechar-lista',false);
   if(ok){
-    var hoje=new Date().toLocaleDateString('pt-BR');
-    abertos.forEach(function(i){i.ListaData=hoje;});
+    abertos.forEach(function(i){i.ListaData=carimbo;});
     renderListaAbertaDash();
     popularSelectPedidosMayse();
-    showToast('Lista fechada — "lista de '+hoje+'"');
+    showToast('Lista fechada — "lista de '+carimbo+'"');
   }else showToast('Erro ao fechar lista','warn');
 }
 
 // ── PEDIDOS DA MAYSE (listas de compra fechadas por ela) ────
 // Mesmo modelo do pdv.html: itens com ListaData preenchida formam a "lista do dia X".
-function parsePtDataSimples(s){var p=String(s||'').split('/');return p.length===3?new Date(p[2],p[1]-1,p[0]).getTime():0;}
+function parsePtDataSimples(s){var m=String(s||'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);if(!m)return 0;return new Date(+m[3],+m[2]-1,+m[1],m[4]?+m[4]:0,m[5]?+m[5]:0).getTime();}
 function popularSelectPedidosMayse(){
   var sel=document.getElementById('cp-lc-select-data');
   if(!sel)return;
@@ -1294,7 +1305,8 @@ function renderPedidosMayse(dataSel){
 var cpListaItemRefDash=null;
 function comprarPedidoMayse(item){
   cpListaItemRefDash=item;
-  abMCompra(item);
+  var it=(D.listaCompras||[]).find(function(x){return x.Item===item&&x.Status==='Pendente';});
+  abMCompra(item,null,it&&it.Fornecedor);
 }
 var recusaItemDash=null;
 function abrirRecusaDash(item){
@@ -1528,6 +1540,8 @@ function renderDREMensal(){
       return;
     }
     // Empresa (ou Grupo vazio/legado, ex. dado antigo sem Grupo) — cai em "Não categorizado" se a Categoria não bater com nenhuma conhecida
+    // 'Compra de Mercadorias' (gravada pelas compras do PDV/Dashboard) é subcategoria de Custos/CMV
+    if(catRaw==='Compra de Mercadorias'){catRaw=CAT_CMV;if(!subRaw)subRaw='Compra de Mercadorias';}
     var cat=TODAS_EMP.indexOf(catRaw)>=0?catRaw:'Não categorizado';
     if(pago)despEmpPorCatMes[cat][k]+=parseFloat(p.Valor||0);else despEmpPlanPorCatMes[cat][k]+=parseFloat(p.Valor||0);
     if(subRaw){
@@ -2436,16 +2450,39 @@ function renGiroCompras(){
       '</div></div>';
   }).join('')||'<div class="empty">Sem dados suficientes</div>';
 }
-function abMCompra(nome,loja){
+function abMCompra(nome,loja,fornecedor){
   document.getElementById('fm-compra').className='fmsg';
   document.getElementById('cp-dt').value=new Date().toISOString().split('T')[0];
   document.getElementById('cp-lj').value=loja||'juquia';
   document.getElementById('cp-prod').value=nome||'';
   document.getElementById('cp-formato').value='Caixa';
-  document.getElementById('cp-forn').value='';document.getElementById('cp-frac').value='';document.getElementById('cp-qtd').value='';document.getElementById('cp-vu').value='';document.getElementById('cp-custo').value='';document.getElementById('cp-venda').value='';document.getElementById('cp-obs').value='';
+  document.getElementById('cp-forn').value=fornecedor||'';document.getElementById('cp-frac').value='';document.getElementById('cp-qtd').value='';document.getElementById('cp-vu').value='';document.getElementById('cp-custo').value='';document.getElementById('cp-venda').value='';document.getElementById('cp-obs').value='';
   document.getElementById('cp-pag').value='Dinheiro';
+  document.getElementById('cp-venc').value='';
+  cpBoletos=[];document.getElementById('tog-cp-boleto').classList.remove('on');
+  document.getElementById('cp-venc-wrap').style.display='none';
+  document.getElementById('cp-boleto-toggle-wrap').style.display='none';
+  document.getElementById('cp-boletos-box').style.display='none';
   if(nome)onCpProdChange();
   document.getElementById('m-compra').classList.add('open');
+}
+// Mostra/esconde vencimento (avista) ou parcelamento (boleto), igual ao mesmo
+// controle ja usado no modal de Saida -- so que aqui pro fluxo de Compra.
+function onCpPagChange(){
+  var isBoleto=document.getElementById('cp-pag').value==='Boleto';
+  document.getElementById('cp-boleto-toggle-wrap').style.display=isBoleto?'block':'none';
+  var parcelado=document.getElementById('tog-cp-boleto').classList.contains('on');
+  document.getElementById('cp-venc-wrap').style.display=(isBoleto&&!parcelado)?'block':'none';
+  if(!isBoleto){document.getElementById('tog-cp-boleto').classList.remove('on');document.getElementById('cp-boletos-box').style.display='none';cpBoletos=[];}
+}
+function onToggleCpBoleto(){
+  var t=document.getElementById('tog-cp-boleto');t.classList.toggle('on');
+  var on=t.classList.contains('on');
+  document.getElementById('cp-boletos-box').style.display=on?'block':'none';
+  document.getElementById('cp-venc-wrap').style.display=on?'none':'block';
+  cpBoletos=[];
+  if(on){var qtd=parseFloat(document.getElementById('cp-qtd').value)||0,vu=parseFloat(document.getElementById('cp-vu').value)||0;addBoleto('cp',qtd*vu);}
+  else renderBoletos('cp');
 }
 /* ── Parcelas de boleto (reutilizado nos modais Compra e Saída) ── */
 var cpBoletos=[],fsBoletos=[];
@@ -2493,6 +2530,18 @@ async function subCompra(){
     quantidade:qtd,valorPago:vp,fracionado:frac,valorVenda:venda,
     formaPagamento:forma,observacao:document.getElementById('cp-obs').value,operador:'Jax'};
   if(cpListaItemRefDash)pl.listaItem=cpListaItemRefDash;
+  // Boleto: parcelado usa a lista de parcelas (cpBoletos); a vista usa 1 vencimento so.
+  var parcelado=forma==='Boleto'&&document.getElementById('tog-cp-boleto').classList.contains('on');
+  if(parcelado){
+    if(!cpBoletos.length){sFMsg('fm-compra','Adicione ao menos uma parcela','err');return;}
+    for(var i=0;i<cpBoletos.length;i++){
+      if(!cpBoletos[i].valor||!cpBoletos[i].vencimento){sFMsg('fm-compra','Preencha valor e vencimento de todas as parcelas','err');return;}
+    }
+    pl.boletos=cpBoletos.map(function(b){return{valor:b.valor,vencimento:isoToDateBR(b.vencimento)};});
+  }else if(forma==='Boleto'){
+    if(!document.getElementById('cp-venc').value){sFMsg('fm-compra','Informe o vencimento do boleto','err');return;}
+    pl.vencimento=isoToDateBR(document.getElementById('cp-venc').value);
+  }
   setML('btn-fcp','sp-cp',true);var ok=await apiPost(pl);setML('btn-fcp','sp-cp',false);
   if(ok){
     var custoUnit=frac>0?vp/frac:0;
@@ -2580,6 +2629,8 @@ function setProjTipoFil(tipo){
   document.querySelectorAll('#sec-projetos .pchip').forEach(function(b){b.classList.toggle('on',b.dataset.tipo===tipo);});
   renProjetos();
 }
+// Projeto pausado = coluna Ativo preenchida com algo diferente de 'Sim' (ex.: 'Não'). Vazio conta como ativo.
+function projPausado(p){var a=String((p&&p.Ativo)||'').trim().toLowerCase();return !!a&&a!=='sim';}
 function renProjetos(){
   var projs=D.projetos.slice();
   var porNome={};
@@ -2611,6 +2662,7 @@ function renProjetos(){
   var PRIOR_ORD={Alta:0,Media:1,Baixa:2};
   ordem.sort(function(na,nb){
     var pa=porNome[na].proj,pb=porNome[nb].proj;
+    var za=projPausado(pa)?1:0,zb=projPausado(pb)?1:0;if(za!==zb)return za-zb;
     var oa=PRIOR_ORD[pa.Prioridade]!==undefined?PRIOR_ORD[pa.Prioridade]:1,ob=PRIOR_ORD[pb.Prioridade]!==undefined?PRIOR_ORD[pb.Prioridade]:1;
     if(oa!==ob)return oa-ob;
     var da=parsePtD(pa.Prazo),db=parsePtD(pb.Prazo);
@@ -2650,7 +2702,8 @@ function renProjetos(){
     return '<div class="proj-card">'
       +'<div class="proj-head" onclick="toggleProj('+idx+')">'
       +'<div class="proj-head-l"><span class="proj-chev'+(aberto?' open':'')+'">▸</span><span class="proj-emoji">'+(p.Emoji||'📁')+'</span><span class="proj-nome">'+esc(nome)+'</span>'
-        +(bloqueadoProj?'<span class="bdg" style="background:#f0f0f0;color:#888;margin-left:4px;">🔒 Bloqueado</span>':'')
+        +(projPausado(p)?'<span class="bdg" style="background:#f0f0f0;color:#888;margin-left:4px;">⏸ Pausado</span>':'')
+        +(bloqueadoProj&&!projPausado(p)?'<span class="bdg" style="background:#f0f0f0;color:#888;margin-left:4px;">🔒 Bloqueado</span>':'')
         +(p.Tipo?'<span class="bdg" style="background:var(--cream);color:var(--mid);margin-left:4px;">'+(TIPO_BDG[p.Tipo]||p.Tipo)+'</span>':'')
         +(p.Prioridade?'<span class="bdg" style="background:var(--cream);color:var(--mid);margin-left:4px;">'+(PRIOR_BDG[p.Prioridade]||p.Prioridade)+'</span>':'')
         +(p.Prazo?'<span style="font-size:11px;color:'+(vencProj?'var(--red)':'var(--light)')+';font-weight:'+(vencProj?'700':'400')+';margin-left:6px;white-space:nowrap;">📅 '+esc(p.Prazo)+(vencProj?' · atrasado':'')+'</span>':'')+'</div>'
@@ -2730,8 +2783,9 @@ function renResumoProjetos(){
   var porNome={};
   D.projetos.forEach(function(p){porNome[p.Nome]={proj:p,tarefas:[]};});
   D.tarefas.forEach(function(t){var nome=t.Projeto||'(sem projeto)';if(!porNome[nome])porNome[nome]={proj:{Nome:nome,Emoji:'📁'},tarefas:[]};porNome[nome].tarefas.push(t);});
-  var ordem=D.projetos.map(function(p){return p.Nome;});
-  Object.keys(porNome).forEach(function(n){if(ordem.indexOf(n)<0)ordem.push(n);});
+  var ordem=D.projetos.filter(function(p){return !projPausado(p);}).map(function(p){return p.Nome;});
+  var pausados={};D.projetos.forEach(function(p){if(projPausado(p))pausados[p.Nome]=1;});
+  Object.keys(porNome).forEach(function(n){if(ordem.indexOf(n)<0&&!pausados[n])ordem.push(n);});
   var barras=ordem.map(function(nome){
     var g=porNome[nome],tarefasVis=g.tarefas.filter(function(t){return t.Tarefa!==CAMINHADA_TAREFA;});
     var pct=pctProjeto(g.proj,g.tarefas);
@@ -2741,7 +2795,7 @@ function renResumoProjetos(){
     return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px;"><span style="width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;">'+(g.proj.Emoji||'📁')+' '+esc(nome)+'</span><div class="proj-bar" style="flex:1;"><div class="proj-bar-f" style="width:'+pctBar+'%'+(pct<0?';background:var(--red)':'')+'"></div></div><span style="width:60px;text-align:right;color:var(--light);flex-shrink:0;">'+(g.proj.ModoProgresso==='ritmo_mensal'?pctLbl:feitas+'/'+tarefasVis.length)+'</span></div>';
   }).join('')||'<div class="empty">Nenhum projeto ainda</div>';
   var hoje=new Date();hoje.setHours(0,0,0,0);
-  var urgentes=D.tarefas.map(function(t,i){return Object.assign({},t,{_ti:i});}).filter(function(t){return t.Status!=='Feito'&&t.Data_Prazo&&t.Tarefa!==CAMINHADA_TAREFA;}).sort(function(a,b){var da=parsePtD(a.Data_Prazo),db=parsePtD(b.Data_Prazo);return(da?da.getTime():Infinity)-(db?db.getTime():Infinity);}).slice(0,5);
+  var urgentes=D.tarefas.map(function(t,i){return Object.assign({},t,{_ti:i});}).filter(function(t){return t.Status!=='Feito'&&t.Data_Prazo&&t.Tarefa!==CAMINHADA_TAREFA&&!pausados[t.Projeto];}).sort(function(a,b){var da=parsePtD(a.Data_Prazo),db=parsePtD(b.Data_Prazo);return(da?da.getTime():Infinity)-(db?db.getTime():Infinity);}).slice(0,5);
   var urgHtml=urgentes.length?urgentes.map(function(t){var d=parsePtD(t.Data_Prazo);var venc=d&&d.getTime()<hoje.getTime();return '<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:4px 0;"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(t.Tarefa||'')+' <span style="color:var(--light);">— '+esc(t.Projeto||'')+'</span></span><span style="flex-shrink:0;color:'+(venc?'var(--red)':'var(--light)')+';font-weight:'+(venc?'700':'400')+';">'+esc(t.Data_Prazo)+(venc?' · atrasada':'')+'</span></div>';}).join(''):'<div class="empty" style="padding:6px 0;">Nenhuma tarefa com prazo pendente</div>';
   el.innerHTML='<div style="margin-bottom:14px;">'+barras+'</div><div style="border-top:1px solid var(--border);padding-top:10px;"><div style="font-size:11px;color:var(--light);font-weight:600;margin-bottom:6px;text-transform:uppercase;">Mais urgentes</div>'+urgHtml+'</div>';
 }
