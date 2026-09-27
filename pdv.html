@@ -2677,7 +2677,13 @@ function renderHistorico() {
         '</div>'+btnCancelar;
       div.appendChild(item);
     });
-
+    container.appendChild(div);
+  }
+}
+// As funcoes do "Cancelar venda" precisam ser globais (fora do
+// renderHistorico) -- o onclick inline no HTML gerado so' enxerga funcoes no
+// escopo global; declaradas dentro da funcao, o clique dava erro (function
+// is not defined), mesmo com o botao aparecendo normalmente.
 var mcvVendaAtual=null;
 function abrirModalCancelarVenda(id){
   var hist=JSON.parse(localStorage.getItem('mayse_v3_hist')||'[]');
@@ -2713,9 +2719,6 @@ async function confirmarCancelarVenda(){
     renderHistorico();
   }else showToast('Erro ao cancelar venda',true);
   mcvVendaAtual=null;
-}
-    container.appendChild(div);
-  }
 }
 
 // ── ENCOMENDAS ─────────────────────────────────────────────
