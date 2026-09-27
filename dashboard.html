@@ -577,7 +577,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
         <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
           <input type="text" id="lc-dash-item" list="lc-dash-item-list" placeholder="O que você precisa? Ex: antúrio" style="flex:2;min-width:160px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;"><datalist id="lc-dash-item-list"></datalist>
           <input type="text" id="lc-dash-qtd" placeholder="Qtd (ex: 1 caixa)" style="flex:1;min-width:100px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;">
-          <input type="text" id="lc-dash-forn" placeholder="Fornecedor (opcional)" style="flex:1;min-width:140px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;">
+          <input type="text" id="lc-dash-forn" list="lc-dash-forn-list" placeholder="Fornecedor (opcional)" style="flex:1;min-width:140px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;"><datalist id="lc-dash-forn-list"></datalist>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:14px;">
           <button class="btn-l" style="flex:1;" onclick="adicionarItemListaDash()">+ Pedir</button>
@@ -860,6 +860,8 @@ var LCORES={juquia:'#C97A1A',cambuci:'#3B5BC9',pessoal:'#9c56b8',viveiro:'#83AB3
 var LPILL={juquia:'ljq',cambuci:'lcb',pessoal:'lps',viveiro:'lvv'};
 
 function esc(s){if(!s)return'—';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+// Igual ao esc(), mas sem o travessao no lugar de vazio -- pro value="" de um <input> nao virar texto literal '\u2014'.
+function escAttr(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function fmt(n){return'R$ '+parseFloat(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function fmtN(n){return parseFloat(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function sEl(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}
@@ -1186,23 +1188,113 @@ function renEstoquePrioritario(){
 }
 
 // ── MONTAR LISTA DE COMPRAS (Mayse constrói, aqui ou no PDV) ─
+function inferirFornecedorItemDash(nome){
+  var p=(D.estoque||[]).find(function(x){return String(x.Nome||'').trim().toLowerCase()===String(nome||'').trim().toLowerCase();});
+  return (p&&p.Fornecedor)?String(p.Fornecedor):'';
+}
+function inferirCustoItemDash(nome){
+  var p=(D.estoque||[]).find(function(x){return String(x.Nome||'').trim().toLowerCase()===String(nome||'').trim().toLowerCase();});
+  return (p&&p.Preco_Custo)?parseFloat(p.Preco_Custo):'';
+}
+function qtdNumericaDash(txt){
+  var m=String(txt||'').match(/[\d.,]+/);
+  if(!m)return 1;
+  var n=parseFloat(m[0].replace(',','.'));
+  return isNaN(n)||n<=0?1:n;
+}
+function _gruposDashPorPrefixo(prefix){return prefix==='la'?lcGruposAbertaDash:lcGruposFechadaDash;}
+function _renderGrupoFornecedorHtml(g,gi,prefix){
+  var linhas=g.itens.map(function(i,ji){
+    var qtdTxt=i.Quantidade?' · pedido: '+esc(String(i.Quantidade)):'';
+    var origTxt=i.Origem==='encomenda'?('encomenda'+(i.EncomendaRef?' · '+esc(String(i.EncomendaRef)):'')):'pedido de '+esc(String(i.Operador||'—'));
+    var qtdSug=qtdNumericaDash(i.Quantidade);
+    var custoSug=inferirCustoItemDash(i.Item);
+    return '<div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">'+
+      '<div style="flex:1;min-width:110px;"><div style="font-weight:600;font-size:13px;">'+esc(i.Item||'')+qtdTxt+'</div>'+
+      '<div style="font-size:10px;color:var(--light);">'+origTxt+'</div></div>'+
+      '<input type="number" min="0" step="1" id="'+prefix+'-g'+gi+'-it'+ji+'-qtd" value="'+qtdSug+'" placeholder="Qtd" style="width:64px;padding:6px;font-size:12px;border:1px solid var(--border);border-radius:6px;">'+
+      '<input type="number" min="0" step="0.01" id="'+prefix+'-g'+gi+'-it'+ji+'-valor" value="'+custoSug+'" placeholder="R$ unit." style="width:78px;padding:6px;font-size:12px;border:1px solid var(--border);border-radius:6px;">'+
+      '<button class="btn-l" style="padding:4px 9px;font-size:11px;background:#fff;color:var(--red);border:1px solid var(--red);" onclick=\'abrirRecusaDash('+JSON.stringify(i.Item||'')+')\'>✕</button>'+
+      '</div>';
+  }).join('');
+  var fornEsc=escAttr(g.fornecedor);
+  return '<div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:14px;">'+
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">'+
+      '<span style="font-size:12px;font-weight:700;white-space:nowrap;">🏷️ Fornecedor</span>'+
+      '<input type="text" id="'+prefix+'-g'+gi+'-forn" value="'+fornEsc+'" placeholder="Nome do fornecedor" style="flex:1;min-width:140px;padding:7px 10px;font-size:13px;border:1px solid var(--border);border-radius:8px;">'+
+      '<select id="'+prefix+'-g'+gi+'-loja" style="padding:7px 10px;font-size:13px;border:1px solid var(--border);border-radius:8px;"><option value="juquia">Juquiá</option><option value="cambuci">Cambuci</option></select>'+
+    '</div>'+
+    linhas+
+    '<div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">'+
+      '<select id="'+prefix+'-g'+gi+'-pag" style="flex:1;min-width:110px;padding:8px;font-size:13px;border:1px solid var(--border);border-radius:8px;">'+
+        '<option>Dinheiro</option><option>Pix</option><option>CartaoC6</option><option>CartaoItau</option><option>Boleto</option><option>Transferencia</option>'+
+      '</select>'+
+      '<button class="btn-l" style="width:auto;padding:9px 16px;font-size:13px;" onclick="darEntradaLoteDash('+gi+',\''+prefix+'\')">✅ Dar entrada</button>'+
+    '</div>'+
+  '</div>';
+}
+async function darEntradaLoteDash(gi,prefix){
+  var grupos=_gruposDashPorPrefixo(prefix);
+  var g=grupos[gi];
+  if(!g)return;
+  var fornInput=document.getElementById(prefix+'-g'+gi+'-forn');
+  var pagInput=document.getElementById(prefix+'-g'+gi+'-pag');
+  var lojaInput=document.getElementById(prefix+'-g'+gi+'-loja');
+  var fornecedor=fornInput?fornInput.value.trim():g.fornecedor;
+  var formaPagamento=pagInput?pagInput.value:'Dinheiro';
+  var loja=lojaInput?lojaInput.value:'juquia';
+  if(!fornecedor||fornecedor==='A definir'){showToast('Informe o fornecedor do grupo','warn');return;}
+
+  var itens=[];var faltaValor=false;
+  g.itens.forEach(function(i,ji){
+    var qtdEl=document.getElementById(prefix+'-g'+gi+'-it'+ji+'-qtd');
+    var valEl=document.getElementById(prefix+'-g'+gi+'-it'+ji+'-valor');
+    var qtd=qtdEl?parseFloat(qtdEl.value)||0:0;
+    var valorUnit=valEl?parseFloat(valEl.value)||0:0;
+    if(qtd>0){
+      if(!valorUnit)faltaValor=true;
+      itens.push({nome:i.Item,quantidade:qtd,valorUnit:valorUnit,listaItem:i.Item});
+    }
+  });
+  if(!itens.length){showToast('Informe a quantidade de ao menos um item','warn');return;}
+  if(faltaValor){showToast('Informe o valor unitário de todos os itens com quantidade','warn');return;}
+
+  var payload={tipo:'compra_lote',loja:loja,fornecedor:fornecedor,formaPagamento:formaPagamento,itens:itens,operador:'Mayse'};
+  var ok=await apiPost(payload);
+  if(ok){
+    showToast('Entrada registrada: '+itens.length+' item(ns) de '+(fornecedor||'fornecedor'));
+    // Atualiza local (sem refazer as 21 chamadas do reload completo): marca os
+    // itens do lote como comprados e soma no estoque exibido na tela.
+    itens.forEach(function(it){
+      var li=(D.listaCompras||[]).find(function(x){return x.Item===it.listaItem&&x.Status==='Pendente';});
+      if(li)li.Status='Comprado';
+      var p=D.estoque.find(function(x){return x.Nome===it.nome&&lSlug(x.Loja||'')===loja;})||D.estoque.find(function(x){return x.Nome===it.nome;});
+      if(p){p.Qtd=(parseInt(p.Qtd||0)+it.quantidade);if(it.valorUnit)p.Preco_Custo=it.valorUnit;}
+    });
+    renderListaAbertaDash();
+    popularSelectPedidosMayse();
+    if(secAtiva==='estoque')renEst();
+  }else showToast('Erro ao registrar entrada','warn');
+}
+var lcGruposAbertaDash=[];
 function renderListaAbertaDash(){
   var el=document.getElementById('lc-dash-aberta');
   if(!el)return;
   var abertos=(D.listaCompras||[]).filter(function(i){return (i.Status||'')==='Pendente' && !i.ListaData;});
-  if(!abertos.length){el.innerHTML='<div class="empty">Nada pedido ainda nessa lista</div>';return;}
-  el.innerHTML=abertos.map(function(i){
-    var qtdTxt=i.Quantidade?' · '+esc(String(i.Quantidade)):'';
-    var fornTxt=i.Fornecedor?' · '+esc(String(i.Fornecedor)):'';
-    var origTxt=i.Origem==='encomenda'?('encomenda'+(i.EncomendaRef?' · '+esc(String(i.EncomendaRef)):'')):'pedido de '+esc(String(i.Operador||'—'));
-    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">'+
-      '<div><div style="font-weight:600;font-size:13px;">'+esc(i.Item||'')+qtdTxt+fornTxt+'</div>'+
-      '<div style="font-size:11px;color:var(--light);">'+origTxt+'</div></div>'+
-      '<div style="display:flex;gap:6px;">'+
-      '<button class="btn-l" style="padding:4px 10px;font-size:12px;" onclick=\'comprarPedidoMayse('+JSON.stringify(i.Item||'')+')\'>Comprar</button>'+
-      '<button class="btn-l" style="padding:4px 10px;font-size:12px;background:#fff;color:var(--red);border:1px solid var(--red);" onclick=\'abrirRecusaDash('+JSON.stringify(i.Item||'')+')\'>Recusar</button>'+
-      '</div></div>';
-  }).join('');
+  if(!abertos.length){el.innerHTML='<div class="empty">Nada pedido ainda nessa lista</div>';lcGruposAbertaDash=[];return;}
+
+  // Agrupa por fornecedor (o que a Mayse digitou tem prioridade sobre o do
+  // cadastro do Estoque) -- da entrada de um fornecedor inteiro de uma vez,
+  // com um unico lancamento em Pagamentos.
+  var mapa={};var ordem=[];
+  abertos.forEach(function(i){
+    var forn=(i.Fornecedor&&String(i.Fornecedor).trim())||inferirFornecedorItemDash(i.Item)||'A definir';
+    if(!mapa[forn]){mapa[forn]=[];ordem.push(forn);}
+    mapa[forn].push(i);
+  });
+  lcGruposAbertaDash=ordem.map(function(forn){return {fornecedor:forn,itens:mapa[forn]};});
+
+  el.innerHTML=lcGruposAbertaDash.map(function(g,gi){return _renderGrupoFornecedorHtml(g,gi,'la');}).join('');
 }
 function adicionarItemListaDash(){
   var elItem=document.getElementById('lc-dash-item'),elQtd=document.getElementById('lc-dash-qtd'),elForn=document.getElementById('lc-dash-forn');
@@ -1282,32 +1374,44 @@ function popularSelectPedidosMayse(){
   else if(datas.length){sel.value=datas[0];renderPedidosMayse(datas[0]);}
   else renderPedidosMayse('');
 }
+var lcGruposFechadaDash=[];
 function renderPedidosMayse(dataSel){
   var el=document.getElementById('cp-lc-lst');
   if(!el)return;
-  if(!dataSel){el.innerHTML='<div class="empty">Nenhuma lista fechada ainda</div>';return;}
+  if(!dataSel){el.innerHTML='<div class="empty">Nenhuma lista fechada ainda</div>';lcGruposFechadaDash=[];return;}
   var itens=(D.listaCompras||[]).filter(function(i){return i.ListaData===dataSel;});
-  if(!itens.length){el.innerHTML='<div class="empty">Nenhum item nessa lista</div>';return;}
-  el.innerHTML=itens.map(function(i){
+  if(!itens.length){el.innerHTML='<div class="empty">Nenhum item nessa lista</div>';lcGruposFechadaDash=[];return;}
+
+  var pendentes=itens.filter(function(i){return (i.Status||'')==='Pendente';});
+  var resolvidos=itens.filter(function(i){return (i.Status||'')!=='Pendente';});
+
+  var mapa={};var ordem=[];
+  pendentes.forEach(function(i){
+    var forn=(i.Fornecedor&&String(i.Fornecedor).trim())||inferirFornecedorItemDash(i.Item)||'A definir';
+    if(!mapa[forn]){mapa[forn]=[];ordem.push(forn);}
+    mapa[forn].push(i);
+  });
+  lcGruposFechadaDash=ordem.map(function(forn){return {fornecedor:forn,itens:mapa[forn]};});
+
+  var gruposHtml=lcGruposFechadaDash.map(function(g,gi){return _renderGrupoFornecedorHtml(g,gi,'lf');}).join('');
+
+  var resolvidosHtml=resolvidos.map(function(i){
     var qtdTxt=i.Quantidade?' · '+esc(String(i.Quantidade)):'';
     var origTxt=i.Origem==='encomenda'?('encomenda'+(i.EncomendaRef?' · '+esc(String(i.EncomendaRef)):'')):'pedido de '+esc(String(i.Operador||'—'));
-    var statusTag=i.Status==='Comprado'?' <span style="color:var(--vf);font-weight:700;">✓ comprado</span>':i.Status==='Recusado'?' <span style="color:var(--red);font-weight:700;">✕ recusado'+(i.Observacao?' — '+esc(String(i.Observacao)):'')+'</span>':'';
-    var acoes=i.Status==='Pendente'?
-      '<button class="btn-l" style="padding:4px 10px;font-size:12px;" onclick=\'comprarPedidoMayse('+JSON.stringify(i.Item||'')+')\'>Comprar</button>'+
-      '<button class="btn-l" style="padding:4px 10px;font-size:12px;background:#fff;color:var(--red);border:1px solid var(--red);" onclick=\'abrirRecusaDash('+JSON.stringify(i.Item||'')+')\'>Recusar</button>'
-      :'';
+    var statusTag=i.Status==='Comprado'?' <span style="color:var(--vf);font-weight:700;">✓ comprado</span>':' <span style="color:var(--red);font-weight:700;">✕ recusado'+(i.Observacao?' — '+esc(String(i.Observacao)):'')+'</span>';
     return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">'+
       '<div><div style="font-weight:600;font-size:13px;">'+esc(i.Item||'')+qtdTxt+statusTag+'</div>'+
-      '<div style="font-size:11px;color:var(--light);">'+origTxt+'</div></div>'+
-      '<div style="display:flex;gap:6px;">'+acoes+'</div></div>';
+      '<div style="font-size:11px;color:var(--light);">'+origTxt+'</div></div></div>';
   }).join('');
+
+  var html=gruposHtml;
+  if(resolvidos.length){
+    if(gruposHtml)html+='<div style="font-size:12px;font-weight:700;color:var(--light);margin:14px 0 6px;">Já comprados / recusados</div>';
+    html+=resolvidosHtml;
+  }
+  el.innerHTML=html||'<div class="empty">Nenhum item nessa lista</div>';
 }
 var cpListaItemRefDash=null;
-function comprarPedidoMayse(item){
-  cpListaItemRefDash=item;
-  var it=(D.listaCompras||[]).find(function(x){return x.Item===item&&x.Status==='Pendente';});
-  abMCompra(item,null,it&&it.Fornecedor);
-}
 var recusaItemDash=null;
 function abrirRecusaDash(item){
   recusaItemDash=item;
@@ -2344,9 +2448,20 @@ function popularListaComprasDashDatalist(){
     return '<option value="'+nome.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'">'+esc(nome)+prTag+tag+'</option>';
   }).join('');
 }
+function popularListaComprasFornDatalistDash(){
+  var dl=document.getElementById('lc-dash-forn-list');
+  if(!dl)return;
+  var vistos={},opts=[];
+  (D.estoque||[]).forEach(function(p){
+    var f=String(p.Fornecedor||'').trim();
+    if(f&&!vistos[f]){vistos[f]=1;opts.push(f);}
+  });
+  dl.innerHTML=opts.sort().map(function(f){return '<option value="'+escAttr(f)+'">';}).join('');
+}
 function renCompras(){
   var est=gDL(D.estoque);
   popularListaComprasDashDatalist();
+  popularListaComprasFornDatalistDash();
   var sug=est.filter(function(p){return estComprado(p)&&estBaixo(p);});
   sug.sort(function(a,b){
     var pa=prioridadeNum(a),pb=prioridadeNum(b);

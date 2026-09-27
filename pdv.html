@@ -606,10 +606,12 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 <div id="page-compras" class="page">
   <div class="section-title" style="margin-bottom:4px;">📝 Lista em aberto</div>
   <p style="font-size:12px;color:var(--light);margin:0 0 12px;">Vá adicionando o que precisa comprar — já aparece aqui com Comprar/Recusar pra agir na hora. "Fechar lista" é opcional, só agrupa os itens do dia pra consultar depois.</p>
-  <div style="display:flex;gap:8px;margin-bottom:8px;">
-    <input type="text" id="lc-pdv-novo-item" list="lc-pdv-item-list" placeholder="O que você precisa? Ex: antúrio" class="form-input" style="flex:2;">
+  <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+    <input type="text" id="lc-pdv-novo-item" list="lc-pdv-item-list" placeholder="O que você precisa? Ex: antúrio" class="form-input" style="flex:2;min-width:160px;">
     <datalist id="lc-pdv-item-list"></datalist>
-    <input type="text" id="lc-pdv-novo-qtd" placeholder="Qtd (ex: 1 caixa)" class="form-input" style="flex:1;">
+    <input type="text" id="lc-pdv-novo-qtd" placeholder="Qtd (ex: 1 caixa)" class="form-input" style="flex:1;min-width:100px;">
+    <input type="text" id="lc-pdv-novo-forn" list="lc-pdv-forn-list" placeholder="Fornecedor (opcional)" class="form-input" style="flex:1;min-width:140px;">
+    <datalist id="lc-pdv-forn-list"></datalist>
   </div>
   <div style="display:flex;gap:8px;margin-bottom:14px;">
     <button class="btn btn-primary" style="flex:1;" onclick="solicitarItemListaPDV()">+ Pedir</button>
@@ -914,6 +916,18 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <div class="form-group"><label class="form-label">Motivo (opcional)</label><input class="form-input" id="recusa-obs" type="text" placeholder="Ex: muito caro, em falta…"></div>
     <button class="btn" style="background:#B33A3A;color:#fff;" onclick="confirmarRecusa()">Recusar item</button>
     <button class="btn btn-outline" onclick="document.getElementById('modal-recusa').classList.remove('open')">Cancelar</button>
+  </div>
+</div>
+
+<!-- Cancelar venda (Historico) -- devolve estoque e lanca estorno, sem apagar o lancamento original -->
+<div class="modal-overlay" id="modal-cancelar-venda" onclick="closeModal(event,'modal-cancelar-venda')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Cancelar venda</div>
+    <p style="font-size:13px;color:var(--mid);margin-bottom:16px;" id="mcv-sub">—</p>
+    <div class="form-group"><label class="form-label">Motivo (opcional)</label><input class="form-input" id="mcv-motivo" type="text" placeholder="Ex: cliente desistiu…"></div>
+    <button class="btn" style="background:#B33A3A;color:#fff;" onclick="confirmarCancelarVenda()">Confirmar cancelamento</button>
+    <button class="btn btn-outline" onclick="document.getElementById('modal-cancelar-venda').classList.remove('open')">Voltar</button>
   </div>
 </div>
 
@@ -1533,8 +1547,19 @@ function carregarEstoque() {
       renderEstoque();
       atualizarAlertas();
       popularListaComprasItemDatalist();
+      popularListaComprasFornDatalistPDV();
     }
   });
+}
+function popularListaComprasFornDatalistPDV() {
+  var dl = document.getElementById('lc-pdv-forn-list');
+  if (!dl) return;
+  var vistos = {}, opts = [];
+  (estoque||[]).forEach(function(p){
+    var f = String(p.Fornecedor||'').trim();
+    if (f && !vistos[f]) { vistos[f]=1; opts.push(f); }
+  });
+  dl.innerHTML = opts.sort().map(function(f){return '<option value="'+escapeHtml(f)+'">';}).join('');
 }
 function prioridadeNum(p) {
   var n = parseInt(p && p.Prioridade, 10);
@@ -1929,7 +1954,8 @@ async function finalizarVenda() {
   var produtosTexto = prodsFilled.map(function(p){return p.nome+' ('+p.qtd+'x R$ '+fmt(p.valorUnit)+')';}).join(' | ');
 
   vendaAtual = {
-    tipo:'venda', nome:nome, telefone:tel,
+    tipo:'venda', id:'V'+agora.getTime()+Math.floor(10+Math.random()*90),
+    nome:nome, telefone:tel,
     produtos:prodsFilled, produtosTexto:produtosTexto,
     total:totalVenda, desconto:descontoVal, pagamentos:pags, troco:troco,
     pagamentoTexto:Object.entries(pagamentosSelecionados).map(function(e){return e[0]+': R$ '+fmt(e[1]);}).join(' · '),
@@ -2058,13 +2084,17 @@ function carregarListaComprasPDV() {
 function solicitarItemListaPDV() {
   var el = document.getElementById('lc-pdv-novo-item');
   var elQtd = document.getElementById('lc-pdv-novo-qtd');
+  var elForn = document.getElementById('lc-pdv-novo-forn');
   var v = el.value.trim();
   var qtd = elQtd ? elQtd.value.trim() : '';
+  var forn = elForn ? elForn.value.trim() : '';
   if (!v) { showToast('Digite o que você precisa', false, 'warn'); return; }
-  listaCompras.push({Item:v, Quantidade:qtd, Origem:'manual', Status:'Pendente', Operador:operador||'PDV'});
+  // Fornecedor digitado aqui tem prioridade sobre o do cadastro do Estoque
+  // (inferirFornecedorItem so entra quando este campo fica em branco).
+  listaCompras.push({Item:v, Quantidade:qtd, Fornecedor:forn, Origem:'manual', Status:'Pendente', Operador:operador||'PDV'});
   renderListaComprasPDV();
-  enviarParaSheets({tipo:'add_lista_compra', item:v, quantidade:qtd, origem:'manual', operador:operador||'PDV'});
-  el.value=''; if (elQtd) elQtd.value='';
+  enviarParaSheets({tipo:'add_lista_compra', item:v, quantidade:qtd, fornecedor:forn, origem:'manual', operador:operador||'PDV'});
+  el.value=''; if (elQtd) elQtd.value=''; if (elForn) elForn.value='';
   showToast('Pedido adicionado à lista!');
 }
 // Botão "🛒 Lista de compras" no card do Estoque: adiciona o produto direto,
@@ -2127,7 +2157,7 @@ function renderListaComprasPDV() {
   // Agrupa por fornecedor (inferido do Estoque quando possível)
   var mapa = {}; var ordem = [];
   abertos.forEach(function(i){
-    var forn = inferirFornecedorItem(i.Item) || 'A definir';
+    var forn = (i.Fornecedor && String(i.Fornecedor).trim()) || inferirFornecedorItem(i.Item) || 'A definir';
     if (!mapa[forn]) { mapa[forn] = []; ordem.push(forn); }
     mapa[forn].push(i);
   });
@@ -2172,17 +2202,23 @@ async function darEntradaLote(gi) {
   var pagInput = document.getElementById('lc-g'+gi+'-pag');
   var fornecedor = fornInput ? fornInput.value.trim() : g.fornecedor;
   var formaPagamento = pagInput ? pagInput.value : 'Dinheiro';
+  if (!fornecedor || fornecedor === 'A definir') { showToast('Informe o fornecedor do grupo', false, 'warn'); return; }
 
   var itens = [];
+  var faltaValor = false;
   g.itens.forEach(function(i, ji){
     var qtdEl = document.getElementById('lc-g'+gi+'-it'+ji+'-qtd');
     var valEl = document.getElementById('lc-g'+gi+'-it'+ji+'-valor');
     var qtd = qtdEl ? parseFloat(qtdEl.value)||0 : 0;
     var valorUnit = valEl ? parseFloat(valEl.value)||0 : 0;
-    if (qtd > 0) itens.push({nome: i.Item, quantidade: qtd, valorUnit: valorUnit, listaItem: i.Item});
+    if (qtd > 0) {
+      if (!valorUnit) faltaValor = true;
+      itens.push({nome: i.Item, quantidade: qtd, valorUnit: valorUnit, listaItem: i.Item});
+    }
   });
 
   if (!itens.length) { showToast('Informe a quantidade de ao menos um item', false, 'warn'); return; }
+  if (faltaValor) { showToast('Informe o valor unitário de todos os itens com quantidade', false, 'warn'); return; }
 
   var payload = {
     tipo: 'compra_lote', loja: (sessaoLoja||pdvLoja), fornecedor: fornecedor,
@@ -2201,14 +2237,19 @@ async function darEntradaLote(gi) {
 function fecharListaPDV() {
   var abertos = (listaCompras||[]).filter(function(i){return (i.Status||'')==='Pendente' && !i.ListaData;});
   if (!abertos.length) { showToast('Nada pra fechar ainda', false, 'warn'); return; }
-  enviarParaSheets({tipo:'fechar_lista_compras', operador:operador||'PDV'}).then(function(ok){
+  // Manda o carimbo (data+hora) pronto, igual ao dashboard -- assim duas
+  // listas fechadas no mesmo dia nao caem no mesmo horario por acaso.
+  var agora = new Date();
+  var carimbo = agora.toLocaleDateString('pt-BR')+' '+String(agora.getHours()).padStart(2,'0')+':'+String(agora.getMinutes()).padStart(2,'0');
+  enviarParaSheets({tipo:'fechar_lista_compras', operador:operador||'PDV', dataHoraFechamento:carimbo}).then(function(ok){
     if (ok) { showToast('Lista fechada!'); carregarListaComprasPDV(); }
     else showToast('Erro ao fechar lista', true);
   });
 }
 function parsePtDataSimples(s) {
-  var p = String(s||'').split('/');
-  return p.length===3 ? new Date(p[2], p[1]-1, p[0]).getTime() : 0;
+  var m = String(s||'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
+  if (!m) return 0;
+  return new Date(+m[3], +m[2]-1, +m[1], m[4]?+m[4]:0, m[5]?+m[5]:0).getTime();
 }
 function popularSelectListasFechadas() {
   var sel = document.getElementById('lc-select-data');
@@ -2222,31 +2263,113 @@ function popularSelectListasFechadas() {
   else if (datas.length) { sel.value = datas[0]; renderListaFechadaPDV(datas[0]); }
   else { document.getElementById('lista-fechada-pdv').innerHTML=''; }
 }
+var lcGruposFechados = []; // grupos por fornecedor da lista fechada selecionada (itens ainda Pendente)
 function renderListaFechadaPDV(dataSel) {
   var el = document.getElementById('lista-fechada-pdv');
   if (!el) return;
-  if (!dataSel) { el.innerHTML=''; return; }
+  if (!dataSel) { el.innerHTML=''; lcGruposFechados=[]; return; }
   var itens = (listaCompras||[]).filter(function(i){return i.ListaData===dataSel;});
-  if (!itens.length) { el.innerHTML = '<div class="empty-state">Nenhum item nessa lista</div>'; return; }
-  el.innerHTML = itens.map(function(i){
+  if (!itens.length) { el.innerHTML = '<div class="empty-state">Nenhum item nessa lista</div>'; lcGruposFechados=[]; return; }
+
+  // Mesmo padrao da lista em aberto: pendentes agrupam por fornecedor com um
+  // unico "Dar entrada"; comprados/recusados so aparecem pra consulta.
+  var pendentes = itens.filter(function(i){return (i.Status||'')==='Pendente';});
+  var resolvidos = itens.filter(function(i){return (i.Status||'')!=='Pendente';});
+
+  var mapa = {}; var ordem = [];
+  pendentes.forEach(function(i){
+    var forn = (i.Fornecedor && String(i.Fornecedor).trim()) || inferirFornecedorItem(i.Item) || 'A definir';
+    if (!mapa[forn]) { mapa[forn] = []; ordem.push(forn); }
+    mapa[forn].push(i);
+  });
+  lcGruposFechados = ordem.map(function(forn){ return { fornecedor: forn, itens: mapa[forn] }; });
+
+  var gruposHtml = lcGruposFechados.map(function(g, gi){
+    var linhas = g.itens.map(function(i, ji){
+      var qtdTxt = i.Quantidade ? ' · pedido: '+escapeHtml(String(i.Quantidade)) : '';
+      var origTxt = i.Origem==='encomenda' ? ('encomenda'+(i.EncomendaRef?' · '+escapeHtml(String(i.EncomendaRef)):'')) : 'pedido de '+escapeHtml(String(i.Operador||'—'));
+      var itemEsc = escapeHtml(String(i.Item||'')).replace(/'/g,"\\'");
+      var qtdSug = qtdNumerica(i.Quantidade);
+      var custoSug = inferirCustoItem(i.Item);
+      return '<div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">'+
+        '<div style="flex:1;min-width:110px;"><div style="font-weight:600;font-size:13px;">'+escapeHtml(String(i.Item||''))+qtdTxt+'</div>'+
+        '<div style="font-size:10px;color:#5F5E5A;">'+origTxt+'</div></div>'+
+        '<input type="number" min="0" step="1" class="form-input" id="lf-g'+gi+'-it'+ji+'-qtd" value="'+qtdSug+'" placeholder="Qtd" style="width:64px;padding:6px;font-size:12px;">'+
+        '<input type="number" min="0" step="0.01" class="form-input" id="lf-g'+gi+'-it'+ji+'-valor" value="'+custoSug+'" placeholder="R$ unit." style="width:78px;padding:6px;font-size:12px;">'+
+        '<button class="btn btn-outline" style="width:auto;padding:6px 9px;font-size:11px;color:#B33A3A;border-color:#B33A3A;" onclick="abrirModalRecusa(\''+itemEsc+'\')">✕</button>'+
+        '</div>';
+    }).join('');
+    var fornEsc = escapeHtml(g.fornecedor).replace(/'/g,"\\'");
+    return '<div class="lc-grupo" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px;">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'+
+        '<span style="font-size:12px;font-weight:700;white-space:nowrap;">🏷️ Fornecedor</span>'+
+        '<input type="text" class="form-input" id="lf-g'+gi+'-forn" value="'+fornEsc+'" placeholder="Nome do fornecedor" style="flex:1;padding:7px 10px;font-size:13px;">'+
+      '</div>'+
+      linhas+
+      '<div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">'+
+        '<select class="form-input" id="lf-g'+gi+'-pag" style="flex:1;min-width:110px;padding:8px;font-size:13px;">'+
+          '<option>Dinheiro</option><option>Pix</option><option>CartaoC6</option><option>CartaoItau</option><option>Boleto</option><option>Transferencia</option>'+
+        '</select>'+
+        '<button class="btn btn-primary" style="width:auto;padding:9px 16px;font-size:13px;" onclick="darEntradaLoteFechada('+gi+')">✅ Dar entrada</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+
+  var resolvidosHtml = resolvidos.map(function(i){
     var qtdTxt = i.Quantidade ? ' · '+escapeHtml(String(i.Quantidade)) : '';
     var origTxt = i.Origem==='encomenda' ? ('encomenda'+(i.EncomendaRef?' · '+escapeHtml(String(i.EncomendaRef)):'')) : 'pedido de '+escapeHtml(String(i.Operador||'—'));
-    var statusTag = i.Status==='Comprado' ? ' <span style="color:#2E7D32;font-weight:700;">✓ comprado</span>' : i.Status==='Recusado' ? ' <span style="color:#B33A3A;font-weight:700;">✕ recusado'+(i.Observacao?' — '+escapeHtml(String(i.Observacao)):'')+'</span>' : '';
-    var itemEsc = escapeHtml(String(i.Item||'')).replace(/'/g,"\\'");
-    var acoes = i.Status==='Pendente' ?
-      '<button class="btn btn-primary" style="width:auto;padding:8px 14px;font-size:13px;" onclick="comprarDaLista(\''+itemEsc+'\',\''+itemEsc+'\')">Comprar</button>'+
-      '<button class="btn btn-outline" style="width:auto;padding:8px 14px;font-size:13px;color:#B33A3A;border-color:#B33A3A;" onclick="abrirModalRecusa(\''+itemEsc+'\')">Recusar</button>'
-      : '';
-    return '<div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">'+
-      '<div style="flex:1;min-width:140px;"><div style="font-weight:600;font-size:14px;">'+escapeHtml(String(i.Item||''))+qtdTxt+statusTag+'</div>'+
+    var statusTag = i.Status==='Comprado' ? ' <span style="color:#2E7D32;font-weight:700;">✓ comprado</span>' : ' <span style="color:#B33A3A;font-weight:700;">✕ recusado'+(i.Observacao?' — '+escapeHtml(String(i.Observacao)):'')+'</span>';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">'+
+      '<div style="flex:1;min-width:140px;"><div style="font-weight:600;font-size:13px;">'+escapeHtml(String(i.Item||''))+qtdTxt+statusTag+'</div>'+
       '<div style="font-size:11px;color:#5F5E5A;">'+origTxt+'</div></div>'+
-      '<div style="display:flex;gap:6px;">'+acoes+'</div>'+
       '</div>';
   }).join('');
+
+  var html = gruposHtml;
+  if (resolvidos.length) {
+    if (gruposHtml) html += '<div style="font-size:12px;font-weight:700;color:#5F5E5A;margin:14px 0 6px;">Já comprados / recusados</div>';
+    html += resolvidosHtml;
+  }
+  el.innerHTML = html || '<div class="empty-state">Nenhum item nessa lista</div>';
 }
-function comprarDaLista(nome, listaItem) {
-  abrirModalCompra(nome);
-  cpListaItemRef = listaItem || null;
+async function darEntradaLoteFechada(gi) {
+  var g = lcGruposFechados[gi];
+  if (!g) return;
+  var fornInput = document.getElementById('lf-g'+gi+'-forn');
+  var pagInput = document.getElementById('lf-g'+gi+'-pag');
+  var fornecedor = fornInput ? fornInput.value.trim() : g.fornecedor;
+  var formaPagamento = pagInput ? pagInput.value : 'Dinheiro';
+  if (!fornecedor || fornecedor === 'A definir') { showToast('Informe o fornecedor do grupo', false, 'warn'); return; }
+
+  var itens = [];
+  var faltaValor = false;
+  g.itens.forEach(function(i, ji){
+    var qtdEl = document.getElementById('lf-g'+gi+'-it'+ji+'-qtd');
+    var valEl = document.getElementById('lf-g'+gi+'-it'+ji+'-valor');
+    var qtd = qtdEl ? parseFloat(qtdEl.value)||0 : 0;
+    var valorUnit = valEl ? parseFloat(valEl.value)||0 : 0;
+    if (qtd > 0) {
+      if (!valorUnit) faltaValor = true;
+      itens.push({nome: i.Item, quantidade: qtd, valorUnit: valorUnit, listaItem: i.Item});
+    }
+  });
+
+  if (!itens.length) { showToast('Informe a quantidade de ao menos um item', false, 'warn'); return; }
+  if (faltaValor) { showToast('Informe o valor unitário de todos os itens com quantidade', false, 'warn'); return; }
+
+  var payload = {
+    tipo: 'compra_lote', loja: (sessaoLoja||pdvLoja), fornecedor: fornecedor,
+    formaPagamento: formaPagamento, itens: itens,
+    operador: operador||'PDV'
+  };
+  var ok = await enviarParaSheets(payload);
+  if (ok) {
+    showToast('Entrada registrada: '+itens.length+' item(ns) de '+(fornecedor||'fornecedor'));
+    carregarListaComprasPDV();
+    carregarEstoque();
+  } else {
+    showToast('Erro ao registrar entrada', true);
+  }
 }
 var recusaItemAtual = null;
 function abrirModalRecusa(item) {
@@ -2538,18 +2661,59 @@ function renderHistorico() {
     g.forEach(function(v){
       var prods=v.produtos?v.produtos.map(function(p){return p.nome;}).join(', '):v.produto||'—';
       var item=document.createElement('div');
-      item.style.cssText='background:var(--branco);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:7px;';
+      item.style.cssText='background:var(--branco);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:7px;'+(v.cancelada?'opacity:.55;':'');
+      var cancelTag=v.cancelada?' <span style="font-size:10px;background:#ffe0e0;color:#B33A3A;padding:2px 7px;border-radius:20px;font-weight:700;">CANCELADA</span>':'';
+      // So' mostra o botao em vendas que ja nasceram com ID (feitas depois
+      // desse recurso existir) e que ainda nao foram canceladas.
+      var btnCancelar=(v.id && !v.cancelada)?'<button class="btn btn-outline" style="width:auto;padding:5px 12px;font-size:11px;color:#B33A3A;border-color:#B33A3A;margin-top:8px;" onclick=\'abrirModalCancelarVenda('+JSON.stringify(v.id)+')\'>Cancelar venda</button>':'';
       item.innerHTML=
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">'+
-          '<div><span style="font-size:14px;font-weight:600;">'+escapeHtml(v.nome)+'</span>'+(v.telefone?'<div style="font-size:11px;color:var(--light);">'+escapeHtml(v.telefone)+'</div>':'')+'</div>'+
+          '<div><span style="font-size:14px;font-weight:600;">'+escapeHtml(v.nome)+'</span>'+cancelTag+(v.telefone?'<div style="font-size:11px;color:var(--light);">'+escapeHtml(v.telefone)+'</div>':'')+'</div>'+
           '<span style="font-size:11px;color:var(--light);">'+v.hora+'</span></div>'+
         '<div style="font-size:12px;color:var(--mid);margin-bottom:6px;">'+escapeHtml(prods)+'</div>'+
         '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;">'+
           '<span style="font-size:17px;font-weight:700;color:var(--vf);">R$ '+fmt(v.total)+'</span>'+
           '<span style="font-size:10px;background:var(--vj-pale);color:var(--vf);padding:2px 7px;border-radius:20px;font-weight:500;">'+escapeHtml(v.pagamentoTexto||'—')+'</span>'+
-        '</div>';
+        '</div>'+btnCancelar;
       div.appendChild(item);
     });
+
+var mcvVendaAtual=null;
+function abrirModalCancelarVenda(id){
+  var hist=JSON.parse(localStorage.getItem('mayse_v3_hist')||'[]');
+  var v=hist.find(function(h){return h.id===id;});
+  if(!v){showToast('Venda não encontrada',true);return;}
+  mcvVendaAtual=v;
+  document.getElementById('mcv-sub').textContent=v.nome+' · R$ '+fmt(v.total)+' · '+v.hora;
+  document.getElementById('mcv-motivo').value='';
+  document.getElementById('modal-cancelar-venda').classList.add('open');
+}
+async function confirmarCancelarVenda(){
+  if(!mcvVendaAtual)return;
+  var motivo=document.getElementById('mcv-motivo').value.trim();
+  var ok=await enviarParaSheets({tipo:'cancelar_venda',id:mcvVendaAtual.id,loja:mcvVendaAtual.loja,motivo:motivo});
+  document.getElementById('modal-cancelar-venda').classList.remove('open');
+  if(ok){
+    // Marca local (otimista, igual ao resto do app -- o POST e' no-cors e
+    // nao da pra ler a resposta real do servidor).
+    var hist=JSON.parse(localStorage.getItem('mayse_v3_hist')||'[]');
+    var h=hist.find(function(x){return x.id===mcvVendaAtual.id;});
+    if(h)h.cancelada=true;
+    localStorage.setItem('mayse_v3_hist',JSON.stringify(hist));
+    // Devolve o estoque na tela tambem (o servidor ja fez isso na planilha),
+    // pra nao precisar recarregar a pagina pra ver o estoque certo de novo.
+    if(mcvVendaAtual.produtos){
+      mcvVendaAtual.produtos.forEach(function(p){
+        var ep=estoque.find(function(e){return e.Nome===p.nome;});
+        if(ep)ep.Qtd=(parseInt(ep.Qtd||0)+p.qtd);
+      });
+      atualizarAlertas();
+    }
+    showToast('Venda cancelada e estoque devolvido!');
+    renderHistorico();
+  }else showToast('Erro ao cancelar venda',true);
+  mcvVendaAtual=null;
+}
     container.appendChild(div);
   }
 }
