@@ -440,7 +440,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
           <div class="fil-grp" style="display:flex;align-items:flex-end;"><button onclick="limparFiltrosAnalitica()" style="padding:7px 12px;background:var(--branco);border:1.5px solid var(--border);border-radius:8px;font-family:'Sora',sans-serif;font-size:11px;cursor:pointer;color:var(--mid);">✕ Limpar</button></div>
         </div>
         <div style="font-size:12px;color:var(--mid);margin-bottom:8px;">Exibindo <strong id="ent-count">—</strong> registros</div>
-        <div class="tw"><table class="dt"><thead><tr><th>Loja</th><th>Data</th><th>Hora</th><th>Cliente</th><th>Descrição</th><th>Dinheiro</th><th>Pix</th><th>Crédito</th><th>Débito</th><th>Troco</th><th>Total</th><th>Operador</th></tr></thead><tbody id="tb-ent"></tbody></table></div>
+        <div class="tw"><table class="dt"><thead><tr><th>Loja</th><th>Data</th><th>Hora</th><th>Cliente</th><th>Descrição</th><th>Dinheiro</th><th>Pix</th><th>Crédito</th><th>Débito</th><th>Troco</th><th>Total</th><th>Operador</th><th>Status</th><th></th></tr></thead><tbody id="tb-ent"></tbody></table></div>
       </div>
     </div>
 
@@ -705,6 +705,9 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 </div></div>
 
 <div class="mov" id="m-cli-det" onclick="cMov(event,'m-cli-det')"><div class="mo"><button class="mc" onclick="fM('cli-det')">×</button><div class="mt" id="cd-nm">Cliente</div><div class="mst" id="cd-sb"></div><div class="fg2" id="cd-mt" style="margin-bottom:16px;"></div><div class="ct" style="margin-bottom:10px;font-size:13px;">Últimas compras</div><div id="cd-hist"></div><div class="mft"><button class="btn-cn" onclick="fM('cli-det')">Fechar</button><button class="btn-sb" onclick="edCli()">Editar</button></div></div></div>
+<!-- Cancelar venda (tabela analitica de Entradas) -- mesmo endpoint/logica do pdv.html:
+     devolve estoque e lanca estorno no backend, sem apagar o lancamento original. -->
+<div class="mov" id="m-cv" onclick="cMov(event,'m-cv')"><div class="mo"><button class="mc" onclick="fM('cv')">×</button><div class="mt">Cancelar venda</div><div class="mst" id="cv-sub">—</div><div class="fg"><label class="fl">Motivo (opcional)</label><input class="fi" id="cv-motivo" type="text" placeholder="Ex: cliente desistiu…"></div><div class="mft"><button class="btn-cn" onclick="fM('cv')">Voltar</button><button class="btn-sb" id="btn-cv-confirmar" style="background:#B33A3A;" onclick="confirmarCancelarVendaDash()">Confirmar cancelamento</button></div></div></div>
 
 <div class="mov" id="m-cliente" onclick="cMov(event,'m-cliente')"><div class="mo"><button class="mc" onclick="fM('cliente')">×</button><div class="mt" id="m-cli-ttl">Cadastrar cliente</div><div class="mst">Salvo na aba Clientes.</div><div class="fg2"><div class="fg"><label class="fl">Nome *</label><input class="fi" id="fcn" type="text" placeholder="Nome completo"></div><div class="fg"><label class="fl">Telefone *</label><input class="fi" id="fct" type="tel" placeholder="(XX) XXXXX-XXXX"></div></div><div class="fg"><label class="fl">Loja</label><select class="fsl" id="fcl"><option value="juquia">Juquiá</option><option value="cambuci">Cambuci</option><option value="pessoal">Pessoal</option></select></div><div class="fmsg" id="fm-cli"></div><div class="mft"><button class="btn-cn" onclick="fM('cliente')">Cancelar</button><button class="btn-sb" id="btn-fcli" onclick="subCli()"><div class="msp" id="sp-cli"></div>Salvar</button></div></div></div>
 
@@ -1010,6 +1013,17 @@ function gDL(arr){
     return true;
   });
 }
+/* vendasValidas: tira as linhas Status='Cancelada'/'Estorno' de uma lista de Vendas
+   ja' filtrada por gDL. Uma venda cancelada gera 2 linhas (original marcada
+   Cancelada + o estorno, com valores negativos) -- somas em R$ ja fecham
+   sozinhas por causa do estorno negativo, mas CONTAGEM/QUANTIDADE dobraria se
+   contasse as 2 linhas. Use em qualquer agregacao por contagem ou quantidade de
+   produto (numero de vendas, produtos mais vendidos, ticket medio, etc.).
+   Nao usar na tabela analitica de Entradas -- ali o objetivo e mostrar TODAS as
+   linhas (inclusive canceladas/estorno) pra conciliacao. */
+function vendasValidas(vnd){
+  return (vnd||[]).filter(function(v){ return v.Status!=='Cancelada' && v.Status!=='Estorno'; });
+}
 /* gLojaOnly: filtra só por loja ativa, ignorando o período global — usado em widgets
    "sempre atuais" (ex.: Próximos vencimentos) que não devem ser cortados pelo filtro de data */
 function gLojaOnly(arr){
@@ -1146,7 +1160,7 @@ function renAll(){renVisao();if(secAtiva==='entradas')renEntradas();if(secAtiva=
 /* ── VISÃO GERAL ── */
 function renVisao(){
   var vnd=gDL(D.vendas),pag=gLojaOnly(D.pagamentos); // pag: nao filtra por periodo (kv-ap e Proximos vencimentos sao "sempre atuais")
-  var fat=vnd.reduce(function(s,v){return s+parseFloat(v.Total||0);},0),qtd=vnd.length;
+  var fat=vnd.reduce(function(s,v){return s+parseFloat(v.Total||0);},0),qtd=vendasValidas(vnd).length;
   sEl('kv-fat',fmt(fat));sEl('kv-vnd',qtd);sEl('kv-tkt',fmt(qtd?fat/qtd:0));
   var ap=pag.filter(function(p){return (p.Status||'').toLowerCase()!=='pago';});
   sEl('kv-ap',fmt(ap.reduce(function(s,p){return s+parseFloat(p.Valor||0);},0)));
@@ -1154,7 +1168,7 @@ function renVisao(){
   var arr=[...lojasAtivas];
   if(arr.length>1){
     document.getElementById('kv-fat-sp').innerHTML=arr.map(function(id){var v=D.vendas.filter(function(r){return lSlug(r.Loja||'')===id;});var f=v.reduce(function(s,r){return s+parseFloat(r.Total||0);},0);return'<span class="kp p'+id.substring(0,2)+'">'+LNOMES[id].substring(0,3)+' '+fmt(f)+'</span>';}).join('');
-    document.getElementById('kv-vnd-sp').innerHTML=arr.map(function(id){var c=D.vendas.filter(function(r){return lSlug(r.Loja||'')===id;}).length;return'<span class="kp p'+id.substring(0,2)+'">'+LNOMES[id].substring(0,3)+' '+c+'</span>';}).join('');
+    document.getElementById('kv-vnd-sp').innerHTML=arr.map(function(id){var c=vendasValidas(D.vendas.filter(function(r){return lSlug(r.Loja||'')===id;})).length;return'<span class="kp p'+id.substring(0,2)+'">'+LNOMES[id].substring(0,3)+' '+c+'</span>';}).join('');
   }else{document.getElementById('kv-fat-sp').innerHTML='';document.getElementById('kv-vnd-sp').innerHTML='';}
   renChFat(vnd);renChPico(vnd,'ch-pico');renTimeline(ap);renEstoquePrioritario();renTimelineHoje();
   renResumoProjetos();
@@ -1511,7 +1525,7 @@ function getFinDesp(){
   });
 }
 function renderFinanceiro(){
-  var vendas=gDL(D.vendas);
+  var vendas=vendasValidas(gDL(D.vendas));
   var despesas=getFinDesp();
   var receita=vendas.reduce(function(s,r){return s+parseFloat(r.Total||0);},0);
   var totalDesp=despesas.reduce(function(s,r){return s+(r._val||parseFloat(r.Valor||0));},0);
@@ -2045,7 +2059,7 @@ function buildCategoriaMap(){
 }
 function calcularAnalise(){
   _pendentesNovos={};
-  var vnd=gDL(D.vendas);
+  var vnd=vendasValidas(gDL(D.vendas));
   var custoMap=buildCustoMap();
   var catMap=buildCategoriaMap();
   var porProduto={};
@@ -2541,7 +2555,7 @@ function renGiroCompras(){
     }
   });
   var vendAntes={},vendDepois={};
-  gDL(D.vendas).forEach(function(v){
+  vendasValidas(gDL(D.vendas)).forEach(function(v){
     var dv=parsePtD(v.Data);
     parseProdutosVenda(v).forEach(function(it){
       var ref=porProd[it.nome];
@@ -2964,7 +2978,7 @@ function renEst(){
   sEl('estk-t',est.length);sEl('estk-l',lw.length);sEl('estk-z',zr.length);
   sEl('estk-v',fmt(est.reduce(function(s,p){return s+parseInt(p.Qtd||0)*parseFloat(p.Preco_Custo||0);},0)));
   /* Donut fornecedores */
-  var forn={},vnd=gDL(D.vendas);
+  var forn={},vnd=vendasValidas(gDL(D.vendas));
   vnd.forEach(function(v){var ps=String(v.Produtos||'');est.forEach(function(ep){if(ps.includes(ep.Nome||'')&&ep.Fornecedor)forn[ep.Fornecedor]=(forn[ep.Fornecedor]||0)+1;});});
   var fa=Object.entries(forn).sort(function(a,b){return b[1]-a[1];}).slice(0,6);
   var totF=fa.reduce(function(s,e){return s+e[1];},0)||1;
@@ -3317,8 +3331,17 @@ function limparFiltrosAnalitica(){
 function renderTabelaAnaliticaRows(rows){
   const tbody=document.getElementById('tb-ent');
   if(!tbody) return;
-  if(!rows.length){tbody.innerHTML='<tr><td colspan="12"><div class="empty-state"><div class="empty-msg">Nenhum registro encontrado</div></div></td></tr>';return;}
-  tbody.innerHTML=rows.map(r=>`<tr>
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="14"><div class="empty-state"><div class="empty-msg">Nenhum registro encontrado</div></div></td></tr>';return;}
+  tbody.innerHTML=rows.map(r=>{
+    var st=r.Status||'';
+    var stBdg=st==='Cancelada'?'<span style="font-size:10px;background:#ffe0e0;color:#B33A3A;padding:2px 7px;border-radius:20px;font-weight:700;">Cancelada</span>'
+      :st==='Estorno'?'<span style="font-size:10px;background:#f0f0f0;color:#777;padding:2px 7px;border-radius:20px;font-weight:700;">Estorno</span>':'—';
+    // So mostra Cancelar em vendas com ID (feitas depois desse recurso existir)
+    // que ainda nao foram canceladas nem sao a propria linha de estorno.
+    var acao=(r.ID&&st!=='Cancelada'&&st!=='Estorno')
+      ?'<button onclick=\'abrirModalCancelarVendaDash('+JSON.stringify(r.ID)+')\' style="font-size:11px;padding:5px 10px;border-radius:8px;border:1px solid #ffcdd2;background:var(--red-pale);color:var(--red);cursor:pointer;font-family:Sora,sans-serif;">Cancelar</button>'
+      :'';
+    return `<tr>
     <td><span class="loja-badge ${lSlug(r.Loja||"")||'jq'}">${lojaNome(lSlug(r.Loja||""))}</span></td>
     <td>${fmtDateBR(r.Data)}</td><td>${fmtHora(r.Hora)}</td>
     <td><strong>${esc(r.Cliente||r.Descricao||'—')}</strong></td>
@@ -3330,7 +3353,43 @@ function renderTabelaAnaliticaRows(rows){
     <td style="text-align:right;color:#7a5c00">${parseFloat(r.Troco||0)>0?fmt(r.Troco):'—'}</td>
     <td style="text-align:right;font-weight:700;color:var(--vf)">${fmt(r.Total)}</td>
     <td style="font-size:11px;color:var(--mid)">${esc(r.Operador||'—')}</td>
-  </tr>`).join('');
+    <td>${stBdg}</td>
+    <td>${acao}</td>
+  </tr>`;
+  }).join('');
+}
+var cvVendaAtual=null;
+var cvProcessando=false; // trava contra duplo/triplo clique (mesma correcao feita no pdv.html)
+function abrirModalCancelarVendaDash(id){
+  var v=_vendaAnaliticaCache.find(function(r){return r.ID===id;});
+  if(!v){showToast('Venda n\u00e3o encontrada','warn');return;}
+  cvVendaAtual=v;
+  document.getElementById('cv-sub').textContent=(v.Cliente||'—')+' \u00b7 '+fmt(v.Total)+' \u00b7 '+fmtDateBR(v.Data)+' '+fmtHora(v.Hora);
+  document.getElementById('cv-motivo').value='';
+  document.getElementById('m-cv').classList.add('open');
+}
+async function confirmarCancelarVendaDash(){
+  if(!cvVendaAtual||cvProcessando)return;
+  cvProcessando=true;
+  var venda=cvVendaAtual; // copia local -- cvVendaAtual e' zerado no final
+  var btn=document.getElementById('btn-cv-confirmar');
+  if(btn){btn.disabled=true;btn.textContent='Cancelando\u2026';}
+  var motivo=document.getElementById('cv-motivo').value.trim();
+  var ok=await apiPost({tipo:'cancelar_venda',id:venda.ID,loja:venda.Loja,motivo:motivo});
+  fM('cv');
+  if(ok){
+    // Marca local (otimista, igual ao pdv.html -- o POST e' no-cors e nao da
+    // pra ler a resposta real do servidor). O estorno de verdade so aparece
+    // aqui no proximo Carregar dados.
+    venda.Status='Cancelada';
+    showToast('Venda cancelada e estoque devolvido!');
+    renAll();
+  }else{
+    showToast('Erro ao cancelar venda','warn');
+  }
+  cvVendaAtual=null;
+  cvProcessando=false;
+  if(btn){btn.disabled=false;btn.textContent='Confirmar cancelamento';}
 }
 
 /* ══════════════ ORÇAMENTOS ══════════════ */

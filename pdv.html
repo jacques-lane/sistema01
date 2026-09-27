@@ -186,7 +186,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 .estoque-chevron{font-size:11px;color:var(--light);margin-left:4px;}
 .estoque-expand-body{padding-top:10px;margin-top:10px;border-top:1px dashed var(--border);}
 .estoque-preco-edit label{font-size:11px;color:var(--light);display:block;margin-bottom:4px;}
-.est-cat-header{font-size:12px;font-weight:700;color:var(--vf);margin:16px 0 8px;text-transform:uppercase;letter-spacing:.03em;}
+.est-cat-header{font-size:12px;font-weight:700;color:var(--vf);margin:16px 0 8px;text-transform:uppercase;letter-spacing:.03em;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
 .estoque-emoji{font-size:24px;flex-shrink:0;}
 .estoque-info{flex:1;}
 .estoque-nome{font-size:14px;font-weight:600;}
@@ -204,11 +204,11 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 .lista-btn{font-size:10px;padding:3px 8px;border-radius:10px;border:1px solid var(--vj-pale);background:var(--vj-pale);color:var(--vf);cursor:pointer;font-family:'Sora',sans-serif;margin-top:4px;margin-left:6px;}
 .alert-banner{background:var(--red-pale);border:1px solid #ffcdd2;border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px;display:none;}
 .alert-banner.show{display:block;}
-.alert-banner-title{font-size:12px;font-weight:600;color:var(--red);margin-bottom:6px;}
+.alert-banner-title{font-size:12px;font-weight:600;color:var(--red);margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
 .alert-item{font-size:12px;color:var(--red);padding:2px 0;}
 .low-banner{background:var(--gold-pale);border:1px solid #f0d98a;border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px;display:none;}
 .low-banner.show{display:block;}
-.low-banner-title{font-size:12px;font-weight:600;color:var(--gold);margin-bottom:6px;}
+.low-banner-title{font-size:12px;font-weight:600;color:var(--gold);margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
 
 /* ── HISTÓRICO ── */
 .hist-periodo{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
@@ -586,12 +586,12 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <button class="est-filtro" onclick="setEstFiltro('zerados',this)">🔴 Zerados</button>
   </div>
   <div class="alert-banner" id="alert-zero">
-    <div class="alert-banner-title">🔴 Sem estoque</div>
-    <div id="lista-zero"></div>
+    <div class="alert-banner-title" onclick="toggleAlertBanner('zero')"><span id="alert-zero-titulo">🔴 Sem estoque</span><span class="estoque-chevron" id="alert-zero-chevron">▼</span></div>
+    <div id="lista-zero" style="display:none;"></div>
   </div>
   <div class="low-banner" id="alert-low">
-    <div class="low-banner-title">🟡 Estoque baixo</div>
-    <div id="lista-low"></div>
+    <div class="low-banner-title" onclick="toggleAlertBanner('low')"><span id="alert-low-titulo">🟡 Estoque baixo</span><span class="estoque-chevron" id="alert-low-chevron">▼</span></div>
+    <div id="lista-low" style="display:none;"></div>
   </div>
   <div class="estoque-search">
     <input type="text" id="est-busca" placeholder="Buscar produto…" oninput="filtrarEstoque(this.value)">
@@ -926,7 +926,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <div class="modal-title">Cancelar venda</div>
     <p style="font-size:13px;color:var(--mid);margin-bottom:16px;" id="mcv-sub">—</p>
     <div class="form-group"><label class="form-label">Motivo (opcional)</label><input class="form-input" id="mcv-motivo" type="text" placeholder="Ex: cliente desistiu…"></div>
-    <button class="btn" style="background:#B33A3A;color:#fff;" onclick="confirmarCancelarVenda()">Confirmar cancelamento</button>
+    <button class="btn" id="btn-mcv-confirmar" style="background:#B33A3A;color:#fff;" onclick="confirmarCancelarVenda()">Confirmar cancelamento</button>
     <button class="btn btn-outline" onclick="document.getElementById('modal-cancelar-venda').classList.remove('open')">Voltar</button>
   </div>
 </div>
@@ -971,6 +971,11 @@ var gastosDia = [];
 var estFiltroAtivo = 'todos';
 var estExpandido = {};   // nomes de produtos atualmente expandidos no estoque
 var estAgruparCategoria = false;
+// "Sem estoque" / "Estoque baixo" e os grupos de categoria comecam colapsados;
+// esses objetos so' guardam excecao (o que o usuario abriu manualmente).
+var estBannerAberto = {zero:false, low:false};
+var estCatColapsado = {};
+function catEstaColapsada(cat){ return estCatColapsado[cat] !== false; } // default = colapsado
 var histPeriodo = 'hoje';
 var encHistFiltro = 'Disponível';
 var encomendaConvertendoIdx = null; // guarda a encomenda sendo convertida em venda, pra marcar como Paga ao finalizar
@@ -2053,9 +2058,17 @@ function atualizarAlertas() {
   var badge = document.getElementById('badge-alertas');
   badge.textContent=total; badge.style.display=total>0?'inline':'none';
   document.getElementById('alert-zero').classList.toggle('show',zeros.length>0);
+  document.getElementById('alert-zero-titulo').textContent='🔴 Sem estoque ('+zeros.length+')';
   document.getElementById('lista-zero').innerHTML=zeros.map(function(p){return '<div class="alert-item">🔴 '+(p.Emoji||'🌷')+' '+escapeHtml(String(p.Nome||''))+' — zerado</div>';}).join('');
   document.getElementById('alert-low').classList.toggle('show',lows.length>0);
+  document.getElementById('alert-low-titulo').textContent='🟡 Estoque baixo ('+lows.length+')';
   document.getElementById('lista-low').innerHTML=lows.map(function(p){return '<div class="alert-item" style="color:var(--gold);">🟡 '+(p.Emoji||'🌷')+' '+escapeHtml(String(p.Nome||''))+' — restam '+p.Qtd+'</div>';}).join('');
+}
+// Colapsa/expande os blocos "Sem estoque" e "Estoque baixo" (nascem colapsados).
+function toggleAlertBanner(tipo){
+  estBannerAberto[tipo]=!estBannerAberto[tipo];
+  document.getElementById('lista-'+tipo).style.display=estBannerAberto[tipo]?'block':'none';
+  document.getElementById('alert-'+tipo+'-chevron').textContent=estBannerAberto[tipo]?'▲':'▼';
 }
 
 function setEstFiltro(tipo, btn) {
@@ -2481,10 +2494,21 @@ function renderEstoque() {
   var html = '';
   var globalIdx = 0;
   ordem.forEach(function(cat){
-    html += '<div class="est-cat-header">'+escapeHtml(cat)+' ('+grupos[cat].length+')</div>';
-    html += grupos[cat].map(function(p){ var h = renderEstoqueItemHTML(p, globalIdx); globalIdx++; return h; }).join('');
+    var colapsada = catEstaColapsada(cat); // grupos nascem colapsados por padrao
+    var catSeg = cat.replace(/'/g,"\\'");
+    html += '<div class="est-cat-header" onclick="toggleEstCategoria(\''+catSeg+'\')">'+escapeHtml(cat)+' ('+grupos[cat].length+')<span class="estoque-chevron">'+(colapsada?'▼':'▲')+'</span></div>';
+    if (!colapsada) {
+      html += grupos[cat].map(function(p){ var h = renderEstoqueItemHTML(p, globalIdx); globalIdx++; return h; }).join('');
+    } else {
+      globalIdx += grupos[cat].length;
+    }
   });
   lista.innerHTML = html;
+}
+// Abre/fecha um grupo de categoria no Estoque (clique no cabecalho do grupo).
+function toggleEstCategoria(cat){
+  estCatColapsado[cat] = !catEstaColapsada(cat);
+  renderEstoque();
 }
 
 async function ajustarQtd(nome, delta) {
@@ -2685,6 +2709,13 @@ function renderHistorico() {
 // escopo global; declaradas dentro da funcao, o clique dava erro (function
 // is not defined), mesmo com o botao aparecendo normalmente.
 var mcvVendaAtual=null;
+var mcvProcessando=false; // trava contra duplo/triplo clique: sem isso, cliques
+                           // rapidos disparavam confirmarCancelarVenda() varias
+                           // vezes em paralelo -- cada chamada fazia seu proprio
+                           // POST de cancelamento (arriscando estorno duplicado
+                           // no backend) e a 1a chamada a terminar zerava
+                           // mcvVendaAtual, causando "Cannot read properties of
+                           // null" nas chamadas seguintes.
 function abrirModalCancelarVenda(id){
   var hist=JSON.parse(localStorage.getItem('mayse_v3_hist')||'[]');
   var v=hist.find(function(h){return h.id===id;});
@@ -2695,21 +2726,25 @@ function abrirModalCancelarVenda(id){
   document.getElementById('modal-cancelar-venda').classList.add('open');
 }
 async function confirmarCancelarVenda(){
-  if(!mcvVendaAtual)return;
+  if(!mcvVendaAtual||mcvProcessando)return;
+  mcvProcessando=true;
+  var venda=mcvVendaAtual; // copia local -- mcvVendaAtual e' zerado no final
+  var btn=document.getElementById('btn-mcv-confirmar');
+  if(btn){btn.disabled=true;btn.textContent='Cancelando…';}
   var motivo=document.getElementById('mcv-motivo').value.trim();
-  var ok=await enviarParaSheets({tipo:'cancelar_venda',id:mcvVendaAtual.id,loja:mcvVendaAtual.loja,motivo:motivo});
+  var ok=await enviarParaSheets({tipo:'cancelar_venda',id:venda.id,loja:venda.loja,motivo:motivo});
   document.getElementById('modal-cancelar-venda').classList.remove('open');
   if(ok){
     // Marca local (otimista, igual ao resto do app -- o POST e' no-cors e
     // nao da pra ler a resposta real do servidor).
     var hist=JSON.parse(localStorage.getItem('mayse_v3_hist')||'[]');
-    var h=hist.find(function(x){return x.id===mcvVendaAtual.id;});
+    var h=hist.find(function(x){return x.id===venda.id;});
     if(h)h.cancelada=true;
     localStorage.setItem('mayse_v3_hist',JSON.stringify(hist));
     // Devolve o estoque na tela tambem (o servidor ja fez isso na planilha),
     // pra nao precisar recarregar a pagina pra ver o estoque certo de novo.
-    if(mcvVendaAtual.produtos){
-      mcvVendaAtual.produtos.forEach(function(p){
+    if(venda.produtos){
+      venda.produtos.forEach(function(p){
         var ep=estoque.find(function(e){return e.Nome===p.nome;});
         if(ep)ep.Qtd=(parseInt(ep.Qtd||0)+p.qtd);
       });
@@ -2719,6 +2754,8 @@ async function confirmarCancelarVenda(){
     renderHistorico();
   }else showToast('Erro ao cancelar venda',true);
   mcvVendaAtual=null;
+  mcvProcessando=false;
+  if(btn){btn.disabled=false;btn.textContent='Confirmar cancelamento';}
 }
 
 // ── ENCOMENDAS ─────────────────────────────────────────────
