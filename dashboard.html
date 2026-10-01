@@ -1176,7 +1176,13 @@ async function loadData(){
   document.getElementById('btn-lbl').textContent='Carregando…';document.getElementById('btn-sp').style.display='block';
   document.getElementById('lov').classList.add('show');
   try{
-    var res=await apiGetLote(ABAS_DASH);
+    /* 01/10/2026: medido ao vivo -- o lote com as 21 abas juntas (~1,1 MB) volta
+       404 do Google; separado em 3 grupos menores (em paralelo) funciona.
+       Vendas sozinha ~440 KB; resto ~650 KB. */
+    var GRUPOS_LOTE=[['Vendas'],['Estoque','Pagamentos','Clientes'],ABAS_DASH.filter(function(a){return['Vendas','Estoque','Pagamentos','Clientes'].indexOf(a)<0;})];
+    var partes=await Promise.all(GRUPOS_LOTE.map(apiGetLote));
+    var res=null;
+    partes.forEach(function(pt){ if(!pt)return; if(!res)res={data:{},erros:{}}; Object.assign(res.data,pt.data||{}); });
     // lote respondeu mas com abas faltando/erro -> tenta só essas de novo, no modo antigo
     if(res){
       var faltam=ABAS_DASH.filter(function(a){return !Array.isArray(res.data[a]);});
