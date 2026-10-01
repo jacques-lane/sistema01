@@ -1156,10 +1156,21 @@ function apiGetSeguro(sh){
 }
 /* Uma execução só no Apps Script. Devolve null se o backend não suporta o lote. */
 function apiGetLote(abas){
-  return fetch(cfg.url+'?token='+encodeURIComponent(cfg.token)+'&acao=lote&sheets='+abas.join(','))
+  // formato=compacto (01/10): cada aba vem como {h:[cabeçalhos], r:[linhas]} -> ~metade do tamanho.
+  // Backend sem v2 ignora o parâmetro e manda lista de objetos; os dois formatos são aceitos.
+  return fetch(cfg.url+'?token='+encodeURIComponent(cfg.token)+'&acao=lote&formato=compacto&sheets='+abas.join(','))
     .then(function(r){return r.json();})
-    .then(function(j){return (j&&j.data&&!Array.isArray(j.data))?j:null;})
+    .then(function(j){
+      if(!(j&&j.data&&!Array.isArray(j.data)))return null;
+      Object.keys(j.data).forEach(function(a){j.data[a]=expandirTabela(j.data[a]);});
+      return j;
+    })
     .catch(function(){return null;});
+}
+/* {h,r} -> lista de objetos (mesmo resultado do formato antigo; com cabeçalho repetido, o último vence, igual ao backend) */
+function expandirTabela(t){
+  if(Array.isArray(t)||!t||!Array.isArray(t.h))return t;
+  return (t.r||[]).map(function(row){var o={};t.h.forEach(function(h,i){o[h]=row[i];});return o;});
 }
 /* Modo antigo, mas em blocos de 4 pra não afogar o Apps Script. */
 async function carregarAbasEmBlocos(abas){
@@ -1179,8 +1190,9 @@ async function loadData(){
     /* 01/10/2026: medido ao vivo -- o lote com as 21 abas juntas (~1,1 MB) volta
        404 do Google; separado em 3 grupos menores (em paralelo) funciona.
        Vendas sozinha ~440 KB; resto ~650 KB. */
-    var GRUPOS_LOTE=[['Vendas'],['Estoque','Pagamentos','Clientes'],ABAS_DASH.filter(function(a){return['Vendas','Estoque','Pagamentos','Clientes'].indexOf(a)<0;})];
-    var partes=await Promise.all(GRUPOS_LOTE.map(apiGetLote));
+    // 01/10: 4 grupos (Estoque sozinho -- falhou junto com Pagamentos/Clientes) + 1 nova tentativa por grupo
+    var GRUPOS_LOTE=[['Vendas'],['Estoque'],['Pagamentos','Clientes'],ABAS_DASH.filter(function(a){return['Vendas','Estoque','Pagamentos','Clientes'].indexOf(a)<0;})];
+    var partes=await Promise.all(GRUPOS_LOTE.map(function(g){return apiGetLote(g).then(function(r){return r||apiGetLote(g);});}));
     var res=null;
     partes.forEach(function(pt){ if(!pt)return; if(!res)res={data:{},erros:{}}; Object.assign(res.data,pt.data||{}); });
     // lote respondeu mas com abas faltando/erro -> tenta só essas de novo, no modo antigo
