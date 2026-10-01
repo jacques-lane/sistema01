@@ -763,7 +763,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 <div class="fg2"><div class="fg"><label class="fl">Fornecedor</label><input class="fi" id="cp-forn" type="text" placeholder="Ex: Ceagesp"></div><div class="fg"><label class="fl">Fracionado (unid. de venda por 1 comprada) *</label><input class="fi" id="cp-frac" type="number" min="1" placeholder="Ex: 8" oninput="calcCpMargem()"></div></div>
 <div class="fg2"><div class="fg"><label class="fl">Quantidade comprada *</label><input class="fi" id="cp-qtd" type="number" min="1" placeholder="0" oninput="calcCpMargem()"></div><div class="fg"><label class="fl">Valor pago (por unidade comprada) (R$) *</label><input class="fi" id="cp-vu" type="number" min="0" step="0.01" placeholder="0,00" oninput="calcCpMargem()"></div></div>
 <div class="fg2"><div class="fg"><label class="fl">Custo unitário (calculado)</label><input class="fi" id="cp-custo" type="text" disabled style="background:var(--cream);"></div><div class="fg"><label class="fl">Venda sugerida (R$, editável)</label><input class="fi" id="cp-venda" type="number" min="0" step="0.01" placeholder="0,00"></div></div>
-<div class="fg2"><div class="fg"><label class="fl">Forma de pagamento</label><select class="fsl" id="cp-pag" onchange="onCpPagChange()"><option value="Dinheiro">Dinheiro</option><option value="Debito">Débito</option><option value="CartaoC6">Cartão C6 (fecha 03, vence 10)</option><option value="CartaoItau">Cartão Itaú (fecha 02, vence 09)</option><option value="Boleto">Boleto</option></select></div><div class="fg"><label class="fl">Observação</label><input class="fi" id="cp-obs" type="text" placeholder="Opcional"></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Forma de pagamento</label><select class="fsl" id="cp-pag" onchange="onCpPagChange()"><option value="Dinheiro">Dinheiro</option><option value="Pix">Pix</option><option value="Debito">Débito</option><option value="CartaoC6">Cartão C6 (fecha 03, vence 10)</option><option value="CartaoItau">Cartão Itaú (fecha 02, vence 09)</option><option value="Boleto">Boleto</option></select></div><div class="fg"><label class="fl">Observação</label><input class="fi" id="cp-obs" type="text" placeholder="Opcional"></div></div>
 <div id="cp-venc-wrap" style="display:none;"><div class="fg"><label class="fl">Vencimento *</label><input class="fi" id="cp-venc" type="date"></div></div>
 <div id="cp-boleto-toggle-wrap" style="display:none;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--cream);border-radius:8px;"><div><div style="font-size:13px;">Parcelar em vários boletos?</div><div style="font-size:11px;color:var(--light);">Cada parcela pode ter valor e vencimento diferente</div></div><button class="tog" id="tog-cp-boleto" onclick="onToggleCpBoleto()" aria-label="toggle boleto parcelado compra"></button></div></div>
 <div id="cp-boletos-box" style="display:none;margin-bottom:12px;"><div id="cp-boletos-lista"></div><button type="button" class="btn-cn" style="font-size:12px;padding:6px 12px;" onclick="addBoleto('cp')">+ Adicionar parcela</button><div id="cp-boletos-total" style="font-size:12px;margin-top:6px;color:var(--light);"></div></div>
@@ -900,7 +900,7 @@ function renderBarChart(id,items,color){
   }).join('');
 }
 
-function showToast(m,t){var el=document.getElementById('toast');el.textContent=m;el.className='toast'+(t?' '+t:'');el.classList.add('show');clearTimeout(window._tt);window._tt=setTimeout(function(){el.classList.remove('show');},2800);}
+function showToast(m,t,ms){var el=document.getElementById('toast');el.textContent=m;el.className='toast'+(t?' '+t:'');el.classList.add('show');clearTimeout(window._tt);window._tt=setTimeout(function(){el.classList.remove('show');},ms||2800);} /* ms opcional (29/09): avisos longos ficam mais tempo */
 
 /* horaInt: extrai a hora (0-23) de 'HH:MM', ISO datetime (padrão Apps Script) ou Date */
 function horaInt(v){
@@ -1131,27 +1131,76 @@ function apiPost(p){
   return fetch(cfg.url,{method:'POST',mode:'no-cors',body:JSON.stringify(Object.assign({token:cfg.token},p))}).then(function(){return true;}).catch(function(){return false;});
 }
 
-/* ── LOAD ── */
+/* ── LOAD ──
+   29/09/2026: antes eram 21 apiGet em paralelo (1 por aba). O Apps Script
+   enfileira execuções concorrentes -> carregamento de minutos e 503 em
+   várias abas, e o erro era engolido (aba vinha vazia e o toast dizia
+   "Dados carregados!"). Agora:
+   1) tenta UMA chamada em lote (acao=lote) que lê todas as abas numa
+      execução só;
+   2) se o backend ainda não tiver o lote (versão antiga) ou a chamada
+      falhar, cai no modo antigo, mas em blocos de 4 (não 21 de uma vez);
+   3) aba que falhar NÃO é zerada: mantém o dado anterior e o toast
+      avisa quais abas falharam. */
+var ABAS_DASH=['Vendas','Encomendas','Estoque','Compras','Pagamentos','Clientes','PDVs','Projetos','ProjetoTarefas','Caminhadas','Orcamentos','OrcamentoItens','Funcionarios','Ponto','Caixa','Metas','ListaCompras','Categorias','Conciliacao','Patrimonio','ProdutoDePara'];
+/* aba da planilha -> chave em D (e transformação, quando existe) */
+var ABA_PARA_D={Vendas:'vendas',Encomendas:'encomendas',Estoque:'estoque',Compras:'compras',Pagamentos:'pagamentos',Clientes:'clientes',PDVs:'pdvs',Projetos:'projetos',ProjetoTarefas:'tarefas',Caminhadas:'caminhadas',Orcamentos:'orcamentos',OrcamentoItens:'orcamentoItens',Funcionarios:'funcionarios',Ponto:'ponto',Caixa:'caixa',Metas:'metas',ListaCompras:'listaCompras',Categorias:'categorias',Conciliacao:'conciliacao',Patrimonio:'patrimonio',ProdutoDePara:'depara'};
+
+/* apiGetSeguro: igual ao apiGet, mas DIZ quando falhou ({ok:false}) em vez de
+   devolver lista vazia como se estivesse tudo certo. */
+function apiGetSeguro(sh){
+  return fetch(cfg.url+'?token='+encodeURIComponent(cfg.token)+'&sheet='+sh)
+    .then(function(r){return r.json();})
+    .then(function(j){return (j&&Array.isArray(j.data))?{ok:true,data:j.data}:{ok:false,erro:(j&&j.erro)||'resposta inválida'};})
+    .catch(function(e){return{ok:false,erro:String(e)};});
+}
+/* Uma execução só no Apps Script. Devolve null se o backend não suporta o lote. */
+function apiGetLote(abas){
+  return fetch(cfg.url+'?token='+encodeURIComponent(cfg.token)+'&acao=lote&sheets='+abas.join(','))
+    .then(function(r){return r.json();})
+    .then(function(j){return (j&&j.data&&!Array.isArray(j.data))?j:null;})
+    .catch(function(){return null;});
+}
+/* Modo antigo, mas em blocos de 4 pra não afogar o Apps Script. */
+async function carregarAbasEmBlocos(abas){
+  var res={data:{},erros:{}};
+  for(var i=0;i<abas.length;i+=4){
+    var bloco=abas.slice(i,i+4);
+    var rs=await Promise.all(bloco.map(apiGetSeguro));
+    rs.forEach(function(r,k){ if(r.ok)res.data[bloco[k]]=r.data; else res.erros[bloco[k]]=r.erro; });
+  }
+  return res;
+}
 async function loadData(){
   if(!cfg.url||!cfg.token){showToast('Configure URL e token','warn');goSec('config',null);return;}
   document.getElementById('btn-lbl').textContent='Carregando…';document.getElementById('btn-sp').style.display='block';
   document.getElementById('lov').classList.add('show');
   try{
-    var rs=await Promise.all([apiGet('Vendas'),apiGet('Encomendas'),apiGet('Estoque'),apiGet('Compras'),apiGet('Pagamentos'),apiGet('Clientes'),apiGet('PDVs'),apiGet('Projetos'),apiGet('ProjetoTarefas'),apiGet('Caminhadas'),apiGet('Orcamentos'),apiGet('OrcamentoItens'),apiGet('Funcionarios'),apiGet('Ponto'),apiGet('Caixa'),apiGet('Metas'),apiGet('ListaCompras'),apiGet('Categorias'),apiGet('Conciliacao'),apiGet('Patrimonio'),apiGet('ProdutoDePara')]);
-    D.vendas=rs[0].data||[];D.encomendas=rs[1].data||[];D.estoque=rs[2].data||[];
-    D.compras=rs[3].data||[];D.pagamentos=rs[4].data||[];
-    D.clientes=rs[5].data||[];D.pdvs=rs[6].data||[];
-    D.projetos=rs[7].data||[];D.tarefas=rs[8].data||[];D.caminhadas=rs[9].data||[];
-    D.orcamentos=rs[10].data||[];D.orcamentoItens=rs[11].data||[];
-    D.funcionarios=rs[12].data||[];D.ponto=consolidarPontoPorDia(rs[13].data||[]);D.caixa=rs[14].data||[];
-    D.metas=rs[15].data||[];D.listaCompras=rs[16].data||[];D.categorias=rs[17].data||[];
-    D.conciliacao=rs[18].data||[];D.patrimonio=rs[19].data||[];D.depara=rs[20].data||[];
+    var res=await apiGetLote(ABAS_DASH);
+    // lote respondeu mas com abas faltando/erro -> tenta só essas de novo, no modo antigo
+    if(res){
+      var faltam=ABAS_DASH.filter(function(a){return !Array.isArray(res.data[a]);});
+      if(faltam.length){var r2=await carregarAbasEmBlocos(faltam);Object.assign(res.data,r2.data);res.erros=r2.erros;}
+      else res.erros={};
+    }else{
+      res=await carregarAbasEmBlocos(ABAS_DASH);
+    }
+    // Só sobrescreve o que veio certo; aba com falha mantém o dado anterior
+    ABAS_DASH.forEach(function(a){
+      if(!Array.isArray(res.data[a]))return;
+      var k=ABA_PARA_D[a];
+      D[k]= a==='Ponto' ? consolidarPontoPorDia(res.data[a]) : res.data[a];
+    });
     buildDeparaMap();
-    var ops={};D.vendas.forEach(function(v){if(v.Operador)ops[v.Operador]=1;});
+    var ops={};(D.vendas||[]).forEach(function(v){if(v.Operador)ops[v.Operador]=1;});
     var sel=document.getElementById('filt-op');
     if(sel)sel.innerHTML='<option value="">Todos</option>'+Object.keys(ops).map(function(o){return'<option>'+esc(o)+'</option>';}).join('');
-    renAll();showToast('Dados carregados!');
-  }catch(e){showToast('Erro ao carregar','error');}
+    renAll();
+    var falhas=Object.keys(res.erros||{});
+    if(!falhas.length) showToast('Dados carregados!');
+    else if(falhas.length===ABAS_DASH.length) showToast('Falha ao carregar os dados — tente de novo em 1 min','error',8000);
+    else showToast('⚠️ Não carregou: '+falhas.join(', ')+' — mostrando o dado anterior dessas abas. Clique Carregar de novo.','warn',10000);
+  }catch(e){showToast('Erro ao carregar: '+(e&&e.message||e),'error');}
   document.getElementById('btn-lbl').textContent='Carregar';document.getElementById('btn-sp').style.display='none';
   document.getElementById('lov').classList.remove('show');
 }
@@ -2674,10 +2723,10 @@ async function subCompra(){
   setML('btn-fcp','sp-cp',true);var ok=await apiPost(pl);setML('btn-fcp','sp-cp',false);
   if(ok){
     var custoUnit=frac>0?vp/frac:0;
-    var statusLocal=(forma==='CartaoC6'||forma==='CartaoItau')?'Pendente':'Pago';
+    var statusLocal=(forma==='CartaoC6'||forma==='CartaoItau'||forma==='Boleto')?'Pendente':'Pago'; // igual ao backend
     D.pagamentos.push({Vencimento:pl.data,Loja:lj,Descricao:'Compra'+(forn?' - '+forn:''),Categoria:'Compra de Mercadorias',Subcategoria:'',
       Valor:qtd*vp,Status:statusLocal,Observacao:pl.observacao||'',Tipo:'Compra',Data:pl.data,Grupo:'',
-      Fornecedor:forn,Produto:prod,Qtd:qtd,Valor_Unit:custoUnit,Valor_Venda:venda,Forma_Pagamento:forma,Gera_Estoque:'Sim',Operador:'Jax'});
+      Fornecedor:forn,Produto:prod,Qtd:qtd*frac,Valor_Unit:custoUnit, /* backend grava unidades de venda (qtd x fracionado) */ Valor_Venda:venda,Forma_Pagamento:forma,Gera_Estoque:'Sim',Operador:'Jax'});
     var p=D.estoque.find(function(x){return x.Nome===prod&&lSlug(x.Loja||'')===lj;});
     if(p){p.Qtd=(parseInt(p.Qtd||0)+qtd*frac);p.Preco_Custo=custoUnit;if(venda)p.Preco_Venda=venda;}
     if(cpListaItemRefDash){
@@ -3048,7 +3097,12 @@ async function subEnt(){
 
 /* ── MODAL SAÍDA ── */
 function abMSai(){saiTipo='gasto';document.getElementById('fs-dt').value=new Date().toISOString().split('T')[0];['fs-desc','fs-val','fs-obs','fs-forn','fs-prod','fs-qtd','fs-nf','fs-se-p','fs-se-q','fs-venc','fs-cp-venc'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fm-sai').className='fmsg';document.getElementById('fs-cmp-x').style.display='none';document.getElementById('fs-gst-x').style.display='block';document.getElementById('fs-pag-ex').style.display='none';document.getElementById('fs-cat-wrap').style.display='block';document.getElementById('fs-se-x').style.display='none';document.getElementById('tog-se').classList.remove('on');document.getElementById('fs-cp-venc-wrap').style.display='none';document.getElementById('fs-cp-boleto-toggle-wrap').style.display='none';document.getElementById('fs-boletos-box').style.display='none';document.getElementById('tog-fs-boleto').classList.remove('on');fsBoletos=[];document.getElementById('fs-pag').value='Dinheiro';document.querySelectorAll('#m-saida .fbtn').forEach(function(b){b.classList.remove('active');});document.getElementById('st-g').classList.add('active');popularCategoriasUnificada();document.getElementById('m-saida').classList.add('open');}
-function setST(t,b){saiTipo=t;document.querySelectorAll('#m-saida .fbtn').forEach(function(x){x.classList.remove('active');});b.classList.add('active');document.getElementById('fs-cmp-x').style.display=t==='compra'?'block':'none';document.getElementById('fs-gst-x').style.display=t==='gasto'?'block':'none';document.getElementById('fs-pag-ex').style.display=t==='pagamento'?'block':'none';document.getElementById('fs-cat-wrap').style.display=t==='compra'?'none':'block';popularCategoriasUnificada();onFsPagChange();}
+function setST(t,b){
+  /* 30/09/2026: compra de mercadoria tem um fluxo só (registrar_compra_estoque, com fracionamento,
+     custo unitário certo e vencimento de cartão). O caminho antigo por aqui mandava o VALOR TOTAL
+     como custo unitário pro Estoque quando Qtd>1. Agora a aba Compra só abre o modal certo. */
+  if(t==='compra'){fM('saida');abMCompra();return;}
+  saiTipo=t;document.querySelectorAll('#m-saida .fbtn').forEach(function(x){x.classList.remove('active');});b.classList.add('active');document.getElementById('fs-cmp-x').style.display=t==='compra'?'block':'none';document.getElementById('fs-gst-x').style.display=t==='gasto'?'block':'none';document.getElementById('fs-pag-ex').style.display=t==='pagamento'?'block':'none';document.getElementById('fs-cat-wrap').style.display=t==='compra'?'none':'block';popularCategoriasUnificada();onFsPagChange();}
 // Boleto (à vista) precisa de vencimento; parcelado usa a lista. Só se aplica pra Compra.
 function onFsPagChange(){
   var isBoletoCompra=saiTipo==='compra'&&document.getElementById('fs-pag').value==='Boleto';
@@ -3375,7 +3429,7 @@ async function confirmarCancelarVendaDash(){
   var btn=document.getElementById('btn-cv-confirmar');
   if(btn){btn.disabled=true;btn.textContent='Cancelando\u2026';}
   var motivo=document.getElementById('cv-motivo').value.trim();
-  var ok=await apiPost({tipo:'cancelar_venda',id:venda.ID,loja:venda.Loja,motivo:motivo});
+  var ok=await apiPost({tipo:'cancelar_venda',id:venda.ID,loja:venda.Loja,motivo:motivo,operador:'Jax'});
   fM('cv');
   if(ok){
     // Marca local (otimista, igual ao pdv.html -- o POST e' no-cors e nao da
