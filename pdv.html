@@ -830,6 +830,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <div class="form-group">
       <label class="form-label">Produto</label>
       <input class="form-input" id="cp-produto" list="cp-produto-list" type="text" placeholder="Buscar da lista ou digitar novo" oninput="calcCompra()">
+      <div id="cp-estoque-info" style="font-size:12px;color:#5F5E5A;margin-top:5px;"></div>
       <datalist id="cp-produto-list"></datalist>
     </div>
     <div class="form-row" style="margin-bottom:12px;">
@@ -2189,6 +2190,7 @@ function renderListaComprasPDV() {
         '<div style="font-size:10px;color:#5F5E5A;">'+origTxt+'</div></div>'+
         '<input type="number" min="0" step="1" class="form-input" id="lc-g'+gi+'-it'+ji+'-qtd" value="'+qtdSug+'" placeholder="Qtd" style="width:64px;padding:6px;font-size:12px;">'+
         '<input type="number" min="0" step="0.01" class="form-input" id="lc-g'+gi+'-it'+ji+'-valor" value="'+custoSug+'" placeholder="R$ unit." style="width:78px;padding:6px;font-size:12px;">'+
+        '<button class="btn btn-primary" style="width:auto;padding:6px 9px;font-size:11px;" title="Comprar este item (caixa/fracionado)" onclick="abrirCompraItemLista(\''+itemEsc+'\',\''+escapeHtml(g.fornecedor).replace(/'/g,"\\'")+'\')">🛒</button>'+
         '<button class="btn btn-outline" style="width:auto;padding:6px 9px;font-size:11px;color:#B33A3A;border-color:#B33A3A;" onclick="abrirModalRecusa(\''+itemEsc+'\')">✕</button>'+
         '</div>';
     }).join('');
@@ -2239,7 +2241,11 @@ async function darEntradaLote(gi) {
     formaPagamento: formaPagamento, itens: itens,
     operador: operador||'PDV'
   };
+  if (_salvandoCompra) return;
+  _salvandoCompra = true;
+  showToast('Salvando entrada… aguarde');
   var ok = await enviarParaSheets(payload);
+  _salvandoCompra = false;
   if (ok) {
     showToast('Entrada registrada: '+itens.length+' item(ns) de '+(fornecedor||'fornecedor'));
     carregarListaComprasPDV();
@@ -2255,7 +2261,11 @@ function fecharListaPDV() {
   // listas fechadas no mesmo dia nao caem no mesmo horario por acaso.
   var agora = new Date();
   var carimbo = agora.toLocaleDateString('pt-BR')+' '+String(agora.getHours()).padStart(2,'0')+':'+String(agora.getMinutes()).padStart(2,'0');
+  if (_salvandoCompra) return;
+  _salvandoCompra = true;
+  showToast('Fechando lista… aguarde');
   enviarParaSheets({tipo:'fechar_lista_compras', operador:operador||'PDV', dataHoraFechamento:carimbo}).then(function(ok){
+    _salvandoCompra = false;
     if (ok) { showToast('Lista fechada!'); carregarListaComprasPDV(); }
     else showToast('Erro ao fechar lista', true);
   });
@@ -2310,6 +2320,7 @@ function renderListaFechadaPDV(dataSel) {
         '<div style="font-size:10px;color:#5F5E5A;">'+origTxt+'</div></div>'+
         '<input type="number" min="0" step="1" class="form-input" id="lf-g'+gi+'-it'+ji+'-qtd" value="'+qtdSug+'" placeholder="Qtd" style="width:64px;padding:6px;font-size:12px;">'+
         '<input type="number" min="0" step="0.01" class="form-input" id="lf-g'+gi+'-it'+ji+'-valor" value="'+custoSug+'" placeholder="R$ unit." style="width:78px;padding:6px;font-size:12px;">'+
+        '<button class="btn btn-primary" style="width:auto;padding:6px 9px;font-size:11px;" title="Comprar este item (caixa/fracionado)" onclick="abrirCompraItemLista(\''+itemEsc+'\',\''+escapeHtml(g.fornecedor).replace(/'/g,"\\'")+'\')">🛒</button>'+
         '<button class="btn btn-outline" style="width:auto;padding:6px 9px;font-size:11px;color:#B33A3A;border-color:#B33A3A;" onclick="abrirModalRecusa(\''+itemEsc+'\')">✕</button>'+
         '</div>';
     }).join('');
@@ -2376,7 +2387,11 @@ async function darEntradaLoteFechada(gi) {
     formaPagamento: formaPagamento, itens: itens,
     operador: operador||'PDV'
   };
+  if (_salvandoCompra) return;
+  _salvandoCompra = true;
+  showToast('Salvando entrada… aguarde');
   var ok = await enviarParaSheets(payload);
+  _salvandoCompra = false;
   if (ok) {
     showToast('Entrada registrada: '+itens.length+' item(ns) de '+(fornecedor||'fornecedor'));
     carregarListaComprasPDV();
@@ -2393,10 +2408,13 @@ function abrirModalRecusa(item) {
   document.getElementById('modal-recusa').classList.add('open');
 }
 async function confirmarRecusa() {
-  if (!recusaItemAtual) return;
+  if (!recusaItemAtual || _salvandoCompra) return;
+  _salvandoCompra = true;
   var obs = document.getElementById('recusa-obs').value.trim();
-  var ok = await enviarParaSheets({tipo:'recusar_item_lista', item:recusaItemAtual, observacao:obs, operador:operador||'PDV'});
   document.getElementById('modal-recusa').classList.remove('open');
+  showToast('Recusando item… aguarde');
+  var ok = await enviarParaSheets({tipo:'recusar_item_lista', item:recusaItemAtual, observacao:obs, operador:operador||'PDV'});
+  _salvandoCompra = false;
   if (ok) { showToast('Item recusado'); carregarListaComprasPDV(); }
   else showToast('Erro ao recusar', true);
 }
@@ -2571,6 +2589,20 @@ async function salvarProduto() {
 }
 
 // ── MODAL COMPRA (Ceagesp) ───────────────────────────────────
+/* 01/10/2026: botão 🛒 em cada item da lista de compras (aberta ou fechada).
+   Abre o mesmo modal "Registrar compra" (formato, qtd comprada, valor pago,
+   fracionado, venda) já preenchido com o item e o fornecedor do grupo.
+   Ao salvar, o backend marca o item da lista como Comprado (listaItem). */
+/* 01/10/2026: trava contra toque duplo nos salvamentos de compra/lista.
+   Antes o botão "Registrar compra" NÃO ficava desabilitado (setLoading recebia
+   o id do <span>, não do <button>) -> dois toques = compra lançada 2x
+   (provável causa do "Avecao" duplicado em 17/09). */
+var _salvandoCompra = false;
+function abrirCompraItemLista(item, fornecedor) {
+  abrirModalCompra(item);
+  cpListaItemRef = item;
+  if (fornecedor && fornecedor !== 'A definir') document.getElementById('cp-fornecedor').value = fornecedor;
+}
 function abrirModalCompra(nomeSugerido) {
   cpListaItemRef = null;
   ['cp-produto','cp-fracionado','cp-quantidade','cp-valorpago','cp-venda','cp-obs'].forEach(function(id){document.getElementById(id).value='';});
@@ -2578,9 +2610,25 @@ function abrirModalCompra(nomeSugerido) {
   document.getElementById('cp-produto-list').innerHTML = (estoque||[]).map(function(p){return '<option value="'+escapeHtml(p.Nome||'')+'">';}).join('');
   document.getElementById('cp-custo-out').textContent='R$ 0,00';
   if(nomeSugerido) document.getElementById('cp-produto').value = nomeSugerido;
+  mostrarEstoqueCompra();
   document.getElementById('modal-compra').classList.add('open');
 }
+/* 01/10/2026 (backlog 65): mostra quanto já tem do produto no estoque da loja
+   da sessão (e o preço de venda atual) enquanto digita, pra decidir quanto comprar. */
+function mostrarEstoqueCompra() {
+  var el = document.getElementById('cp-estoque-info');
+  if (!el) return;
+  var nome = String(document.getElementById('cp-produto').value||'').trim().toLowerCase();
+  if (!nome) { el.innerHTML = ''; return; }
+  var achados = (estoque||[]).filter(function(p){ return String(p.Nome||'').trim().toLowerCase() === nome; });
+  if (!achados.length) { el.innerHTML = '🆕 Produto novo — ainda não existe no estoque desta loja'; return; }
+  var qtd = achados.reduce(function(s,p){ return s + (parseFloat(p.Qtd)||0); }, 0);
+  var pv = parseFloat(achados[0].Preco_Venda)||0, pc = parseFloat(achados[0].Preco_Custo)||0;
+  el.innerHTML = '📦 Em estoque: <strong style="color:'+(qtd<=0?'#B33A3A':'#12340D')+';">'+qtd+' un</strong>'+
+    (pv ? ' · venda atual R$ '+fmt(pv) : '')+(pc ? ' · custo atual R$ '+fmt(pc) : '');
+}
 function calcCompra() {
+  mostrarEstoqueCompra();
   var qtd = parseFloat(document.getElementById('cp-quantidade').value)||0;
   var vp = parseFloat(document.getElementById('cp-valorpago').value)||0;
   var frac = parseFloat(document.getElementById('cp-fracionado').value)||0;
@@ -2589,13 +2637,16 @@ function calcCompra() {
   document.getElementById('cp-venda').value = (custo*2.5).toFixed(2);
 }
 async function salvarCompra() {
+  if (_salvandoCompra) return;
   var produto = document.getElementById('cp-produto').value.trim();
   var qtd = parseFloat(document.getElementById('cp-quantidade').value)||0;
   var vp = parseFloat(document.getElementById('cp-valorpago').value)||0;
   var frac = parseFloat(document.getElementById('cp-fracionado').value)||0;
   if(!produto){showToast('Informe o produto',false,'warn');return;}
   if(!qtd||!vp||!frac){showToast('Preencha quantidade, valor pago e fracionado',false,'warn');return;}
+  _salvandoCompra = true;
   setLoading('btn-cp-text','btn-cp-text','spinner-cp',true,'Salvando…');
+  showToast('Salvando compra… aguarde');
   var payload = {
     tipo:'registrar_compra_estoque', loja:(sessaoLoja||pdvLoja),
     produto: produto,
@@ -2613,6 +2664,7 @@ async function salvarCompra() {
   if (cpListaItemRef) payload.listaItem = cpListaItemRef;
   var ok = await enviarParaSheets(payload);
   setLoading('btn-cp-text','btn-cp-text','spinner-cp',false,'Registrar compra');
+  _salvandoCompra = false;
   if(ok){
     showToast('Compra registrada, estoque atualizado!');
     document.getElementById('modal-compra').classList.remove('open');

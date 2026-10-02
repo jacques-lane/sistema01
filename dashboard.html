@@ -758,8 +758,8 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
   <button class="btn-l" style="background:var(--red);color:#fff;" onclick="confirmarRecusaDash()">Recusar item</button>
 </div></div>
 <div class="mov" id="m-compra" onclick="cMov(event,'m-compra')"><div class="mo"><button class="mc" onclick="fM('compra')">×</button><div class="mt">Registrar compra</div><div class="mst">Compra em caixa/maço, venda fracionada — informe o fracionamento pra calcular o custo por unidade vendida automaticamente. Mesmo formulário e mesma regra do PDV.</div>
-<div class="fg2"><div class="fg"><label class="fl">Data *</label><input class="fi" id="cp-dt" type="date"></div><div class="fg"><label class="fl">Loja *</label><select class="fsl" id="cp-lj"><option value="juquia">Juquiá</option><option value="cambuci">Cambuci</option><option value="pessoal">Pessoal</option><option value="viveiro">Viveiro</option></select></div></div>
-<div class="fg2"><div class="fg"><label class="fl">Produto *</label><input class="fi" id="cp-prod" type="text" placeholder="Nome do produto" list="cp-prod-list" oninput="onCpProdChange()"><datalist id="cp-prod-list"></datalist></div><div class="fg"><label class="fl">Formato *</label><select class="fsl" id="cp-formato"><option>Caixa</option><option>Maço</option><option>Unidade</option><option>Cuia</option></select></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Data *</label><input class="fi" id="cp-dt" type="date"></div><div class="fg"><label class="fl">Loja *</label><select class="fsl" id="cp-lj" onchange="onCpProdChange()"><option value="juquia">Juquiá</option><option value="cambuci">Cambuci</option><option value="pessoal">Pessoal</option><option value="viveiro">Viveiro</option></select></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Produto *</label><input class="fi" id="cp-prod" type="text" placeholder="Nome do produto" list="cp-prod-list" oninput="onCpProdChange()"><datalist id="cp-prod-list"></datalist><div id="cp-est-info" style="font-size:11px;color:var(--mid);margin-top:4px;"></div></div><div class="fg"><label class="fl">Formato *</label><select class="fsl" id="cp-formato"><option>Caixa</option><option>Maço</option><option>Unidade</option><option>Cuia</option></select></div></div>
 <div class="fg2"><div class="fg"><label class="fl">Fornecedor</label><input class="fi" id="cp-forn" type="text" placeholder="Ex: Ceagesp"></div><div class="fg"><label class="fl">Fracionado (unid. de venda por 1 comprada) *</label><input class="fi" id="cp-frac" type="number" min="1" placeholder="Ex: 8" oninput="calcCpMargem()"></div></div>
 <div class="fg2"><div class="fg"><label class="fl">Quantidade comprada *</label><input class="fi" id="cp-qtd" type="number" min="1" placeholder="0" oninput="calcCpMargem()"></div><div class="fg"><label class="fl">Valor pago (por unidade comprada) (R$) *</label><input class="fi" id="cp-vu" type="number" min="0" step="0.01" placeholder="0,00" oninput="calcCpMargem()"></div></div>
 <div class="fg2"><div class="fg"><label class="fl">Custo unitário (calculado)</label><input class="fi" id="cp-custo" type="text" disabled style="background:var(--cream);"></div><div class="fg"><label class="fl">Venda sugerida (R$, editável)</label><input class="fi" id="cp-venda" type="number" min="0" step="0.01" placeholder="0,00"></div></div>
@@ -2704,6 +2704,16 @@ function onCpProdChange(){
   var nome=document.getElementById('cp-prod').value.trim(),loja=document.getElementById('cp-lj').value;
   var p=D.estoque.find(function(x){return x.Nome===nome&&lSlug(x.Loja||'')===loja;})||D.estoque.find(function(x){return x.Nome===nome;});
   if(p&&!document.getElementById('cp-forn').value)document.getElementById('cp-forn').value=p.Fornecedor||'';
+  /* 01/10/2026 (backlog 65): quanto já tem do produto na loja escolhida */
+  var info=document.getElementById('cp-est-info');
+  if(info){
+    var nm=nome.toLowerCase();
+    var ach=nm?D.estoque.filter(function(x){return String(x.Nome||'').trim().toLowerCase()===nm&&lSlug(x.Loja||'')===loja;}):[];
+    if(!nm)info.innerHTML='';
+    else if(!ach.length)info.innerHTML='🆕 Produto novo nesta loja';
+    else{var q=ach.reduce(function(s2,x){return s2+(parseFloat(x.Qtd)||0);},0),pv=parseFloat(ach[0].Preco_Venda)||0;
+      info.innerHTML='📦 Em estoque: <strong style="color:'+(q<=0?'var(--red)':'var(--vf)')+';">'+q+' un</strong>'+(pv?' · venda atual '+fmt(pv):'');}
+  }
   calcCpMargem();
 }
 // Mesma conta do PDV: custo unitário = valor pago (por unidade comprada) / fracionamento; venda sugerida = custo×3 (markup ideal).
