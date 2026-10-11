@@ -185,6 +185,13 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 .estoque-item-header{display:flex;align-items:center;gap:12px;cursor:pointer;}
 .estoque-chevron{font-size:11px;color:var(--light);margin-left:4px;}
 .estoque-expand-body{padding-top:10px;margin-top:10px;border-top:1px dashed var(--border);}
+.canal-wrap{display:flex;gap:8px;margin-bottom:14px;}
+.canal-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--branco);font-family:'Sora',sans-serif;font-size:14px;font-weight:600;color:var(--mid);cursor:pointer;}
+.canal-btn .canal-box{width:18px;height:18px;border:2px solid var(--border);border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;color:#fff;}
+.canal-btn.on{border-color:var(--vf);color:var(--vf);background:var(--vj-pale);}
+.canal-btn.on .canal-box{background:var(--vf);border-color:var(--vf);}
+.sync-tag{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;white-space:nowrap;}
+.sync-ok{background:#E3F1DA;color:#2E6B12;} .sync-fila{background:var(--gold-pale);color:var(--gold);} .sync-falta{background:#ffe0e0;color:#B33A3A;} .sync-nd{background:#f0f0f0;color:#777;}
 .estoque-preco-edit label{font-size:11px;color:var(--light);display:block;margin-bottom:4px;}
 .est-cat-header{font-size:12px;font-weight:700;color:var(--vf);margin:16px 0 8px;text-transform:uppercase;letter-spacing:.03em;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
 .estoque-emoji{font-size:24px;flex-shrink:0;}
@@ -202,13 +209,17 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 .alert-tag.zero{background:var(--red-pale);color:var(--red);}
 .perda-btn{font-size:10px;padding:3px 8px;border-radius:10px;border:1px solid #ffcdd2;background:var(--red-pale);color:var(--red);cursor:pointer;font-family:'Sora',sans-serif;margin-top:4px;}
 .lista-btn{font-size:10px;padding:3px 8px;border-radius:10px;border:1px solid var(--vj-pale);background:var(--vj-pale);color:var(--vf);cursor:pointer;font-family:'Sora',sans-serif;margin-top:4px;margin-left:6px;}
-.alert-banner{background:var(--red-pale);border:1px solid #ffcdd2;border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px;display:none;}
+.alert-banner{background:var(--red-pale);border:1px solid #ffcdd2;border-radius:var(--radius-sm);padding:13px 14px;margin-bottom:10px;display:none;}
+/* 10/10/2026: aba Estoque em seções recolhíveis, todas no mesmo padrão */
+.est-sec{background:var(--branco);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px 14px;margin-bottom:10px;}
+.est-sec-title{font-size:14px;font-weight:700;color:var(--grafite);cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
+.est-sec-body{margin-top:12px;}
 .alert-banner.show{display:block;}
-.alert-banner-title{font-size:12px;font-weight:600;color:var(--red);margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
+.alert-banner-title{font-size:14px;font-weight:700;color:var(--red);margin-bottom:0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
 .alert-item{font-size:12px;color:var(--red);padding:2px 0;}
-.low-banner{background:var(--gold-pale);border:1px solid #f0d98a;border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:14px;display:none;}
+.low-banner{background:var(--gold-pale);border:1px solid #f0d98a;border-radius:var(--radius-sm);padding:13px 14px;margin-bottom:10px;display:none;}
 .low-banner.show{display:block;}
-.low-banner-title{font-size:12px;font-weight:600;color:var(--gold);margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
+.low-banner-title{font-size:14px;font-weight:700;color:var(--gold);margin-bottom:0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
 
 /* ── HISTÓRICO ── */
 .hist-periodo{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
@@ -439,6 +450,12 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 
 <!-- PAGE: VENDA -->
 <div id="page-venda" class="page active">
+  <!-- 10/10/2026: origem da venda (Presencial por padrão) -- vai na venda como "canal" -->
+  <label class="form-label">Origem da venda</label>
+  <div class="canal-wrap">
+    <button type="button" class="canal-btn on" id="canal-presencial" onclick="setCanalVenda('Presencial')"><span class="canal-box">✓</span>🏪 Presencial</button>
+    <button type="button" class="canal-btn" id="canal-whatsapp" onclick="setCanalVenda('WhatsApp')"><span class="canal-box">✓</span>💬 WhatsApp</button>
+  </div>
   <div class="form-group prod-search-wrap" id="wrap-busca-cli">
     <label class="form-label">Buscar cliente por nome</label>
     <input class="prod-search-input" id="busca-cli" type="text" placeholder="🔍 Digite o nome…" autocomplete="off" oninput="filtrarClienteNome(this.value)" onfocus="filtrarClienteNome(this.value)" onblur="fecharDropdownCliDelay()">
@@ -580,26 +597,37 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 
 <!-- PAGE: ESTOQUE -->
 <div id="page-estoque" class="page">
-  <div class="est-filtros">
-    <button class="est-filtro active" onclick="setEstFiltro('todos',this)">Todos</button>
-    <button class="est-filtro" onclick="setEstFiltro('alertas',this)">⚠ Alertas</button>
-    <button class="est-filtro" onclick="setEstFiltro('zerados',this)">🔴 Zerados</button>
-  </div>
+  <!-- 10/10/2026: ordem fixa, tudo recolhido: 1) Sem estoque 2) Estoque baixo 3) Compras e cadastro 4) Produtos (localizar/ver todos) -->
   <div class="alert-banner" id="alert-zero">
     <div class="alert-banner-title" onclick="toggleAlertBanner('zero')"><span id="alert-zero-titulo">🔴 Sem estoque</span><span class="estoque-chevron" id="alert-zero-chevron">▼</span></div>
-    <div id="lista-zero" style="display:none;"></div>
+    <div id="lista-zero" style="display:none;margin-top:10px;"></div>
   </div>
   <div class="low-banner" id="alert-low">
     <div class="low-banner-title" onclick="toggleAlertBanner('low')"><span id="alert-low-titulo">🟡 Estoque baixo</span><span class="estoque-chevron" id="alert-low-chevron">▼</span></div>
-    <div id="lista-low" style="display:none;"></div>
+    <div id="lista-low" style="display:none;margin-top:10px;"></div>
   </div>
-  <div class="estoque-search">
-    <input type="text" id="est-busca" placeholder="Buscar produto…" oninput="filtrarEstoque(this.value)">
+  <div class="est-sec">
+    <div class="est-sec-title" onclick="toggleEstSec('compras')"><span>🛒 Compras e cadastro</span><span class="estoque-chevron" id="est-sec-compras-chev">▼</span></div>
+    <div class="est-sec-body" id="est-sec-compras" style="display:none;">
+      <button class="btn btn-primary" style="margin-bottom:8px;padding:11px;" onclick="abrirModalCompra()">🛒 Registrar compra</button>
+      <button class="btn btn-outline" style="margin:0;padding:11px;" onclick="abrirModalProduto()">+ Cadastrar produto</button>
+    </div>
   </div>
-  <button class="btn btn-outline" id="btn-agrupar-cat" style="margin-bottom:10px;padding:9px;font-size:12px;" onclick="toggleAgruparCategoria()">📂 Agrupar por categoria</button>
-  <button class="btn btn-primary" style="margin-bottom:10px;padding:11px;" onclick="abrirModalCompra()">🛒 Registrar compra</button>
-  <button class="btn btn-outline" style="margin-bottom:14px;padding:11px;" onclick="abrirModalProduto()">+ Cadastrar produto</button>
-  <div id="lista-estoque"><div class="loading-state">Carregando estoque…</div></div>
+  <div class="est-sec">
+    <div class="est-sec-title" onclick="toggleEstSec('produtos')"><span id="est-todos-tit">🔍 Localizar / todos os produtos</span><span class="estoque-chevron" id="est-sec-produtos-chev">▼</span></div>
+    <div class="est-sec-body" id="est-sec-produtos" style="display:none;">
+      <div class="estoque-search">
+        <input type="text" id="est-busca" placeholder="Buscar produto…" oninput="filtrarEstoque(this.value)">
+      </div>
+      <div class="est-filtros">
+        <button class="est-filtro active" onclick="setEstFiltro('todos',this)">Todos</button>
+        <button class="est-filtro" onclick="setEstFiltro('alertas',this)">⚠ Alertas</button>
+        <button class="est-filtro" onclick="setEstFiltro('zerados',this)">🔴 Zerados</button>
+      </div>
+      <button class="btn btn-outline" id="btn-agrupar-cat" style="margin:0 0 10px;padding:9px;font-size:12px;" onclick="toggleAgruparCategoria()">📂 Agrupar por categoria</button>
+      <div id="lista-estoque"><div class="loading-state">Carregando estoque…</div></div>
+    </div>
+  </div>
 </div>
 
 <!-- PAGE: COMPRAS (lista da Mayse) -->
@@ -637,6 +665,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
   <div class="hist-resumo" style="grid-template-columns:1fr;">
     <div class="hres"><div class="hres-lbl">Vendas no período</div><div class="hres-val" id="hr-qtd">—</div></div>
   </div>
+  <div id="hist-sync-bar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 12px;font-size:12px;color:var(--mid);"></div>
   <div id="hist-content"></div>
 </div>
 
@@ -939,9 +968,9 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 'use strict';
 
 // ── CONFIG ─────────────────────────────────────────────────
-var URL_ATUAL='https://script.google.com/macros/s/AKfycbwqKg_R3f_ZQg7n3Fkdl2I8ABjXijTxC6OLnPedZptKLI-HZfWLayYRHCo2TJSHOPyREA/exec';
+var URL_ATUAL='https://script.google.com/macros/s/AKfycbwhWrLKntn1bS4nfpDViQp9gFDVfa9GgT8cTYbITYI_GL8mMnakz0taQMoYM74oXks/exec';
 var TOKEN_ATUAL='mayseJuquia2026Sistema';
-var URL_VERSAO=5;
+var URL_VERSAO=6; // 10/10/2026: planilha migrada para a conta mayse.sistema@gmail.com
 if(parseInt(localStorage.getItem('mayse_v3_urlver')||'0',10)<URL_VERSAO){
   localStorage.setItem('mayse_v3_url',URL_ATUAL);
   localStorage.setItem('mayse_v3_token',TOKEN_ATUAL);
@@ -1969,7 +1998,8 @@ async function finalizarVenda() {
     data:agora.toLocaleDateString('pt-BR'),
     hora:agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
     ts:agora.getTime(),
-    operador:operador||'Não identificado', cidade:(sessaoLoja||pdvLoja), dispositivo:pdvNome, loja:(sessaoLoja||pdvLoja)
+    operador:operador||'Não identificado', cidade:(sessaoLoja||pdvLoja), dispositivo:pdvNome, loja:(sessaoLoja||pdvLoja),
+    canal: canalVenda
   };
 
   setLoading('btn-finalizar','btn-text','spinner',true,'Salvando…');
@@ -2007,6 +2037,7 @@ function abrirModalRecibo(v, salvo) {
   var descRow  = v.desconto>0?'<div class="recibo-row"><span class="recibo-label">Desconto</span><span style="color:var(--red);">-R$ '+fmt(v.desconto)+'</span></div>':'';
   var prodsRows = v.produtos.map(function(p){return '<div class="recibo-row"><span class="recibo-label">'+escapeHtml(p.nome)+'</span><span>'+p.qtd+'x R$ '+fmt(p.valorUnit)+' = <strong>R$ '+fmt(p.qtd*p.valorUnit)+'</strong></span></div>';}).join('');
   document.getElementById('modal-recibo-content').innerHTML =
+    '<div class="recibo-row"><span class="recibo-label">Origem</span><span>'+escapeHtml(v.canal||'Presencial')+'</span></div>'+
     '<div class="recibo-row"><span class="recibo-label">Telefone</span><span>'+escapeHtml(v.telefone)+'</span></div>'+
     '<div class="recibo-row"><span class="recibo-label">Cliente</span><span>'+escapeHtml(v.nome)+'</span></div>'+
     prodsRows+descRow+
@@ -2031,7 +2062,14 @@ function enviarWhatsapp() {
   novaVenda();
 }
 
+var canalVenda = 'Presencial';
+function setCanalVenda(c) {
+  canalVenda = c;
+  document.getElementById('canal-presencial').classList.toggle('on', c==='Presencial');
+  document.getElementById('canal-whatsapp').classList.toggle('on', c==='WhatsApp');
+}
 function novaVenda() {
+  setCanalVenda('Presencial');
   document.getElementById('modal-recibo').classList.remove('open');
   document.getElementById('nome').value='';
   document.getElementById('telefone').value='';
@@ -2067,6 +2105,12 @@ function atualizarAlertas() {
   document.getElementById('lista-low').innerHTML=lows.map(function(p){return '<div class="alert-item" style="color:var(--gold);">🟡 '+(p.Emoji||'🌷')+' '+escapeHtml(String(p.Nome||''))+' — restam '+p.Qtd+'</div>';}).join('');
 }
 // Colapsa/expande os blocos "Sem estoque" e "Estoque baixo" (nascem colapsados).
+function toggleEstSec(id){
+  var b=document.getElementById('est-sec-'+id), c=document.getElementById('est-sec-'+id+'-chev');
+  var abrir=b.style.display==='none';
+  b.style.display=abrir?'block':'none'; if(c) c.textContent=abrir?'▲':'▼';
+  if(abrir&&id==='produtos'){var i=document.getElementById('est-busca'); if(i) setTimeout(function(){i.focus();},50);}
+}
 function toggleAlertBanner(tipo){
   estBannerAberto[tipo]=!estBannerAberto[tipo];
   document.getElementById('lista-'+tipo).style.display=estBannerAberto[tipo]?'block':'none';
@@ -2459,10 +2503,16 @@ function renderEstoqueItemHTML(p, idx) {
         '<button class="qtd-btn" onclick="ajustarQtd(\''+nomeSeg+'\', 1)">+</button>'+
       '</div>'+
       '<div class="estoque-preco-edit">'+
+        '<label>Nome do produto</label>'+
+        '<input type="text" class="form-input" id="nome-edit-'+idx+'" value="'+escapeHtml(nome)+'" style="font-size:15px;font-weight:600;margin-bottom:10px;">'+
         '<label>Preço de venda</label>'+
-        '<div style="display:flex;gap:6px;">'+
-          '<input type="number" step="0.01" min="0" class="form-input" id="'+precoInputId+'" value="'+sNumJs(p.Preco_Venda)+'" style="flex:1;">'+
-          '<button class="btn btn-primary" style="padding:8px 14px;flex-shrink:0;" onclick="salvarPrecoVenda(\''+nomeSeg+'\',\''+precoInputId+'\')">Salvar</button>'+
+        /* 10/10/2026: .btn tem width:100% -- dentro do flex o botão espremia o campo. Agora o campo ocupa o espaço e o botão fica no tamanho do texto. */
+        '<div style="display:flex;gap:8px;align-items:center;">'+
+          '<div style="flex:1;min-width:0;display:flex;align-items:center;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--branco);padding-left:12px;">'+
+            '<span style="font-size:16px;font-weight:600;color:var(--mid);">R$</span>'+
+            '<input type="number" inputmode="decimal" step="0.01" min="0" class="form-input" id="'+precoInputId+'" value="'+sNumJs(p.Preco_Venda)+'" style="border:none;font-size:20px;font-weight:700;padding:12px 10px;min-width:0;" onfocus="this.select()">'+
+          '</div>'+
+          '<button class="btn btn-primary" style="width:auto;padding:12px 18px;font-size:14px;flex-shrink:0;" id="btn-salvar-prod-'+idx+'" onclick="salvarProdutoEstoque(\''+nomeSeg+'\','+idx+')">Salvar</button>'+
         '</div>'+
       '</div>'+
       '<div style="margin-top:10px;">'+
@@ -2488,6 +2538,8 @@ function renderEstoqueItemHTML(p, idx) {
 }
 
 function renderEstoque() {
+  var titTodos=document.getElementById('est-todos-tit');
+  if(titTodos) titTodos.textContent='🔍 Localizar / todos os produtos ('+(estoque||[]).length+')';
   var lista = document.getElementById('lista-estoque');
   var filtered = estoqueFiltered.filter(function(p){
     var qtd=parseInt(p.Qtd||0), alerta=parseInt(p.Alerta_Minimo||5);
@@ -2540,6 +2592,36 @@ async function ajustarQtd(nome, delta) {
   showToast(nome+': '+novaQtd+' unidades');
 }
 
+/* 10/10/2026: salvar nome + preço do produto no Estoque, com retorno visível no
+   botão (antes não dava pra saber se tinha salvado). O nome novo só é gravado
+   na planilha depois que o script.gs ganhar o campo "novoNome" no ajuste_estoque. */
+var salvandoProd = false;
+async function salvarProdutoEstoque(nome, idx) {
+  if (salvandoProd) return;
+  var p = estoque.find(function(x){return x.Nome===nome;});
+  if (!p) return;
+  var btn = document.getElementById('btn-salvar-prod-'+idx);
+  var novoNome = String(document.getElementById('nome-edit-'+idx).value||'').trim();
+  var novoPreco = parseFloat(document.getElementById('preco-edit-'+idx).value);
+  if (!novoNome) { showToast('Informe o nome do produto', false, 'warn'); return; }
+  if (isNaN(novoPreco) || novoPreco < 0) { showToast('Preço inválido', false, 'warn'); return; }
+  var renomeou = novoNome !== nome;
+  if (renomeou && estoque.some(function(x){ return x !== p && String(x.Nome||'').trim().toLowerCase() === novoNome.toLowerCase(); })) {
+    showToast('Já existe um produto com esse nome nesta loja', false, 'warn'); return;
+  }
+  salvandoProd = true;
+  if (btn) { btn.disabled = true; btn.textContent = 'Salvando…'; }
+  showToast('Salvando '+novoNome+'… aguarde');
+  var payload = {tipo:'ajuste_estoque',loja:(sessaoLoja||pdvLoja),nome:nome,novaQtd:parseInt(p.Qtd||0),precoVenda:novoPreco,operador:operador||'PDV',motivo:renomeou?('Renomeado: '+nome+' -> '+novoNome):'Ajuste de preço'};
+  if (renomeou) payload.novoNome = novoNome;
+  var r = await enviarParaSheets(payload);
+  salvandoProd = false;
+  p.Preco_Venda = novoPreco;
+  if (renomeou) { delete estExpandido[nome]; p.Nome = novoNome; estExpandido[novoNome] = true; }
+  if (btn) { btn.disabled = false; btn.textContent = r==='fila' ? '📱 Guardado' : '✓ Enviado'; }
+  showToast(r==='fila' ? '📱 Sem internet: guardado no celular, envia sozinho quando voltar' : '✓ '+novoNome+' enviado para a planilha (R$ '+fmt(novoPreco)+')');
+  setTimeout(renderEstoque, 1200);
+}
 async function salvarPrecoVenda(nome, inputId) {
   var p = estoque.find(function(x){return x.Nome===nome;});
   if(!p) return;
@@ -2713,7 +2795,94 @@ function setHistPeriodo(p,btn){
   renderHistorico();
 }
 
-function renderHistorico() {
+/* ── Histórico x planilha (10/10/2026) ──
+   Cada venda do histórico do celular mostra onde ela está:
+   ⏳ No celular  = ainda na fila de envio (sem internet / falhou);
+   ✅ Na planilha = conferido: o ID da venda existe na aba Vendas;
+   ⚠️ Não está na planilha = conferido e NÃO achou -> dá pra reenviar.
+   A conferência busca a aba Vendas DIRETO no servidor (sem o cache
+   offline), por loja+data, só pras vendas visíveis na tela. */
+var histSync = {status:{}, conferindo:false, ultima:null, erro:false};
+function histNaFila(id) {
+  return filaObter().some(function(it){ return it.dados && it.dados.tipo==='venda' && String(it.dados.id)===String(id); });
+}
+function histSyncTag(v) {
+  if (!v.id) return '';
+  if (histNaFila(v.id)) return '<span class="sync-tag sync-fila">⏳ No celular</span>';
+  var st = histSync.status[v.id];
+  if (st==='ok') return '<span class="sync-tag sync-ok">✅ Na planilha</span>';
+  if (st==='falta') return '<span class="sync-tag sync-falta">⚠️ Não está na planilha</span>';
+  return '<span class="sync-tag sync-nd">… não conferida</span>';
+}
+async function conferirHistoricoPlanilha(vendas) {
+  if (histSync.conferindo || !webhookUrl) return;
+  var comId = vendas.filter(function(v){ return v.id && !histNaFila(v.id); });
+  if (!comId.length) { renderHistSyncBar(vendas); return; }
+  histSync.conferindo = true; histSync.erro = false; renderHistSyncBar(vendas);
+  var pares = {};
+  comId.forEach(function(v){ pares[(v.loja||sessaoLoja||pdvLoja)+'|'+v.data] = 1; });
+  try {
+    var ids = {};
+    for (var k in pares) {
+      var lj = k.split('|')[0], dt = k.split('|')[1];
+      var url = webhookUrl+'?token='+encodeURIComponent(tokenSecreto)+'&sheet=Vendas&loja='+encodeURIComponent(lj)+'&data='+encodeURIComponent(dt);
+      var r = await fetch(url, {cache:'no-store'}); // direto no servidor, sem cache
+      var j = await r.json();
+      if (!j || !Array.isArray(j.data)) throw new Error('resposta inválida');
+      j.data.forEach(function(row){ if (row.ID) ids[String(row.ID)] = 1; });
+    }
+    comId.forEach(function(v){ histSync.status[v.id] = ids[String(v.id)] ? 'ok' : 'falta'; });
+    histSync.ultima = new Date();
+  } catch(e) { histSync.erro = true; }
+  histSync.conferindo = false;
+  renderHistorico(true);
+}
+function renderHistSyncBar(vendas) {
+  var bar = document.getElementById('hist-sync-bar'); if (!bar) return;
+  var naFila = vendas.filter(function(v){ return v.id && histNaFila(v.id); }).length;
+  var faltam = vendas.filter(function(v){ return v.id && !v.cancelada && !histNaFila(v.id) && histSync.status[v.id]==='falta'; }).length;
+  var txt = histSync.conferindo ? '🔄 Conferindo na planilha…'
+          : histSync.erro ? '📶 Sem conexão pra conferir agora'
+          : histSync.ultima ? 'Conferido às '+String(histSync.ultima.getHours()).padStart(2,'0')+':'+String(histSync.ultima.getMinutes()).padStart(2,'0')
+          : '';
+  bar.innerHTML = '<span>'+txt+'</span>'+
+    (naFila ? '<span class="sync-tag sync-fila">⏳ '+naFila+' no celular aguardando envio</span>' : '')+
+    '<button class="btn btn-outline" style="width:auto;padding:5px 12px;font-size:11px;margin-top:0;" onclick="conferirHistoricoAgora()">🔄 Conferir na planilha</button>'+
+    (faltam ? '<button class="btn btn-primary" style="width:auto;padding:5px 12px;font-size:11px;" onclick="reenviarFaltantes()">↗ Reenviar '+faltam+' venda'+(faltam>1?'s':'')+'</button>' : '');
+}
+function histVendasVisiveis() {
+  var hist=JSON.parse(localStorage.getItem('mayse_v3_hist')||'[]');
+  var hoje=new Date().toLocaleDateString('pt-BR');
+  var ontem=new Date(Date.now()-86400000).toLocaleDateString('pt-BR');
+  return hist.filter(function(v){
+    if(histPeriodo==='hoje')   return v.data===hoje;
+    if(histPeriodo==='ontem')  return v.data===ontem;
+    if(histPeriodo==='semana') return v.ts>Date.now()-7*86400000;
+    return v.ts>Date.now()-30*86400000;
+  });
+}
+function conferirHistoricoAgora() { conferirHistoricoPlanilha(histVendasVisiveis()); }
+var reenviando = false;
+async function reenviarFaltantes() {
+  if (reenviando) return;
+  var falt = histVendasVisiveis().filter(function(v){ return v.id && !v.cancelada && !histNaFila(v.id) && histSync.status[v.id]==='falta'; });
+  if (!falt.length) return;
+  if (!confirm('Reenviar '+falt.length+' venda(s) que não estão na planilha?')) return;
+  reenviando = true;
+  showToast('Reenviando… aguarde');
+  for (var i=0;i<falt.length;i++) {
+    var dados = JSON.parse(JSON.stringify(falt[i]));
+    dados.tipo = 'venda';
+    await enviarParaSheets(dados);
+    delete histSync.status[falt[i].id];
+  }
+  reenviando = false;
+  showToast('Reenviado! Conferindo de novo em alguns segundos…');
+  renderHistorico(true);
+  setTimeout(conferirHistoricoAgora, 8000);
+}
+
+function renderHistorico(semConferir) {
   var hist=JSON.parse(localStorage.getItem('mayse_v3_hist')||'[]');
   var hoje=new Date().toLocaleDateString('pt-BR');
   var ontem=new Date(Date.now()-86400000).toLocaleDateString('pt-BR');
@@ -2724,6 +2893,8 @@ function renderHistorico() {
     return v.ts>Date.now()-30*86400000;
   });
   setEl('hr-qtd',filtradas.length);
+  renderHistSyncBar(filtradas);
+  if (!semConferir && navigator.onLine) setTimeout(function(){ conferirHistoricoPlanilha(filtradas); }, 50);
 
   var container=document.getElementById('hist-content');
   if(!filtradas.length){container.innerHTML='<div class="empty-state">🌼<br>Nenhuma venda no período</div>';return;}
@@ -2739,6 +2910,7 @@ function renderHistorico() {
       var prods=v.produtos?v.produtos.map(function(p){return p.nome;}).join(', '):v.produto||'—';
       var item=document.createElement('div');
       item.style.cssText='background:var(--branco);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:7px;'+(v.cancelada?'opacity:.55;':'');
+      var syncTag=histSyncTag(v);
       var cancelTag=v.cancelada?' <span style="font-size:10px;background:#ffe0e0;color:#B33A3A;padding:2px 7px;border-radius:20px;font-weight:700;">CANCELADA</span>':'';
       // So' mostra o botao em vendas que ja nasceram com ID (feitas depois
       // desse recurso existir) e que ainda nao foram canceladas.
@@ -2746,8 +2918,8 @@ function renderHistorico() {
       item.innerHTML=
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">'+
           '<div><span style="font-size:14px;font-weight:600;">'+escapeHtml(v.nome)+'</span>'+cancelTag+(v.telefone?'<div style="font-size:11px;color:var(--light);">'+escapeHtml(v.telefone)+'</div>':'')+'</div>'+
-          '<span style="font-size:11px;color:var(--light);">'+v.hora+'</span></div>'+
-        '<div style="font-size:12px;color:var(--mid);margin-bottom:6px;">'+escapeHtml(prods)+'</div>'+
+          '<div style="text-align:right;"><span style="font-size:11px;color:var(--light);">'+v.hora+'</span><div style="margin-top:3px;">'+syncTag+'</div></div></div>'+
+        '<div style="font-size:12px;color:var(--mid);margin-bottom:6px;">'+(v.canal==='WhatsApp'?'💬 ':'')+escapeHtml(prods)+'</div>'+
         '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;">'+
           '<span style="font-size:17px;font-weight:700;color:var(--vf);">R$ '+fmt(v.total)+'</span>'+
           '<span style="font-size:10px;background:var(--vj-pale);color:var(--vf);padding:2px 7px;border-radius:20px;font-weight:500;">'+escapeHtml(v.pagamentoTexto||'—')+'</span>'+
