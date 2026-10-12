@@ -325,6 +325,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
         <input type="date" class="pi" id="dt-from" onchange="onCustomDateChange()"><span style="font-size:11px;color:var(--light)">até</span><input type="date" class="pi" id="dt-to" onchange="onCustomDateChange()">
       </div>
       <span class="per-lbl" id="per-lbl"></span>
+      <button class="btn-l" id="chip-fila-d" style="display:none;" onclick="abrirFilaDash()" title="Lançamentos que ainda não chegaram na planilha"></button>
       <button class="btn-l" onclick="loadData()"><div class="sp-sm" id="btn-sp"></div><span id="btn-lbl">Carregar</span></button>
     </div>
   </div>
@@ -713,6 +714,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 <div class="mov" id="m-cli-det" onclick="cMov(event,'m-cli-det')"><div class="mo"><button class="mc" onclick="fM('cli-det')">×</button><div class="mt" id="cd-nm">Cliente</div><div class="mst" id="cd-sb"></div><div class="fg2" id="cd-mt" style="margin-bottom:16px;"></div><div class="ct" style="margin-bottom:10px;font-size:13px;">Últimas compras</div><div id="cd-hist"></div><div class="mft"><button class="btn-cn" onclick="fM('cli-det')">Fechar</button><button class="btn-sb" onclick="edCli()">Editar</button></div></div></div>
 <!-- Cancelar venda (tabela analitica de Entradas) -- mesmo endpoint/logica do pdv.html:
      devolve estoque e lanca estorno no backend, sem apagar o lancamento original. -->
+<div class="mov" id="m-fila" onclick="cMov(event,'m-fila')"><div class="mo"><button class="mc" onclick="fM('fila')">×</button><div class="mt">📤 Envios para a planilha</div><div class="mst">Lançamentos feitos neste computador que ainda não chegaram na planilha. O sistema reenvia sozinho.</div><div id="fila-d-lista"></div><div class="mft"><button class="btn-cn" onclick="fM('fila')">Fechar</button><button class="btn-sb" onclick="tentarFilaDashAgora()">Tentar enviar agora</button></div></div></div>
 <div class="mov" id="m-cv" onclick="cMov(event,'m-cv')"><div class="mo"><button class="mc" onclick="fM('cv')">×</button><div class="mt">Cancelar venda</div><div class="mst" id="cv-sub">—</div><div class="fg"><label class="fl">Motivo (opcional)</label><input class="fi" id="cv-motivo" type="text" placeholder="Ex: cliente desistiu…"></div><div class="mft"><button class="btn-cn" onclick="fM('cv')">Voltar</button><button class="btn-sb" id="btn-cv-confirmar" style="background:#B33A3A;" onclick="confirmarCancelarVendaDash()">Confirmar cancelamento</button></div></div></div>
 
 <div class="mov" id="m-cliente" onclick="cMov(event,'m-cliente')"><div class="mo"><button class="mc" onclick="fM('cliente')">×</button><div class="mt" id="m-cli-ttl">Cadastrar cliente</div><div class="mst">Salvo na aba Clientes.</div><div class="fg2"><div class="fg"><label class="fl">Nome *</label><input class="fi" id="fcn" type="text" placeholder="Nome completo"></div><div class="fg"><label class="fl">Telefone *</label><input class="fi" id="fct" type="tel" placeholder="(XX) XXXXX-XXXX"></div></div><div class="fg"><label class="fl">Loja</label><select class="fsl" id="fcl"><option value="juquia">Juquiá</option><option value="cambuci">Cambuci</option><option value="pessoal">Pessoal</option></select></div><div class="fmsg" id="fm-cli"></div><div class="mft"><button class="btn-cn" onclick="fM('cliente')">Cancelar</button><button class="btn-sb" id="btn-fcli" onclick="subCli()"><div class="msp" id="sp-cli"></div>Salvar</button></div></div></div>
@@ -1131,11 +1133,93 @@ function capturarDataHoraDash() {
   var p = function(n){ return String(n).padStart(2,'0'); };
   return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes());
 }
+/* ── GRAVAÇÃO CONFIRMADA (Fase 1 confiabilidade, 11/10/2026) ──
+   Antes: POST "no-cors" -> o dashboard não lia a resposta e dizia "salvo"
+   mesmo quando a planilha recusava (caso do Google sem armazenamento).
+   Agora lê {ok:true} / {ok:false, erro}. Se falhar (internet ou servidor),
+   guarda numa fila neste navegador e reenvia sozinho (60 s; recusados a
+   cada 5 min). Botão laranja/vermelho no topo mostra o que está pendente.
+   Cada envio leva um _rid único: se chegar 2x, o servidor ignora a cópia.
+   apiPost devolve true (gravou), 'fila' (guardado p/ reenviar) -- os dois
+   são "verdadeiros" pros formulários, pra ninguém lançar de novo e duplicar. */
+var FILA_D_KEY='mayse_dash_fila', filaDProc=false, FILA_D_RETRY_MS=5*60*1000;
+function filaDObter(){try{return JSON.parse(localStorage.getItem(FILA_D_KEY)||'[]');}catch(e){return[];}}
+function filaDSalvar(f){try{localStorage.setItem(FILA_D_KEY,JSON.stringify(f));}catch(e){}atualizarChipFilaD();}
+function filaDAtualizar(id,fn){var f=filaDObter();for(var k=0;k<f.length;k++){if(f[k].id===id){var r=fn(f[k]);if(r===null)f.splice(k,1);else f[k]=r;break;}}filaDSalvar(f);}
+function novoRidD(){return Date.now()+'_'+Math.random().toString(36).slice(2,8);}
+function postServidorD(corpo){
+  var ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
+  var tm=ctrl?setTimeout(function(){ctrl.abort();},30000):null;
+  // sem cabeçalhos extras: requisição "simples" -> Apps Script libera CORS e dá pra ler o JSON
+  return fetch(cfg.url,{method:'POST',body:JSON.stringify(Object.assign({token:cfg.token},corpo)),signal:ctrl?ctrl.signal:undefined})
+    .then(function(r){return r.text().then(function(t){var j=null;try{j=JSON.parse(t);}catch(e){}
+      if(!j)return{ok:false,rede:true,erro:'Resposta inválida do servidor (HTTP '+r.status+')'};
+      if(j.ok)return{ok:true};
+      return{ok:false,rede:false,erro:j.erro||'O servidor recusou a gravação'};});})
+    .catch(function(e){return{ok:false,rede:true,erro:(e&&e.name==='AbortError')?'Tempo esgotado':'Sem conexão'};})
+    .finally(function(){if(tm)clearTimeout(tm);});
+}
 function apiPost(p){
   p.dispositivo = detectarAparelhoDash();
   p.dataHoraCliente = capturarDataHoraDash();
-  return fetch(cfg.url,{method:'POST',mode:'no-cors',body:JSON.stringify(Object.assign({token:cfg.token},p))}).then(function(){return true;}).catch(function(){return false;});
+  var rid=novoRidD();
+  return postServidorD(Object.assign({_rid:rid},p)).then(function(res){
+    if(res.ok)return true;
+    var f=filaDObter();
+    f.push({id:rid,dados:p,criadoEm:new Date().toISOString(),tentativas:1,ultimaTentativa:Date.now(),ultimoErro:res.erro,recusado:!res.rede});
+    filaDSalvar(f);
+    showToast(res.rede?'📶 Sem conexão — guardado, vou reenviar sozinho':'⚠️ A planilha não gravou ('+res.erro+'). Guardado — vou tentar de novo.',res.rede?'warn':'error',8000);
+    return 'fila';
+  });
 }
+async function filaDProcessar(){
+  if(filaDProc||!cfg.url||!cfg.token)return;
+  filaDProc=true;
+  try{
+    var f=filaDObter();
+    for(var k=0;k<f.length;k++){
+      var it=f[k];
+      if(it.recusado&&Date.now()-(it.ultimaTentativa||0)<FILA_D_RETRY_MS)continue;
+      var res=await postServidorD(Object.assign({_rid:it.id},it.dados));
+      if(res.ok){filaDAtualizar(it.id,function(){return null;});continue;}
+      filaDAtualizar(it.id,function(x){x.tentativas=(x.tentativas||0)+1;x.ultimaTentativa=Date.now();x.ultimoErro=res.erro;if(!res.rede)x.recusado=true;return x;});
+      if(res.rede)break;
+    }
+  }finally{filaDProc=false;atualizarChipFilaD();}
+}
+function atualizarChipFilaD(){
+  var el=document.getElementById('chip-fila-d');if(!el)return;
+  var f=filaDObter(),rec=f.filter(function(x){return x.recusado;}).length;
+  if(!f.length){el.style.display='none';return;}
+  el.style.display='flex';
+  el.style.background=rec?'#B33A3A':'#C97A1A';
+  el.textContent=rec?('⚠️ '+rec+' não gravada'+(rec>1?'s':'')):('🔄 '+f.length+' pendente'+(f.length>1?'s':''));
+}
+function abrirFilaDash(){
+  var f=filaDObter(),box=document.getElementById('fila-d-lista');
+  box.innerHTML=!f.length?'<div style="color:var(--light);font-size:13px;padding:8px 0;">✅ Tudo gravado na planilha.</div>':f.map(function(it){
+    var d=it.dados||{};
+    return '<div style="border:1px solid var(--border,#e5e5e5);border-radius:10px;padding:9px 12px;margin-bottom:8px;font-size:12px;">'
+      +'<div style="display:flex;justify-content:space-between;gap:8px;"><b>'+esc(d.tipo||'?')+'</b>'+(it.recusado?'<span style="color:#B33A3A;font-weight:600;">⚠️ Não gravada</span>':'<span style="color:#C97A1A;font-weight:600;">🔄 Aguardando</span>')+'</div>'
+      +'<div style="color:var(--light);">'+esc(d.dataHoraCliente||'')+(d.operador?' · '+esc(d.operador):'')+'</div>'
+      +(it.ultimoErro?'<div style="color:var(--light);">Motivo: '+esc(it.ultimoErro)+' · '+(it.tentativas||0)+' tentativa(s)</div>':'')
+      +(it.recusado?'<button class="btn-cn" style="margin-top:6px;padding:4px 10px;font-size:11px;" onclick="descartarFilaDash(\''+it.id+'\')">Descartar</button>':'')
+      +'</div>';
+  }).join('');
+  document.getElementById('m-fila').classList.add('open');
+}
+function tentarFilaDashAgora(){
+  var f=filaDObter();f.forEach(function(x){x.ultimaTentativa=0;});filaDSalvar(f);
+  showToast('Tentando enviar…');
+  filaDProcessar().then(function(){var n=filaDObter().length;showToast(n?('Ainda pendente: '+n):'✅ Tudo gravado na planilha',n?'warn':'');abrirFilaDash();});
+}
+function descartarFilaDash(id){
+  if(!confirm('Descartar este lançamento? Ele NÃO vai para a planilha.'))return;
+  filaDAtualizar(id,function(){return null;});abrirFilaDash();
+}
+window.addEventListener('online',filaDProcessar);
+setInterval(filaDProcessar,60000);
+setTimeout(function(){atualizarChipFilaD();filaDProcessar();},1500);
 
 /* ── LOAD ──
    29/09/2026: antes eram 21 apiGet em paralelo (1 por aba). O Apps Script

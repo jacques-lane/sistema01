@@ -430,7 +430,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
   <div class="header-label">Mayse · Floricultura & Garden</div>
   <div class="header-title" id="header-title">Nova <em>venda</em></div>
   <div class="header-meta">
-    <button class="header-chip" id="chip-fila" style="display:none"></button>
+    <button class="header-chip" id="chip-fila" style="display:none" onclick="abrirFilaDetalhe()"></button>
     <button class="header-chip" id="chip-op" onclick="abrirOperador()">👤 <span id="op-label">—</span></button>
     <button class="header-chip loja" id="chip-loja">—</button>
     <button class="header-chip" id="chip-almoco" onclick="toggleAlmoco()">🍽️</button>
@@ -801,6 +801,15 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 </div>
 
 <!-- Modal fechar caixa -->
+<div class="modal-overlay" id="modal-fila" onclick="closeModal(event,'modal-fila')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📤 Envios para a planilha</div>
+    <div id="fila-lista"></div>
+    <button class="btn btn-primary" onclick="tentarFilaAgora()">Tentar enviar agora</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-fechar-caixa" onclick="closeModal(event,'modal-fechar-caixa')">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -1073,6 +1082,36 @@ var funcionariosCache = [];
 // aberto hoje pra loja. Isso permite que qualquer aparelho da mesma loja (ex:
 // os 2 tablets de Juquiá) reconheça uma sessão já aberta em outro aparelho —
 // quem bateu ponto e abriu caixa em um deles não precisa refazer no outro.
+// 11/10/2026 (Fase 1): o aparelho lembra o caixa que abriu hoje. Se a
+// planilha não tiver NENHUMA linha de caixa de hoje pra loja (nem aberta nem
+// fechada) é porque a abertura se perdeu no caminho -> entra direto e, se a
+// abertura não estiver na fila, reenvia. Se tiver linha fechada hoje, o caixa
+// foi fechado (talvez em outro aparelho) e aí pede abertura normalmente.
+var CAIXA_LOCAL_KEY = 'mayse_v3_caixa_local';
+function caixaLocalSalvar(o) { try { localStorage.setItem(CAIXA_LOCAL_KEY, JSON.stringify(o)); } catch(e) {} }
+function caixaLocalObter() { try { return JSON.parse(localStorage.getItem(CAIXA_LOCAL_KEY) || 'null'); } catch(e) { return null; } }
+function caixaLocalLimpar() { try { localStorage.removeItem(CAIXA_LOCAL_KEY); } catch(e) {} }
+function caixaLocalRecuperar(respCaixa, hoje, loja) {
+  var mk = caixaLocalObter();
+  if (!mk || mk.data !== hoje || mk.loja !== loja || !mk.operador) return false;
+  var linhasHoje = ((respCaixa && respCaixa.data) || []).filter(function(c) { return c.Data === hoje; });
+  if (linhasHoje.length) return false; // existe caixa de hoje na planilha (fechado) -> segue o fluxo normal
+  operador = mk.operador;
+  sessaoLoja = loja;
+  localStorage.setItem('mayse_v3_op', operador);
+  localStorage.setItem('mayse_v3_pontodata', hoje);
+  localStorage.setItem('mayse_v3_caixaloja', sessaoLoja);
+  // Só reenvia se a resposta veio do servidor agora (não do cache) e a
+  // abertura não está esperando na fila -- evita abrir o caixa 2x.
+  if (!respCaixa._cache && !filaTemTipo('abrir_caixa')) {
+    enviarParaSheets({ tipo: 'abrir_caixa', funcionario: mk.operador, loja: loja, valorAbertura: parseFloat(mk.valor) || 0, operador: mk.operador });
+  }
+  atualizarHeaderLoja();
+  mostrarApp();
+  showToast('Caixa de hoje recuperado deste aparelho', false, 'warn');
+  return true;
+}
+
 function verificarPonto() {
   var hoje = new Date().toLocaleDateString('pt-BR');
   var lojaCheck = localStorage.getItem('mayse_v3_caixaloja') || pdvLoja;
@@ -1084,8 +1123,13 @@ function verificarPonto() {
       localStorage.setItem('mayse_v3_op', operador);
       localStorage.setItem('mayse_v3_pontodata', hoje);
       localStorage.setItem('mayse_v3_caixaloja', sessaoLoja);
+      caixaLocalSalvar({data: hoje, loja: lojaCheck, operador: operador, valor: linha.Valor_Abertura});
       atualizarHeaderLoja();
       mostrarApp();
+      if (statusAlmocoHoje()) mostrarAlmocoBloqueado();
+    } else if (caixaLocalRecuperar(d, hoje, lojaCheck)) {
+      // Caixa aberto NESTE aparelho hoje, mas a abertura não chegou na
+      // planilha (ex: Google sem espaço / internet caiu). Não pede de novo.
       if (statusAlmocoHoje()) mostrarAlmocoBloqueado();
     } else {
       localStorage.removeItem('mayse_v3_pontodata');
@@ -1294,6 +1338,7 @@ function abrirCaixaGate() {
   if (!sessaoLoja) sessaoLoja = pdvLoja;
   enviarParaSheets({ tipo: 'abrir_caixa', funcionario: operador, loja: sessaoLoja, valorAbertura: val });
   localStorage.setItem('mayse_v3_caixaloja', sessaoLoja);
+  caixaLocalSalvar({data: new Date().toLocaleDateString('pt-BR'), loja: sessaoLoja, operador: operador, valor: val});
   document.getElementById('caixa-screen').style.display = 'none';
   showToast('Caixa aberto — ' + (LOJA_NOMES[sessaoLoja] || sessaoLoja));
   mostrarApp();
@@ -1359,6 +1404,7 @@ function confirmarFecharCaixa() {
   document.getElementById('modal-fechar-caixa').classList.remove('open');
   localStorage.removeItem('mayse_v3_pontodata');
   localStorage.removeItem('mayse_v3_caixaloja');
+  caixaLocalLimpar();
   showToast('Caixa fechado. Diferença: R$ ' + fmt(dif));
   setTimeout(function() { location.reload(); }, 1500);
 }
@@ -1438,6 +1484,17 @@ function setEl(id,v){var el=document.getElementById(id);if(el)el.textContent=v;}
 // tenta de novo indefinidamente, pra nunca perder uma venda ou compra.
 var FILA_KEY = 'mayse_v3_fila_offline';
 var filaProcessando = false;
+// 11/10/2026 (Fase 1 confiabilidade): antes o POST era "no-cors" -- o app não
+// conseguia ler a resposta e mostrava ✅ mesmo quando a planilha recusava a
+// gravação (foi o que aconteceu com o Google sem armazenamento). Agora o app
+// LÊ a resposta do servidor ({ok:true} ou {ok:false, erro}) e:
+//  - sem internet / tempo esgotado  -> guarda na fila e reenvia sozinho;
+//  - servidor respondeu erro        -> guarda na fila marcado em vermelho
+//    ("não gravada") e tenta de novo a cada 5 min; dá pra ver o motivo
+//    tocando no aviso do topo.
+// Cada envio leva um código único (_rid): se a mesma operação chegar 2x
+// (ex: a resposta se perdeu mas o servidor gravou), o servidor ignora a cópia.
+var FILA_RETRY_RECUSADO_MS = 5 * 60 * 1000;
 
 function filaObter() {
   try {
@@ -1449,16 +1506,42 @@ function filaSalvar(fila) {
   try { localStorage.setItem(FILA_KEY, JSON.stringify(fila)); } catch(e) {}
   atualizarIndicadorFila();
 }
-function filaAdicionar(dados) {
+function novoRid() { return Date.now() + '_' + Math.random().toString(36).slice(2,8); }
+function filaAdicionar(dados, rid, res) {
   var fila = filaObter();
-  fila.push({ id: Date.now() + '_' + Math.random().toString(36).slice(2,8), dados: dados, criadoEm: new Date().toISOString() });
+  fila.push({
+    id: rid || novoRid(), dados: dados, criadoEm: new Date().toISOString(),
+    tentativas: res ? 1 : 0, ultimaTentativa: res ? Date.now() : 0,
+    ultimoErro: res ? res.erro : '', recusado: !!(res && !res.rede)
+  });
   filaSalvar(fila);
 }
+// Atualiza/remove um item relendo a fila na hora (outra venda pode ter
+// entrado na fila enquanto este envio estava em andamento).
+function filaAtualizarItem(id, fn) {
+  var fila = filaObter();
+  for (var k = 0; k < fila.length; k++) {
+    if (fila[k].id === id) {
+      var r = fn(fila[k]);
+      if (r === null) fila.splice(k, 1); else fila[k] = r;
+      break;
+    }
+  }
+  filaSalvar(fila);
+}
+function filaTemTipo(tipo) { return filaObter().some(function(it){ return it.dados && it.dados.tipo === tipo; }); }
+
 function atualizarIndicadorFila() {
   var el = document.getElementById('chip-fila');
   if (!el) return;
   var fila = filaObter();
-  if (!navigator.onLine) {
+  var recus = fila.filter(function(it){ return it.recusado; }).length;
+  if (recus > 0) {
+    el.style.display = '';
+    el.style.background = 'var(--red-pale)';
+    el.style.color = '#c0392b';
+    el.textContent = '⚠️ ' + recus + ' não gravada' + (recus > 1 ? 's' : '');
+  } else if (!navigator.onLine) {
     el.style.display = '';
     el.style.background = 'var(--red-pale)';
     el.style.color = '#c0392b';
@@ -1472,34 +1555,111 @@ function atualizarIndicadorFila() {
     el.style.display = 'none';
   }
 }
-// Tenta enviar a fila pro Sheets, em ordem, sem pular itens (assim a ordem
-// dos lançamentos é preservada). Para no primeiro erro e tenta de novo depois.
+
+// Envia 1 operação e LÊ a resposta. Devolve {ok:true} ou
+// {ok:false, rede:true|false, erro:'...'} (rede=true => problema de conexão,
+// vale tentar logo de novo; rede=false => o servidor respondeu com erro).
+async function postServidor(corpo) {
+  var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 30000) : null;
+  try {
+    // Sem cabeçalhos extras de propósito: corpo texto = requisição "simples",
+    // o Apps Script responde com CORS liberado e dá pra ler o JSON
+    // (testado em 11/10/2026 a partir do github.io).
+    var r = await fetch(webhookUrl, {
+      method: 'POST',
+      body: JSON.stringify(Object.assign({token: tokenSecreto}, corpo)),
+      signal: ctrl ? ctrl.signal : undefined
+    });
+    var txt = await r.text();
+    var j = null;
+    try { j = JSON.parse(txt); } catch(e) {}
+    if (!j) return {ok:false, rede:true, erro:'Resposta inválida do servidor (HTTP ' + r.status + ')'};
+    if (j.ok) return {ok:true, duplicada: !!j.duplicada};
+    return {ok:false, rede:false, erro: j.erro || 'O servidor recusou a gravação'};
+  } catch(e) {
+    return {ok:false, rede:true, erro: (e && e.name === 'AbortError') ? 'Tempo esgotado' : 'Sem conexão'};
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+// Reenvia a fila em ordem. Sem conexão: para e tenta depois (30 s).
+// Item que o servidor recusou não trava os outros: fica vermelho e é
+// tentado de novo a cada 5 min (ex: planilha cheia voltou a ter espaço).
 async function filaProcessar() {
   if (filaProcessando || !navigator.onLine || !webhookUrl) return;
   filaProcessando = true;
   try {
     var fila = filaObter();
-    while (fila.length > 0) {
-      var item = fila[0];
-      try {
-        await fetch(webhookUrl, {
-          method: 'POST',
-          mode: 'no-cors',
-          body: JSON.stringify(Object.assign({token: tokenSecreto}, item.dados))
-        });
-        fila.shift();
-        filaSalvar(fila);
-      } catch(e) {
-        break; // ainda sem conexão: mantém o resto na fila e tenta de novo depois
+    for (var k = 0; k < fila.length; k++) {
+      var item = fila[k];
+      if (item.recusado && Date.now() - (item.ultimaTentativa || 0) < FILA_RETRY_RECUSADO_MS) continue;
+      var res = await postServidor(Object.assign({_rid: item.id}, item.dados));
+      if (res.ok) {
+        filaAtualizarItem(item.id, function(){ return null; });
+        continue;
       }
+      filaAtualizarItem(item.id, function(it){
+        it.tentativas = (it.tentativas || 0) + 1;
+        it.ultimaTentativa = Date.now();
+        it.ultimoErro = res.erro;
+        if (!res.rede) it.recusado = true;
+        return it;
+      });
+      if (res.rede) break; // ainda sem conexão: tenta o resto depois
     }
   } finally {
     filaProcessando = false;
+    atualizarIndicadorFila();
   }
 }
 window.addEventListener('online', filaProcessar);
 window.addEventListener('offline', atualizarIndicadorFila);
 setInterval(filaProcessar, 30000);
+
+// Tela "o que está pendente" (toque no aviso do topo)
+var FILA_TIPO_NOME = {venda:'Venda', abrir_caixa:'Abertura de caixa', fechar_caixa:'Fechamento de caixa', bater_ponto:'Ponto', gasto:'Gasto', compra:'Compra', encomenda:'Encomenda', encomenda_update:'Encomenda (status)', ajuste_estoque:'Ajuste de estoque', registrar_perda:'Perda', cancelar_venda:'Cancelamento de venda', upsert_cliente:'Cliente', registrar_compra_estoque:'Compra (estoque)', compra_lote:'Compra em lote', add_lista_compra:'Lista de compras', fechar_lista_compras:'Fechar lista de compras'};
+function abrirFilaDetalhe() {
+  var fila = filaObter();
+  var box = document.getElementById('fila-lista');
+  if (!fila.length) {
+    box.innerHTML = '<div style="color:#666;font-size:14px;padding:8px 0 16px;">✅ Tudo gravado na planilha.</div>';
+  } else {
+    box.innerHTML = fila.map(function(it){
+      var d = it.dados || {};
+      var quando = d.dataHoraCliente || (it.criadoEm || '').slice(0,16).replace('T',' ');
+      var valor = d.total ? ' · R$ ' + fmt(d.total) : (d.valor ? ' · R$ ' + fmt(d.valor) : '');
+      var status = it.recusado
+        ? '<span style="color:#c0392b;font-weight:600;white-space:nowrap;">⚠️ Não gravada</span>'
+        : '<span style="color:var(--gold);font-weight:600;white-space:nowrap;">🔄 Aguardando</span>';
+      var erro = it.ultimoErro ? '<div style="font-size:12px;color:#888;margin-top:2px;">Motivo: ' + escapeHtml(it.ultimoErro) + (it.tentativas ? ' · ' + it.tentativas + ' tentativa(s)' : '') + '</div>' : '';
+      var btnDesc = it.recusado ? '<button class="btn" style="margin-top:6px;padding:6px 10px;font-size:12px;width:auto;" onclick="descartarItemFila(\'' + it.id + '\')">Descartar</button>' : '';
+      return '<div style="border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;">'
+        + '<div style="display:flex;justify-content:space-between;gap:8px;"><b>' + escapeHtml(FILA_TIPO_NOME[d.tipo] || d.tipo || '?') + escapeHtml(valor) + '</b>' + status + '</div>'
+        + '<div style="font-size:12px;color:#888;">' + escapeHtml(quando) + (d.operador ? ' · ' + escapeHtml(d.operador) : '') + '</div>'
+        + erro + btnDesc + '</div>';
+    }).join('');
+  }
+  document.getElementById('modal-fila').classList.add('open');
+}
+function tentarFilaAgora() {
+  // Libera os recusados pra tentar já, sem esperar os 5 min
+  var fila = filaObter();
+  fila.forEach(function(it){ it.ultimaTentativa = 0; });
+  filaSalvar(fila);
+  showToast('Tentando enviar…', false);
+  filaProcessar().then(function(){
+    var f = filaObter();
+    showToast(f.length ? ('Ainda pendente: ' + f.length) : '✅ Tudo gravado na planilha', f.length > 0);
+    abrirFilaDetalhe();
+  });
+}
+function descartarItemFila(id) {
+  if (!confirm('Descartar este lançamento? Ele NÃO vai para a planilha. Só faça isso se ele já foi lançado de outro jeito.')) return;
+  filaAtualizarItem(id, function(){ return null; });
+  abrirFilaDetalhe();
+}
 
 // ── DISPOSITIVO / OPERADOR / DATA-HORA (automático, sem digitação) ──
 // Identifica o aparelho sozinho a partir do que o navegador já expõe
@@ -1537,21 +1697,17 @@ async function enviarParaSheets(dados) {
   dados.dataHoraCliente = capturarDataHora();
   if (!dados.operador) dados.operador = operador || 'PDV';
 
+  var rid = novoRid();
   if (!navigator.onLine) {
-    filaAdicionar(dados);
+    filaAdicionar(dados, rid);
     return 'fila';
   }
-  try {
-    await fetch(webhookUrl, {
-      method: 'POST',
-      mode: 'no-cors',
-      body: JSON.stringify(Object.assign({token: tokenSecreto}, dados))
-    });
-    return true;
-  } catch(e) {
-    filaAdicionar(dados);
-    return 'fila';
-  }
+  var res = await postServidor(Object.assign({_rid: rid}, dados));
+  if (res.ok) return true;
+  filaAdicionar(dados, rid, res);
+  // Erro do servidor (não é falta de internet): avisa na hora, sem esconder.
+  if (!res.rede) showToast('⚠️ A planilha não gravou (' + res.erro + '). Ficou guardado no aparelho e vou tentar de novo.', true);
+  return 'fila';
 }
 
 // Cacheia cada leitura com sucesso e, se a rede falhar, devolve o último
@@ -1567,7 +1723,7 @@ function apiGet(sheet, extra) {
   }).catch(function(){
     try {
       var cache = localStorage.getItem(chaveCache);
-      if (cache) return JSON.parse(cache);
+      if (cache) { var c = JSON.parse(cache); c._cache = true; return c; } // _cache: não veio do servidor agora
     } catch(e) {}
     return {data:[]};
   });
@@ -2960,8 +3116,8 @@ async function confirmarCancelarVenda(){
   var ok=await enviarParaSheets({tipo:'cancelar_venda',id:venda.id,loja:venda.loja,motivo:motivo});
   document.getElementById('modal-cancelar-venda').classList.remove('open');
   if(ok){
-    // Marca local (otimista, igual ao resto do app -- o POST e' no-cors e
-    // nao da pra ler a resposta real do servidor).
+    // Marca local. Desde 11/10/2026 ok===true = servidor confirmou;
+    // ok==='fila' = guardado no aparelho e sera reenviado sozinho.
     var hist=JSON.parse(localStorage.getItem('mayse_v3_hist')||'[]');
     var h=hist.find(function(x){return x.id===venda.id;});
     if(h)h.cancelada=true;
