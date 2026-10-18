@@ -392,6 +392,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
       <div class="cc">
         <div class="ch"><div><div class="ct">DRE — Visão completa</div><div class="csb">Empresa (DRE formal), mês a mês desde jul/2026 · clique numa linha com ▸ pra detalhar · valores esmaecidos = meta ou conta ainda não paga (planejado) · respeita a loja selecionada</div></div>
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <button id="btn-dre-regime" onclick="toggleDreRegime()" title="Caixa = mês em que o dinheiro sai (vencimento). Competência = mês em que a compra foi feita (cartão de crédito entra no mês da compra)." style="padding:5px 10px;background:#fff;color:var(--mid);border:1px solid var(--border);border-radius:8px;font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;">📅 Por caixa</button>
             <button id="btn-dre-pessoal" onclick="toggleDrePessoal()" style="padding:5px 10px;background:#fff;color:var(--mid);border:1px solid var(--border);border-radius:8px;font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;">👤 Ver Pessoal</button>
             <input type="month" id="meta-mes" class="fi-sm" style="width:120px;font-size:11px;padding:5px 8px;">
             <input type="number" id="meta-valor" placeholder="Meta R$" class="fi-sm" style="width:90px;font-size:11px;padding:5px 8px;">
@@ -1780,7 +1781,54 @@ function comprasFundidas(){
    Só mostra a partir de jul/2026 (taxonomia nova; dado antes disso não foi
    migrado retroativamente — decisão do Jax). Respeita a loja selecionada
    (gLojaOnly), igual ao padrão já usado em "Próximos vencimentos". */
+/* ── REGIME DO DRE (19/10/2026) ──
+   Caixa (padrão antigo): cada lançamento entra no mês do Vencimento.
+   Competência: compra no cartão de crédito entra no mês em que foi FEITA
+   (o pagamento da fatura é só quitação). Regras:
+   - só lançamentos de cartão mudam de mês (Forma_Pagamento CartaoC6/CartaoItau
+     ou itens de fatura detalhados "Fatura C6/Itau/Maga - ...");
+   - data da compra = coluna Data (se for até 75 dias antes do vencimento);
+     senão a data "dd/mm" no fim da descrição do item da fatura;
+     senão 1 mês antes do vencimento (fatura fecha no início do mês);
+   - no modo competência a compra no cartão conta como realizada mesmo com
+     Status "Pendente" (o custo já aconteceu; só o pagamento é futuro).
+   Os demais lançamentos (contas, boletos, Pix) continuam pelo Vencimento. */
+var dreRegime=(function(){try{return localStorage.getItem('mayse_dre_regime')||'caixa';}catch(e){return 'caixa';}})();
+function ehLancCartao(p){
+  return /^Cartao(C6|Itau)$/i.test(String(p.Forma_Pagamento||'').trim())||/^Fatura (C6|Itau|Itaú|Maga)/i.test(String(p.Descricao||'').trim());
+}
+function dataCompetencia(p){
+  var v=parsePtD(p.Vencimento);
+  if(!ehLancCartao(p)||!v)return v||parsePtD(p.Data);
+  var LIM=75*86400000;
+  var d=parsePtD(p.Data);
+  if(d&&d.getTime()<=v.getTime()&&v.getTime()-d.getTime()<=LIM)return d;
+  var m=/(\d{2})\/(\d{2})\s*$/.exec(String(p.Descricao||'').trim());
+  if(m){
+    var dia=parseInt(m[1],10),mes=parseInt(m[2],10);
+    if(dia>=1&&dia<=31&&mes>=1&&mes<=12){
+      var c=new Date(v.getFullYear(),mes-1,dia);
+      if(c.getTime()>v.getTime())c=new Date(v.getFullYear()-1,mes-1,dia);
+      if(v.getTime()-c.getTime()<=LIM)return c;
+    }
+  }
+  return new Date(v.getFullYear(),v.getMonth()-1,Math.min(v.getDate(),28));
+}
+function dataDRE(p){return dreRegime==='competencia'?dataCompetencia(p):parsePtD(p.Vencimento);}
+function pagoDRE(p){return (p.Status||'').toLowerCase()==='pago'||(dreRegime==='competencia'&&ehLancCartao(p));}
+function atualizarBtnRegime(){
+  var b=document.getElementById('btn-dre-regime');if(!b)return;
+  var comp=dreRegime==='competencia';
+  b.textContent=comp?'🧾 Por competência':'📅 Por caixa';
+  b.style.background=comp?'var(--vf)':'#fff';b.style.color=comp?'#fff':'var(--mid)';
+}
+function toggleDreRegime(){
+  dreRegime=dreRegime==='competencia'?'caixa':'competencia';
+  try{localStorage.setItem('mayse_dre_regime',dreRegime);}catch(e){}
+  renderDREMensal();
+}
 function renderDREMensal(){
+  atualizarBtnRegime();
   var thead=document.getElementById('tb-dremensal-head'),tbody=document.getElementById('tb-dremensal');
   if(!tbody)return;
   var vendas=gLojaOnly(D.vendas),pagtos=gLojaOnly(pagtosFundidos()),metas=gLojaOnly(D.metas);
@@ -1788,7 +1836,7 @@ function renderDREMensal(){
   var DRE_INICIO='2026-07';
   var mesesSet={};
   vendas.forEach(function(v){var d=parsePtD(v.Data);if(d){var k=chaveMes(d);if(k>=DRE_INICIO)mesesSet[k]=true;}});
-  pagtos.forEach(function(p){var d=parsePtD(p.Vencimento);if(d){var k=chaveMes(d);if(k>=DRE_INICIO)mesesSet[k]=true;}});
+  pagtos.forEach(function(p){var d=dataDRE(p);if(d){var k=chaveMes(d);if(k>=DRE_INICIO)mesesSet[k]=true;}});
   metas.forEach(function(m){if(m.AnoMes&&m.AnoMes>=DRE_INICIO)mesesSet[m.AnoMes]=true;});
   var meses=Object.keys(mesesSet).sort();
   if(!meses.length){
@@ -1834,11 +1882,11 @@ function renderDREMensal(){
   var despPesPorMes=zeroMap(),despPesPlanPorMes=zeroMap(),subPes={};
 
   pagtos.forEach(function(p){
-    var d=parsePtD(p.Vencimento);if(!d)return;var k=chaveMes(d);if(!(k in receitaPorMes))return;
+    var d=dataDRE(p);if(!d)return;var k=chaveMes(d);if(!(k in receitaPorMes))return;
     var grp=p.Grupo||'';
     var catRaw=String(p.Categoria||'').trim();
     var subRaw=String(p.Subcategoria||'').trim();
-    var pago=(p.Status||'').toLowerCase()==='pago';
+    var pago=pagoDRE(p);
     if(grp==='Pessoal'){
       if(pago)despPesPorMes[k]+=parseFloat(p.Valor||0);else despPesPlanPorMes[k]+=parseFloat(p.Valor||0);
       if(subRaw){if(!subPes[subRaw])subPes[subRaw]=zeroMap();subPes[subRaw][k]+=parseFloat(p.Valor||0);}
