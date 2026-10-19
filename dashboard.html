@@ -405,8 +405,9 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
           <b>Como o DRE é calculado</b> (todas as regras — não existe nenhuma outra no código)
           <ol style="margin:6px 0 0 18px;padding:0;">
             <li><b>Empresa ou Pessoal:</b> decide a coluna <b>Grupo</b> da aba Pagamentos. Grupo vazio → decide a <b>Loja</b> ("pessoal" = Pessoal; as demais = Empresa).</li>
-            <li><b>Empresa:</b> a coluna <b>Categoria</b> precisa ser uma destas 5: Deduções da Receita · Custos/CMV · Despesas Operacionais - Administrativas · Despesas Operacionais - Vendas · Resultado Financeiro. Qualquer outra vai para <b>⚠ Não categorizado</b> (clique na linha pra ver quais e o nº da linha na planilha). O detalhe ▸ de cada categoria é a coluna <b>Subcategoria</b>.</li>
+            <li><b>Empresa:</b> a coluna <b>Categoria</b> precisa ser uma destas 5: Deduções da Receita · Custos/CMV · Despesas Operacionais - Administrativas · Despesas Operacionais - Vendas · Resultado Financeiro. Qualquer outra vai para <b>⚠ Não categorizado</b> (clique na linha pra ver quais e o nº da linha na planilha). O detalhe ▸ de cada categoria é a coluna <b>Subcategoria</b>, que precisa ser uma das cadastradas para aquela Categoria na aba <b>Categorias</b> (ex.: "Compra de Mercadorias" e "Frete e viagem de compras" só existem em Custos/CMV). Combinação fora da aba aparece no aviso abaixo da tabela.</li>
             <li><b>Pessoal:</b> Categoria deve ser "Despesas"; o detalhe é a Subcategoria (Alimentação, Moradia, Lazer…). Se vier outra categoria, conta no Pessoal e aparece no aviso abaixo da tabela.</li>
+            <li><b>Custos/CMV</b> = tudo que é preciso para a mercadoria chegar à loja: a compra (Compra de Mercadorias) e o frete/viagem de compra (combustível, pedágio e lanche da ida ao Ceagesp). Entrega para cliente é Desp. Op. Vendas › Transporte/Entrega.</li>
             <li>Lançamento antigo com Categoria "Compra de Mercadorias" conta como Custos/CMV. Compras antigas da aba Compras também entram como Custos/CMV › Compra de Mercadorias.</li>
             <li><b>Receita da Empresa</b> = aba Vendas, menos as vendas da loja "pessoal" (essas são Receitas do Pessoal, detalhadas pela Categoria da venda).</li>
             <li><b>Realizado x planejado:</b> Status "Pago" = realizado. Outro status = planejado (valor esmaecido, não entra no resultado). Na visão <b>Por competência</b>, compra no cartão de crédito conta como realizada mesmo pendente.</li>
@@ -1903,7 +1904,10 @@ function renderDREMensal(){
 
   // ── Despesas Pessoal ──
   var despPesPorMes=zeroMap(),despPesPlanPorMes=zeroMap(),subPes={};
-  var dreNaoCat=[],dreConferir=[]; // linhas a corrigir (mostradas na tela, com nº da linha da planilha)
+  var dreNaoCat=[],dreConferir=[];
+  // Pares Categoria›Subcategoria válidos = os da aba Categorias (a mesma lista usada no "Lançar saída")
+  var parValido={};(D.categorias||[]).forEach(function(c){if(c.Categoria&&c.Subcategoria)parValido[String(c.Categoria).trim()+'›'+String(c.Subcategoria).trim()]=1;});
+  var temPares=Object.keys(parValido).length>0; // linhas a corrigir (mostradas na tela, com nº da linha da planilha)
 
   pagtos.forEach(function(p){
     var d=dataDRE(p);if(!d)return;var k=chaveMes(d);if(!(k in receitaPorMes))return;
@@ -1914,6 +1918,7 @@ function renderDREMensal(){
     var pago=pagoDRE(p);
     if(grp==='Pessoal'){
       if(catRaw!=='Despesas')dreConferir.push({p:p,motivo:'Grupo Pessoal com Categoria "'+(catRaw||'vazia')+'" (deveria ser "Despesas")'});
+      else if(temPares&&subRaw&&!parValido['Despesas›'+subRaw])dreConferir.push({p:p,motivo:'Subcategoria "'+subRaw+'" não existe em Despesas na aba Categorias'});
       if(pago)despPesPorMes[k]+=parseFloat(p.Valor||0);else despPesPlanPorMes[k]+=parseFloat(p.Valor||0);
       if(subRaw){if(!subPes[subRaw])subPes[subRaw]=zeroMap();subPes[subRaw][k]+=parseFloat(p.Valor||0);}
       return;
@@ -1923,6 +1928,7 @@ function renderDREMensal(){
     if(catRaw==='Compra de Mercadorias'){catRaw=CAT_CMV;if(!subRaw)subRaw='Compra de Mercadorias';}
     var cat=TODAS_EMP.indexOf(catRaw)>=0?catRaw:'Não categorizado';
     if(cat==='Não categorizado')dreNaoCat.push({p:p,motivo:'Categoria "'+(catRaw||'vazia')+'" não é uma das 5 do DRE'});
+    else if(temPares&&subRaw&&!parValido[cat+'›'+subRaw])dreConferir.push({p:p,motivo:'Subcategoria "'+subRaw+'" não pertence a "'+cat+'" na aba Categorias'});
     if(pago)despEmpPorCatMes[cat][k]+=parseFloat(p.Valor||0);else despEmpPlanPorCatMes[cat][k]+=parseFloat(p.Valor||0);
     if(subRaw){
       if(!subEmpPorCatMes[cat])subEmpPorCatMes[cat]={};
@@ -2028,7 +2034,7 @@ function renderDREMensal(){
   if(av){
     var h='';
     if(dreNaoCat.length)h+='<div style="margin-bottom:6px;">⚠ <b>'+dreNaoCat.length+' lançamento(s) em "Não categorizado"</b> — clique na linha da tabela pra ver quais. Corrija a Categoria na aba Pagamentos (linha indicada).</div>';
-    if(dreConferir.length)h+='<div>⚠ <b>'+dreConferir.length+' lançamento(s) do Pessoal com categoria da Empresa</b> (já contam no Pessoal, mas a categoria está errada):'+tabelaLinhasDRE(dreConferir)+'</div>';
+    if(dreConferir.length)h+='<div>⚠ <b>'+dreConferir.length+' lançamento(s) com Categoria/Subcategoria fora do plano da aba Categorias</b> (contam no total da categoria, mas o detalhe está errado):'+tabelaLinhasDRE(dreConferir)+'</div>';
     av.innerHTML=h;av.style.display=h?'block':'none';
   }
 }
