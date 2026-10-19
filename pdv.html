@@ -684,14 +684,8 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
       <button class="pay-chip" data-loja="viveiro" onclick="setGasLoja('viveiro',this)">Viveiro</button>
     </div>
     <div class="form-label" style="margin-bottom:8px;">Categoria</div>
-    <div class="cat-grid">
-      <button class="cat-btn active" onclick="setGasCat('Alimentação',this)">🍽 Alimentação</button>
-      <button class="cat-btn" onclick="setGasCat('Combustível',this)">⛽ Combustível</button>
-      <button class="cat-btn" onclick="setGasCat('Material',this)">📦 Material</button>
-      <button class="cat-btn" onclick="setGasCat('Transporte',this)">🚗 Transporte</button>
-      <button class="cat-btn" onclick="setGasCat('Serviço',this)">🔧 Serviço</button>
-      <button class="cat-btn" onclick="setGasCat('Outro',this)">💸 Outro</button>
-    </div>
+    <div class="cat-grid" id="gas-cat-grid"></div>
+    <div id="gas-cat-info" style="font-size:11px;color:var(--light);margin:-8px 0 14px;">Escolha o tipo da saída</div>
     <div class="form-group">
       <label class="form-label">Descrição</label>
       <input class="form-input" id="gas-desc" type="text" placeholder="Ex: Almoço equipe, gasolina entrega…">
@@ -1019,7 +1013,38 @@ function catEstaColapsada(cat){ return estCatColapsado[cat] !== false; } // defa
 var histPeriodo = 'hoje';
 var encHistFiltro = 'Disponível';
 var encomendaConvertendoIdx = null; // guarda a encomenda sendo convertida em venda, pra marcar como Paga ao finalizar
-var gasCat = 'Alimentação';
+var gasCat = ''; // id da opção escolhida em GAS_OPCOES (sem padrão: precisa escolher)
+/* Opções da tela Saída = categorias da aba Categorias da planilha (as mesmas do DRE).
+   Loja "pessoal" grava Grupo=Pessoal; as demais lojas gravam Grupo=Empresa. */
+var GAS_OPCOES = {
+  Empresa: [
+    {id:'entrega',  rot:'🚚 Entrega / combustível', cat:'Despesas Operacionais - Vendas',          sub:'Transporte/Entrega'},
+    {id:'mercad',   rot:'🌸 Mercadoria / insumo',   cat:'Custos/CMV',                              sub:'Compra de Mercadorias'},
+    {id:'func',     rot:'👥 Funcionário (vale/diária)', cat:'Despesas Operacionais - Administrativas', sub:'Funcionário'},
+    {id:'prolab',   rot:'💼 Pró-labore (retirada)', cat:'Despesas Operacionais - Administrativas', sub:'Pro Labore (retirada)'},
+    {id:'mkt',      rot:'📣 Marketing',             cat:'Despesas Operacionais - Vendas',          sub:'Marketing'},
+    {id:'outros',   rot:'🔧 Outros da loja',        cat:'Despesas Operacionais - Administrativas', sub:'Outros'}
+  ],
+  Pessoal: [
+    {id:'p_alim',   rot:'🍽 Alimentação', cat:'Despesas', sub:'Alimentação'},
+    {id:'p_transp', rot:'🚗 Transporte',  cat:'Despesas', sub:'Transporte'},
+    {id:'p_saude',  rot:'💊 Saúde',       cat:'Despesas', sub:'Saude'},
+    {id:'p_casa',   rot:'🏠 Casa',        cat:'Despesas', sub:'Moradia'},
+    {id:'p_lazer',  rot:'🎈 Lazer',       cat:'Despesas', sub:'Lazer'},
+    {id:'p_outros', rot:'💸 Outros',      cat:'Despesas', sub:'Outros'}
+  ]
+};
+function gasGrupo(){ return (gasLoja||sessaoLoja||pdvLoja)==='pessoal' ? 'Pessoal' : 'Empresa'; }
+function gasOpcao(){ return (GAS_OPCOES[gasGrupo()]||[]).find(function(o){return o.id===gasCat;})||null; }
+function renderGasCats(){
+  var el=document.getElementById('gas-cat-grid'); if(!el) return;
+  if(!gasOpcao()) gasCat='';
+  el.innerHTML=GAS_OPCOES[gasGrupo()].map(function(o){
+    return '<button type="button" class="cat-btn'+(o.id===gasCat?' active':'')+'" onclick="setGasCat(\''+o.id+'\',this)">'+o.rot+'</button>';
+  }).join('');
+  var o=gasOpcao(), inf=document.getElementById('gas-cat-info');
+  if(inf) inf.textContent = o ? ('Vai para o DRE como: '+gasGrupo()+' › '+o.cat+' › '+o.sub) : 'Escolha o tipo da saída';
+}
 var gasPag = 'Dinheiro';
 var gasLoja = null; // definido em abrirPageGastos()/primeira renderização, default = loja do dispositivo
 var perdaProduto = null;
@@ -3354,12 +3379,13 @@ function setGastosView(v){
   document.getElementById('gas-tab-hist').classList.toggle('active',v==='historico');
   if(v==='historico') renderGastosHist();
 }
-function setGasCat(cat,btn){gasCat=cat;document.querySelectorAll('.cat-btn').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');}
+function setGasCat(id,btn){gasCat=id;renderGasCats();}
 function setGasPag(pag,btn){gasPag=pag;document.querySelectorAll('#gas-pag-chips .pay-chip').forEach(function(b){b.classList.remove('selected');});btn.classList.add('selected');}
 function setGasLoja(loja,btn){
   gasLoja=loja;
   document.querySelectorAll('#gas-loja-chips .pay-chip').forEach(function(b){b.classList.remove('selected');});
   btn.classList.add('selected');
+  renderGasCats();
 }
 function initGasLoja(){
   // Default = loja da sessão (aberta no caixa), mas o usuário pode trocar por lançamento
@@ -3367,12 +3393,16 @@ function initGasLoja(){
   document.querySelectorAll('#gas-loja-chips .pay-chip').forEach(function(b){
     b.classList.toggle('selected', b.getAttribute('data-loja')===gasLoja);
   });
+  renderGasCats();
 }
 
 async function salvarGasto(){
-  var desc  = document.getElementById('gas-desc').value.trim()||gasCat;
+  var opc = gasOpcao();
+  if(!opc){showToast('Escolha o tipo da saída',false,'warn');return;}
+  var desc  = document.getElementById('gas-desc').value.trim()||opc.sub;
   var valor = parseFloat(document.getElementById('gas-valor').value)||0;
   if(!valor){showToast('Informe o valor',false,'warn');return;}
+  var grupoGasto = gasGrupo();
 
   var togEst = document.getElementById('tog-gas-est').classList.contains('on');
   var produto = togEst?document.getElementById('gas-est-produto').value.trim():'';
@@ -3385,7 +3415,7 @@ async function salvarGasto(){
   var ok = await enviarParaSheets({
     tipo:'gasto', loja:lojaGastoUsada,
     data:new Date().toLocaleDateString('pt-BR'),
-    descricao:desc, categoria:gasCat, valor:valor,
+    descricao:desc, categoria:opc.cat, subcategoria:opc.sub, grupo:grupoGasto, valor:valor,
     formaPagamento:gasPag,
     entraEstoque:togEst?'Sim':'Nao',
     produto:produto, qtdEstoque:qtdEst, valorVenda:valorVenda,
@@ -3395,14 +3425,14 @@ async function salvarGasto(){
 
   if(ok){
     var hora=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-    gastosDia.push({desc:desc,valor:valor,cat:gasCat,pag:gasPag,est:togEst,produto:produto,qtd:qtdEst,hora:hora});
+    gastosDia.push({desc:desc,valor:valor,cat:opc.sub,pag:gasPag,est:togEst,produto:produto,qtd:qtdEst,hora:hora});
     showToast('Gasto registrado!');
     document.getElementById('gas-desc').value='';
     document.getElementById('gas-valor').value='';
     document.getElementById('gas-est-produto').value='';
     document.getElementById('gas-est-qtd').value='';
     document.getElementById('gas-est-venda').value='';
-    gasLoja = sessaoLoja || pdvLoja; initGasLoja(); // volta pro padrão da sessão após lançar
+    gasLoja = sessaoLoja || pdvLoja; gasCat = ''; initGasLoja(); // volta pro padrão da sessão e obriga escolher o tipo de novo
     // Se entra no estoque: dispara também ajuste_estoque para garantir
     if(togEst && produto && qtdEst > 0) {
       var ep = estoque.find(function(x){return x.Nome===produto;});
@@ -3422,7 +3452,7 @@ async function salvarGasto(){
         // Produto não existe no estoque local — cria via upsert
         await enviarParaSheets({
           tipo:'upsert_produto', loja:lojaGastoUsada,
-          nome:produto, categoria:gasCat,
+          nome:produto, categoria:opc.sub,
           emoji:'📦', qtd:qtdEst,
           precoCusto:0, precoVenda:valorVenda,
           fornecedor:'', alertaMinimo:5, lote:'',

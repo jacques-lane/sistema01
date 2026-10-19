@@ -389,10 +389,11 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
           </select>
         </div><div class="bc" id="ch-desp-sub"><div class="empty">Selecione uma categoria</div></div></div>
       </div>
-      <div class="cc">
-        <div class="ch"><div><div class="ct">DRE — Visão completa</div><div class="csb">Empresa (DRE formal), mês a mês desde jul/2026 · clique numa linha com ▸ pra detalhar · valores esmaecidos = meta ou conta ainda não paga (planejado) · respeita a loja selecionada</div></div>
+      <div class="cc" style="margin-bottom:20px;">
+        <div class="ch"><div><div class="ct">DRE — Visão completa</div><div class="csb">Empresa (DRE formal), mês a mês desde jul/2026 · respeita o período e a loja selecionados · clique numa linha com ▸ pra detalhar · valores esmaecidos = meta ou conta ainda não paga (planejado)</div></div>
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
             <button id="btn-dre-regime" onclick="toggleDreRegime()" title="Caixa = mês em que o dinheiro sai (vencimento). Competência = mês em que a compra foi feita (cartão de crédito entra no mês da compra)." style="padding:5px 10px;background:#fff;color:var(--mid);border:1px solid var(--border);border-radius:8px;font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;">📅 Por caixa</button>
+            <button onclick="toggleDreRegras()" title="Como cada número do DRE é calculado" style="padding:5px 10px;background:#fff;color:var(--mid);border:1px solid var(--border);border-radius:8px;font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;">ℹ️ Regras</button>
             <button id="btn-dre-pessoal" onclick="toggleDrePessoal()" style="padding:5px 10px;background:#fff;color:var(--mid);border:1px solid var(--border);border-radius:8px;font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;">👤 Ver Pessoal</button>
             <input type="month" id="meta-mes" class="fi-sm" style="width:120px;font-size:11px;padding:5px 8px;">
             <input type="number" id="meta-valor" placeholder="Meta R$" class="fi-sm" style="width:90px;font-size:11px;padding:5px 8px;">
@@ -400,10 +401,25 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
           </div>
         </div>
         <div class="csb" style="margin:-6px 0 10px;">Por padrão mostra só as lojas da empresa (Cambuci e Juquiá). Clique em "👤 Ver Pessoal" pra alternar e ver o resumo Pessoal separado.</div>
+        <div id="dre-regras" style="display:none;background:var(--cream);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;font-size:12px;line-height:1.55;color:var(--dark);">
+          <b>Como o DRE é calculado</b> (todas as regras — não existe nenhuma outra no código)
+          <ol style="margin:6px 0 0 18px;padding:0;">
+            <li><b>Empresa ou Pessoal:</b> decide a coluna <b>Grupo</b> da aba Pagamentos. Grupo vazio → decide a <b>Loja</b> ("pessoal" = Pessoal; as demais = Empresa).</li>
+            <li><b>Empresa:</b> a coluna <b>Categoria</b> precisa ser uma destas 5: Deduções da Receita · Custos/CMV · Despesas Operacionais - Administrativas · Despesas Operacionais - Vendas · Resultado Financeiro. Qualquer outra vai para <b>⚠ Não categorizado</b> (clique na linha pra ver quais e o nº da linha na planilha). O detalhe ▸ de cada categoria é a coluna <b>Subcategoria</b>.</li>
+            <li><b>Pessoal:</b> Categoria deve ser "Despesas"; o detalhe é a Subcategoria (Alimentação, Moradia, Lazer…). Se vier outra categoria, conta no Pessoal e aparece no aviso abaixo da tabela.</li>
+            <li>Lançamento antigo com Categoria "Compra de Mercadorias" conta como Custos/CMV. Compras antigas da aba Compras também entram como Custos/CMV › Compra de Mercadorias.</li>
+            <li><b>Receita da Empresa</b> = aba Vendas, menos as vendas da loja "pessoal" (essas são Receitas do Pessoal, detalhadas pela Categoria da venda).</li>
+            <li><b>Realizado x planejado:</b> Status "Pago" = realizado. Outro status = planejado (valor esmaecido, não entra no resultado). Na visão <b>Por competência</b>, compra no cartão de crédito conta como realizada mesmo pendente.</li>
+            <li><b>Mês de cada despesa:</b> <i>Por caixa</i> = Vencimento. <i>Por competência</i> = data da compra, só para cartão (Forma CartaoC6/CartaoItau ou itens "Fatura C6/Itau/Maga - …"): coluna Data se até 75 dias antes do vencimento → senão o "dd/mm" no fim da descrição → senão 1 mês antes do vencimento. Os demais lançamentos usam o Vencimento.</li>
+            <li><b>Período e loja:</b> respeita o filtro de período (corta pelo dia, 1 coluna por mês, a partir de jul/2026) e as lojas selecionadas.</li>
+            <li><b>Fora do DRE:</b> aba Gastos antiga (já copiada em Pagamentos) e os espelhos automáticos antigos de compra no cartão (Observação "Gerado automaticamente da compra", sem Tipo), pra não contar em dobro.</li>
+          </ol>
+        </div>
         <div class="tw"><table class="dt">
           <thead><tr id="tb-dremensal-head"><th>Categoria</th></tr></thead>
           <tbody id="tb-dremensal"></tbody>
         </table></div>
+        <div id="dre-avisos" style="display:none;margin-top:10px;background:#FFF6E0;border:1px solid #F0D58C;border-radius:10px;padding:10px 12px;font-size:12px;"></div>
       </div>
       <div class="cc">
         <div class="ch"><div><div class="ct">Balanço Patrimonial</div><div class="csb">Ativo × Passivo × Patrimônio Líquido · saldos de banco/imobilizado/empréstimos/capital vêm da aba Patrimonio (lançamento manual) · visão da empresa toda, não filtra por loja</div></div></div>
@@ -1738,8 +1754,8 @@ function renderFinanceiro(){
 /* ── DRE MENSAL (Receita de Vendas x Despesas por Categoria da aba Pagamentos) ──
    Categorias fixas, pra padronizar o lançamento (ver também o <select id="fs-cat">
    e a validação de dados na planilha, coluna Categoria da aba Pagamentos).
-   Ignora o filtro de período (mostra todos os meses com dado), mas respeita a loja
-   selecionada — mesmo padrão do gLojaOnly() usado em "Próximos vencimentos". */
+   Respeita o filtro de período (corta pelo dia; 1 coluna por mês) e a loja
+   selecionada (via gLojaOnly + dentroPer, não usa gDL porque a data depende do regime). */
 var dreExpand={};
 function toggleDreExpand(key){dreExpand[key]=!dreExpand[key];renderDREMensal();}
 
@@ -1755,6 +1771,7 @@ function ehMirrorCompraLegado(p){
   return !p.Tipo && String(p.Observacao||'').indexOf('Gerado automaticamente da compra')===0;
 }
 function pagtosFundidos(){
+  (D.pagamentos||[]).forEach(function(p,i){p._linha=i+2;}); // nº da linha na aba Pagamentos (cabeçalho = linha 1)
   var pagLimpo=(D.pagamentos||[]).filter(function(p){return !ehMirrorCompraLegado(p);});
   var comprasNorm=(D.compras||[]).map(function(c){
     return {Vencimento:c.Data,Loja:c.Loja,Descricao:(c.Fornecedor||'—')+(c.Produto?' — '+c.Produto:''),Categoria:'Custos/CMV',Subcategoria:'Compra de Mercadorias',
@@ -1831,8 +1848,14 @@ function renderDREMensal(){
   atualizarBtnRegime();
   var thead=document.getElementById('tb-dremensal-head'),tbody=document.getElementById('tb-dremensal');
   if(!tbody)return;
-  var vendas=gLojaOnly(D.vendas),pagtos=gLojaOnly(pagtosFundidos()),metas=gLojaOnly(D.metas);
   function chaveMes(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+  // Filtro de período global (Hoje/Mês/3m/12m/Ano/Personalizado): corta pelo DIA.
+  // Despesas usam a data do regime escolhido (caixa = vencimento; competência = data da compra).
+  function dentroPer(d){if(!d)return false;if(perDe&&d.getTime()<perDe.getTime())return false;if(perAte&&d.getTime()>perAte.getTime())return false;return true;}
+  var kDe=perDe?chaveMes(perDe):'',kAte=perAte?chaveMes(perAte):'9999-12';
+  var vendas=gLojaOnly(D.vendas).filter(function(v){return dentroPer(parsePtD(v.Data));});
+  var pagtos=gLojaOnly(pagtosFundidos()).filter(function(p){return dentroPer(dataDRE(p));});
+  var metas=gLojaOnly(D.metas).filter(function(m){return m.AnoMes&&m.AnoMes>=kDe&&m.AnoMes<=kAte;});
   var DRE_INICIO='2026-07';
   var mesesSet={};
   vendas.forEach(function(v){var d=parsePtD(v.Data);if(d){var k=chaveMes(d);if(k>=DRE_INICIO)mesesSet[k]=true;}});
@@ -1841,7 +1864,7 @@ function renderDREMensal(){
   var meses=Object.keys(mesesSet).sort();
   if(!meses.length){
     if(thead)thead.innerHTML='<th>DRE</th>';
-    tbody.innerHTML='<tr><td><div class="empty">Sem dados a partir de jul/2026</div></td></tr>';
+    tbody.innerHTML='<tr><td><div class="empty">Sem dados no período selecionado (a DRE começa em jul/2026)</div></td></tr>';
     return;
   }
   function nomeMes(k){var p=k.split('-');var n=MESES_PT[parseInt(p[1],10)-1]||'';return n.charAt(0).toUpperCase()+n.slice(1)+'/'+p[0].slice(2);}
@@ -1880,14 +1903,17 @@ function renderDREMensal(){
 
   // ── Despesas Pessoal ──
   var despPesPorMes=zeroMap(),despPesPlanPorMes=zeroMap(),subPes={};
+  var dreNaoCat=[],dreConferir=[]; // linhas a corrigir (mostradas na tela, com nº da linha da planilha)
 
   pagtos.forEach(function(p){
     var d=dataDRE(p);if(!d)return;var k=chaveMes(d);if(!(k in receitaPorMes))return;
-    var grp=p.Grupo||'';
+    // Regra 1: Grupo decide Empresa x Pessoal. Grupo vazio → pela loja (loja "pessoal" = Pessoal; demais = Empresa).
+    var grp=String(p.Grupo||'').trim()||(lSlug(p.Loja||'')==='pessoal'?'Pessoal':'Empresa');
     var catRaw=String(p.Categoria||'').trim();
     var subRaw=String(p.Subcategoria||'').trim();
     var pago=pagoDRE(p);
     if(grp==='Pessoal'){
+      if(catRaw!=='Despesas')dreConferir.push({p:p,motivo:'Grupo Pessoal com Categoria "'+(catRaw||'vazia')+'" (deveria ser "Despesas")'});
       if(pago)despPesPorMes[k]+=parseFloat(p.Valor||0);else despPesPlanPorMes[k]+=parseFloat(p.Valor||0);
       if(subRaw){if(!subPes[subRaw])subPes[subRaw]=zeroMap();subPes[subRaw][k]+=parseFloat(p.Valor||0);}
       return;
@@ -1896,6 +1922,7 @@ function renderDREMensal(){
     // 'Compra de Mercadorias' (gravada pelas compras do PDV/Dashboard) é subcategoria de Custos/CMV
     if(catRaw==='Compra de Mercadorias'){catRaw=CAT_CMV;if(!subRaw)subRaw='Compra de Mercadorias';}
     var cat=TODAS_EMP.indexOf(catRaw)>=0?catRaw:'Não categorizado';
+    if(cat==='Não categorizado')dreNaoCat.push({p:p,motivo:'Categoria "'+(catRaw||'vazia')+'" não é uma das 5 do DRE'});
     if(pago)despEmpPorCatMes[cat][k]+=parseFloat(p.Valor||0);else despEmpPlanPorCatMes[cat][k]+=parseFloat(p.Valor||0);
     if(subRaw){
       if(!subEmpPorCatMes[cat])subEmpPorCatMes[cat]={};
@@ -1955,7 +1982,12 @@ function renderDREMensal(){
 
   linhas+=linhaCategoria(CAT_FIN);
   var temNaoCat=meses.some(function(k){return(despEmpPorCatMes['Não categorizado'][k]||0)>0||(despEmpPlanPorCatMes['Não categorizado'][k]||0)>0;});
-  if(temNaoCat)linhas+=linhaCategoria('Não categorizado');
+  if(temNaoCat){
+    delete subEmpPorCatMes['Não categorizado']; // aqui o detalhe é a lista de linhas, não subcategoria
+    var aNC=!!dreExpand['naocat'];
+    linhas+=linhaCategoria('Não categorizado').replace('<tr><td>Não categorizado','<tr style="cursor:pointer;background:#FFF6E0;" onclick="toggleDreExpand(\'naocat\')"><td>'+(aNC?'▾ ':'▸ ')+'⚠ Não categorizado ('+dreNaoCat.length+')');
+    if(aNC)linhas+='<tr><td colspan="'+(meses.length+1)+'" style="background:#FFF6E0;">'+tabelaLinhasDRE(dreNaoCat)+'</td></tr>';
+  }
   var resLiqEmpPorMes=zeroMap();
   meses.forEach(function(k){resLiqEmpPorMes[k]=resOpPorMes[k]-(despEmpPorCatMes[CAT_FIN][k]||0)-(despEmpPorCatMes['Não categorizado'][k]||0);});
   linhas+=linhaSubtotal('= Resultado Líquido (Empresa)',resLiqEmpPorMes,true);
@@ -1992,7 +2024,19 @@ function renderDREMensal(){
   }
 
   tbody.innerHTML=linhas;
+  var av=document.getElementById('dre-avisos');
+  if(av){
+    var h='';
+    if(dreNaoCat.length)h+='<div style="margin-bottom:6px;">⚠ <b>'+dreNaoCat.length+' lançamento(s) em "Não categorizado"</b> — clique na linha da tabela pra ver quais. Corrija a Categoria na aba Pagamentos (linha indicada).</div>';
+    if(dreConferir.length)h+='<div>⚠ <b>'+dreConferir.length+' lançamento(s) do Pessoal com categoria da Empresa</b> (já contam no Pessoal, mas a categoria está errada):'+tabelaLinhasDRE(dreConferir)+'</div>';
+    av.innerHTML=h;av.style.display=h?'block':'none';
+  }
 }
+function tabelaLinhasDRE(lista){
+  return '<table style="width:100%;font-size:11px;margin-top:6px;border-collapse:collapse;"><tr style="color:var(--mid);text-align:left;"><th>Linha</th><th>Data (DRE)</th><th>Loja</th><th>Descrição</th><th>Grupo</th><th>Categoria</th><th style="text-align:right">Valor</th><th>Problema</th></tr>'+
+    lista.map(function(x){var p=x.p,d=dataDRE(p);return '<tr style="border-top:1px solid var(--border);"><td>'+(p._linha?p._linha:'aba Compras')+'</td><td>'+(d?fmtDateBR(d):'—')+'</td><td>'+esc(p.Loja||'')+'</td><td>'+esc(p.Descricao||'')+'</td><td>'+esc(p.Grupo||'(vazio)')+'</td><td>'+esc(p.Categoria||'(vazia)')+'</td><td style="text-align:right">'+fmt(parseFloat(p.Valor||0))+'</td><td style="color:var(--red)">'+esc(x.motivo)+'</td></tr>';}).join('')+'</table>';
+}
+function toggleDreRegras(){var el=document.getElementById('dre-regras');if(el)el.style.display=el.style.display==='none'?'block':'none';}
 var dreShowPessoal=false;
 function toggleDrePessoal(){
   dreShowPessoal=!dreShowPessoal;
