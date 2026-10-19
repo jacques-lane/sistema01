@@ -410,7 +410,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
             <li><b>Custos/CMV</b> = tudo que é preciso para a mercadoria chegar à loja: a compra (Compra de Mercadorias) e o frete/viagem de compra (combustível, pedágio e lanche da ida ao Ceagesp). Entrega para cliente é Desp. Op. Vendas › Transporte/Entrega.</li>
             <li>Lançamento antigo com Categoria "Compra de Mercadorias" conta como Custos/CMV. Compras antigas da aba Compras também entram como Custos/CMV › Compra de Mercadorias.</li>
             <li><b>Receita da Empresa</b> = aba Vendas, menos as vendas da loja "pessoal" (essas são Receitas do Pessoal, detalhadas pela Categoria da venda).</li>
-            <li><b>Realizado x planejado:</b> Status "Pago" = realizado. Outro status = planejado (valor esmaecido, não entra no resultado). Na visão <b>Por competência</b>, compra no cartão de crédito conta como realizada mesmo pendente.</li>
+            <li><b>Realizado x planejado:</b> Status "Pago" = realizado. Outro status = planejado (valor esmaecido, não entra no resultado). Na visão <b>Por competência</b>, compra no cartão de crédito conta como realizada mesmo pendente — desde que a data da compra (competência) já tenha passado; data futura é sempre planejado.</li>
             <li><b>Mês de cada despesa:</b> <i>Por caixa</i> = Vencimento. <i>Por competência</i> = data da compra, só para cartão (Forma CartaoC6/CartaoItau ou itens "Fatura C6/Itau/Maga - …"): coluna Data se até 75 dias antes do vencimento → senão o "dd/mm" no fim da descrição → senão 1 mês antes do vencimento. Os demais lançamentos usam o Vencimento.</li>
             <li><b>Período e loja:</b> respeita o filtro de período (corta pelo dia, 1 coluna por mês, a partir de jul/2026) e as lojas selecionadas.</li>
             <li><b>Fora do DRE:</b> aba Gastos antiga (já copiada em Pagamentos) e os espelhos automáticos antigos de compra no cartão (Observação "Gerado automaticamente da compra", sem Tipo), pra não contar em dobro.</li>
@@ -1833,7 +1833,14 @@ function dataCompetencia(p){
   return new Date(v.getFullYear(),v.getMonth()-1,Math.min(v.getDate(),28));
 }
 function dataDRE(p){return dreRegime==='competencia'?dataCompetencia(p):parsePtD(p.Vencimento);}
-function pagoDRE(p){return (p.Status||'').toLowerCase()==='pago'||(dreRegime==='competencia'&&ehLancCartao(p));}
+function pagoDRE(p){
+  if((p.Status||'').toLowerCase()==='pago')return true;
+  // Competência: compra no cartão já feita conta como realizada (só o pagamento é futuro).
+  // Data de competência depois de hoje = ainda não aconteceu → planejado.
+  if(dreRegime!=='competencia'||!ehLancCartao(p))return false;
+  var d=dataCompetencia(p),hoje=new Date();hoje.setHours(23,59,59,999);
+  return !!d&&d.getTime()<=hoje.getTime();
+}
 function atualizarBtnRegime(){
   var b=document.getElementById('btn-dre-regime');if(!b)return;
   var comp=dreRegime==='competencia';
