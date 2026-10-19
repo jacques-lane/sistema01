@@ -471,7 +471,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 
     <!-- SAÍDAS -->
     <div id="sec-saidas" class="section">
-      <div style="display:flex;justify-content:flex-end;margin-bottom:16px;gap:8px;"><button class="btn-l" onclick="abMSai()">+ Lançar saída</button></div>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:16px;gap:8px;"><button class="btn-l" onclick="abMFatura()" title="Marca como pagas todas as compras de uma fatura de cartão">💳 Pagar fatura do cartão</button><button class="btn-l" onclick="abMSai()">+ Lançar saída</button></div>
       <div class="kgrid">
         <div class="kpi rd"><div class="ki">💸</div><div class="kl">Total saídas</div><div class="kv rd" id="sk-tot">—</div></div>
         <div class="kpi go"><div class="ki">🛍️</div><div class="kl">Gastos</div><div class="kv go" id="sk-gst">—</div></div>
@@ -748,6 +748,16 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 <div class="fg2"><div class="fg"><label class="fl">Forma de pagamento</label><select class="fsl" id="fe-pag"><option>Pix</option><option>Dinheiro</option><option>Transferência</option><option>Crédito</option><option>Débito</option><option>Outro</option></select></div><div class="fg"><label class="fl">Operador</label><input class="fi" id="fe-op" type="text" placeholder="Seu nome"></div></div>
 <div class="fmsg" id="fm-ent"></div><div class="mft"><button class="btn-cn" onclick="fM('entrada')">Cancelar</button><button class="btn-sb" id="btn-fent" onclick="subEnt()"><div class="msp" id="sp-ent"></div>Salvar recebimento</button></div></div></div>
 
+<div class="mov" id="m-fatura" onclick="cMov(event,'m-fatura')"><div class="mo" style="max-width:720px;"><button class="mc" onclick="fM('fatura')">×</button>
+<div class="mt">💳 Pagar fatura do cartão</div>
+<div class="mst">Pagar a fatura não é uma despesa nova: as compras já estão lançadas, uma por linha. Aqui você marca como <b>Pago</b> todas as compras daquela fatura de uma vez. A soma tem que bater com o valor da fatura.</div>
+<div class="fg2"><div class="fg"><label class="fl">Cartão</label><select class="fsl" id="fat-cartao" onchange="fatPopVenc()"></select></div>
+<div class="fg"><label class="fl">Vencimento da fatura</label><select class="fsl" id="fat-venc" onchange="fatRender()"></select></div></div>
+<div class="fg"><label class="fl">Valor da fatura (do PDF/app do banco)</label><input class="fi" id="fat-valor" type="number" step="0.01" placeholder="Ex: 6324,89" oninput="fatRender()"></div>
+<div id="fat-resumo" style="font-size:12px;margin:6px 0 10px;"></div>
+<div id="fat-lista" style="max-height:42vh;overflow:auto;border:1px solid var(--border);border-radius:8px;"></div>
+<div class="fmsg" id="fm-fat"></div>
+<div class="mft"><button class="btn-cn" onclick="fM('fatura')">Cancelar</button><button class="btn-sb" id="btn-fat" onclick="confirmarFatura()">Marcar como pagas</button></div></div></div>
 <div class="mov" id="m-saida" onclick="cMov(event,'m-saida')"><div class="mo"><button class="mc" onclick="fM('saida')">×</button>
 <div class="mt">Lançar saída</div><div class="mst">Gasto, compra ou pagamento.</div>
 <div class="fg"><label class="fl">Tipo *</label><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="fbtn active" id="st-g" onclick="setST('gasto',this)">Gasto</button><button class="fbtn" id="st-c" onclick="setST('compra',this)">Compra</button><button class="fbtn" id="st-p" onclick="setST('pagamento',this)">Pagamento</button></div></div>
@@ -3463,6 +3473,66 @@ function togEP(){var t=document.getElementById('tog-ep');t.classList.toggle('on'
 async function subEnc(){var nm=document.getElementById('fenc-nm').value.trim(),tel=document.getElementById('fenc-tel').value.trim(),ds=document.getElementById('fenc-desc').value.trim();if(!nm||!tel||!ds){sFMsg('fm-enc','Preencha nome, telefone e descrição','err');return;}var tp=document.getElementById('tog-ep').classList.contains('on'),ag=new Date();setML('btn-fenc','sp-enc',true);var ok=await apiPost({tipo:'encomenda',loja:document.getElementById('fenc-lj').value,data:ag.toLocaleDateString('pt-BR'),hora:ag.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),telefone:tel,nome:nm,descricao:ds,tipoEncomenda:encTipoM,status:encTipoM==='Agendada'?'Confirmada':'Pendente',dataRetirada:document.getElementById('fenc-dt').value,horaRetirada:document.getElementById('fenc-hr').value,entrega:'Não',endereco:'',recebedor:'',valor:tp?parseFloat(document.getElementById('fenc-val').value)||0:0,formaPagamento:tp?document.getElementById('fenc-pag').value:'',operador:'Jax',cidade:document.getElementById('fenc-lj').value,dispositivo:'Dashboard'});setML('btn-fenc','sp-enc',false);if(ok){showToast('Encomenda registrada!');fM('encomenda');}else sFMsg('fm-enc','Erro ao salvar','err');}
 
 /* ── HELPERS ── */
+
+/* ── PAGAR FATURA DO CARTÃO (19/10/2026) ──
+   Regra (visível no modal): uma compra no cartão = uma linha em Pagamentos com o vencimento da fatura.
+   Pagar a fatura só muda o Status dessas linhas para Pago (pagamento_update linha a linha).
+   Linha da fatura = Forma_Pagamento do cartão OU descrição começando com "Fatura <cartão> -". */
+var FAT_CARTOES=[{id:'C6',nome:'C6',forma:'CartaoC6',re:/^Fatura C6\b/i},{id:'ITAU',nome:'Itaú',forma:'CartaoItau',re:/^Fatura It(a|á)u\b/i},{id:'MAGA',nome:'Magalu',forma:'',re:/^Fatura Maga\b/i}];
+var fatSel=[];
+function fatDoCartao(p,c){return (c.forma&&String(p.Forma_Pagamento||'').trim()===c.forma)||c.re.test(String(p.Descricao||'').trim());}
+function fatCartaoAtual(){var id=document.getElementById('fat-cartao').value;return FAT_CARTOES.filter(function(c){return c.id===id;})[0]||FAT_CARTOES[0];}
+function fatLinhas(){
+  var c=fatCartaoAtual(),v=document.getElementById('fat-venc').value;
+  return (D.pagamentos||[]).map(function(p,i){p._linha=i+2;return p;}).filter(function(p){
+    if(!fatDoCartao(p,c)||ehMirrorCompraLegado(p))return false;var d=parsePtD(p.Vencimento);return d&&fmtDateBR(d)===v;});
+}
+function abMFatura(){
+  var sc=document.getElementById('fat-cartao');
+  sc.innerHTML=FAT_CARTOES.map(function(c){return '<option value="'+c.id+'">'+c.nome+'</option>';}).join('');
+  document.getElementById('fat-valor').value='';document.getElementById('fm-fat').className='fmsg';
+  fatPopVenc();document.getElementById('m-fatura').classList.add('open');
+}
+function fatPopVenc(){
+  var c=fatCartaoAtual(),pend={};
+  (D.pagamentos||[]).forEach(function(p){
+    if(!fatDoCartao(p,c)||ehMirrorCompraLegado(p))return;var d=parsePtD(p.Vencimento);if(!d)return;
+    var k=fmtDateBR(d);if(!pend[k])pend[k]={d:d,n:0};if((p.Status||'').toLowerCase()!=='pago')pend[k].n++;
+  });
+  var ks=Object.keys(pend).filter(function(k){return pend[k].n>0;}).sort(function(a,b){return pend[a].d-pend[b].d;});
+  document.getElementById('fat-venc').innerHTML=ks.length?ks.map(function(k){return '<option value="'+k+'">'+k+' ('+pend[k].n+' pendente'+(pend[k].n>1?'s':'')+')</option>';}).join(''):'<option value="">Nenhuma fatura com compra pendente</option>';
+  fatRender();
+}
+function fatRender(){
+  var L=fatLinhas(),pend=L.filter(function(p){return (p.Status||'').toLowerCase()!=='pago';}),pagas=L.filter(function(p){return (p.Status||'').toLowerCase()==='pago';});
+  fatSel=pend;
+  var sP=pend.reduce(function(s,p){return s+parseFloat(p.Valor||0);},0),sJ=pagas.reduce(function(s,p){return s+parseFloat(p.Valor||0);},0),tot=sP+sJ;
+  var vf=parseFloat(document.getElementById('fat-valor').value||0),h='';
+  h+='Compras pendentes: <b>'+pend.length+'</b> = <b>'+fmt(sP)+'</b>'+(pagas.length?' · já pagas: '+pagas.length+' = '+fmt(sJ):'')+' · total da fatura no sistema: <b>'+fmt(tot)+'</b>';
+  if(vf>0){var dif=Math.round((vf-tot)*100)/100;
+    h+='<div style="margin-top:4px;font-weight:700;color:'+(Math.abs(dif)<0.01?'var(--vf)':'var(--red)')+';">'+(Math.abs(dif)<0.01?'✔ Bate com a fatura':(dif>0?'⚠ Faltam '+fmt(dif)+' em compras lançadas (lance antes de marcar)':'⚠ Sistema tem '+fmt(-dif)+' a mais que a fatura (compra em fatura errada ou duplicada)'))+'</div>';}
+  document.getElementById('fat-resumo').innerHTML=h;
+  document.getElementById('fat-lista').innerHTML=L.length?'<table style="width:100%;font-size:11px;border-collapse:collapse;">'+L.map(function(p){var pg=(p.Status||'').toLowerCase()==='pago';var dc=dataCompetencia(p);
+    return '<tr style="border-top:1px solid var(--border);'+(pg?'opacity:.45;':'')+'"><td style="padding:4px 6px;">'+(dc?fmtDateBR(dc):'—')+'</td><td>'+esc(p.Descricao||'')+'</td><td>'+esc(p.Grupo||lSlug(p.Loja||''))+'</td><td style="text-align:right;padding-right:6px;">'+fmt(parseFloat(p.Valor||0))+'</td><td>'+(pg?'Pago':'Pendente')+'</td></tr>';}).join('')+'</table>':'<div class="empty">Nada nesta fatura</div>';
+  var b=document.getElementById('btn-fat');b.textContent=pend.length?'Marcar '+pend.length+' como pagas':'Nada a marcar';b.disabled=!pend.length;
+}
+async function confirmarFatura(){
+  if(!fatSel.length)return;
+  var b=document.getElementById('btn-fat'),msg=document.getElementById('fm-fat');b.disabled=true;b.textContent='Conferindo a planilha…';
+  // Relê a aba Pagamentos agora e acha cada linha de novo por Descrição+Valor+Vencimento (a planilha pode ter mudado)
+  var j=await apiGetLote(['Pagamentos']),atual=(j&&j.data&&j.data.Pagamentos)||null;
+  if(!atual){msg.className='fmsg err';msg.textContent='Não consegui reler a planilha agora. Tente de novo em 1 minuto.';b.disabled=false;fatRender();return;}
+  var usados={},envios=[],falta=[];
+  fatSel.forEach(function(p){
+    var achou=-1;
+    for(var i=0;i<atual.length;i++){var q=atual[i];if(usados[i])continue;
+      if(String(q.Descricao||'')===String(p.Descricao||'')&&Math.abs(parseFloat(q.Valor||0)-parseFloat(p.Valor||0))<0.01&&fmtDateBR(parsePtD(q.Vencimento))===fmtDateBR(parsePtD(p.Vencimento))&&(q.Status||'').toLowerCase()!=='pago'){achou=i;break;}}
+    if(achou<0){falta.push(p.Descricao);return;}usados[achou]=1;envios.push({p:p,linha:achou+2});
+  });
+  envios.forEach(function(e){e.p.Status='Pago';apiPost({tipo:'pagamento_update',linha:e.linha,status:'Pago'});});
+  fM('fatura');renAll();
+  showToast(envios.length+' compra(s) marcadas como pagas'+(falta.length?' · '+falta.length+' não encontradas na planilha (já pagas ou alteradas)':''),falta.length?'warn':undefined,6000);
+}
 function fM(id){var el=document.getElementById('m-'+id);if(el)el.classList.remove('open');}
 function cMov(e,id){if(e.target===document.getElementById(id))fM(id.replace('m-',''));}
 function sFMsg(id,m,t){var el=document.getElementById(id);if(el){el.textContent=m;el.className='fmsg '+t;}}
