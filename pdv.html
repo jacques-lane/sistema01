@@ -645,6 +645,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <button class="btn btn-primary" style="flex:1;" onclick="solicitarItemListaPDV()">+ Pedir</button>
     <button class="btn btn-outline" style="flex:1;" onclick="abrirEscolhaEncomendaPDV()">📋 Da encomenda</button>
   </div>
+  <button class="btn btn-outline" style="margin:0 0 14px;padding:10px;" onclick="abrirModalCompra()">🛒 Comprar item que não está na lista</button>
   <div id="lista-compras-pdv"><div class="loading-state">Carregando…</div></div>
   <button class="btn" style="background:var(--gold);color:#fff;margin-top:14px;" onclick="fecharListaPDV()">🔒 Fechar lista de hoje</button>
 
@@ -881,17 +882,26 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     </div>
     <div class="form-row" style="margin-bottom:12px;background:var(--bg-soft,#f6f6f2);border-radius:var(--radius-sm);padding:10px;">
       <div class="form-group" style="margin-bottom:0"><label class="form-label">Custo unitário</label><div id="cp-custo-out" style="font-size:17px;font-weight:600;">R$ 0,00</div></div>
-      <div class="form-group" style="margin-bottom:0"><label class="form-label">Venda sugerida (editável)</label><input class="form-input" id="cp-venda" type="number" inputmode="decimal" placeholder="0,00"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Venda sugerida (editável)</label><input class="form-input" id="cp-venda" type="number" inputmode="decimal" placeholder="0,00" oninput="mostrarMargemCompra()"></div>
     </div>
+    <div id="cp-margem" style="font-size:13px;margin:-4px 0 12px;"></div>
     <div class="form-group">
       <label class="form-label">Forma de pagamento</label>
-      <select class="form-input" id="cp-pagamento">
+      <select class="form-input" id="cp-pagamento" onchange="calcBoletosCompra()">
         <option value="Dinheiro">Dinheiro</option>
         <option value="Pix">Pix</option>
         <option value="Debito">Débito</option>
         <option value="CartaoC6">Cartão C6 (fecha 03, vence 10)</option>
         <option value="CartaoItau">Cartão Itaú (fecha 02, vence 09)</option>
+        <option value="Boleto">Boleto</option>
       </select>
+    </div>
+    <div id="cp-boleto-box" style="display:none;background:var(--bg-soft,#f6f6f2);border-radius:var(--radius-sm);padding:10px;margin-bottom:12px;">
+      <div class="form-row" style="margin-bottom:6px;">
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">1º vencimento</label><input class="form-input" id="cp-bol-venc" type="date" oninput="calcBoletosCompra()"></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">Parcelas</label><input class="form-input" id="cp-bol-parc" type="number" inputmode="numeric" min="1" value="1" oninput="calcBoletosCompra()"></div>
+      </div>
+      <div id="cp-bol-resumo" style="font-size:12px;color:#5F5E5A;"></div>
     </div>
     <div class="form-group"><label class="form-label">Observação (opcional)</label><input class="form-input" id="cp-obs" type="text" placeholder="Opcional"></div>
     <button class="btn btn-primary" onclick="salvarCompra()">
@@ -2513,6 +2523,8 @@ function popularSelectListasFechadas() {
   else if (datas.length) { sel.value = datas[0]; renderListaFechadaPDV(datas[0]); }
   else { document.getElementById('lista-fechada-pdv').innerHTML=''; }
 }
+var lfResolvidosAberto = {}; // por lista: "Já comprados" aberto/fechado (começa fechado)
+function toggleResolvidosLF(d) { lfResolvidosAberto[d] = !lfResolvidosAberto[d]; renderListaFechadaPDV(d); }
 var lcGruposFechados = []; // grupos por fornecedor da lista fechada selecionada (itens ainda Pendente)
 function renderListaFechadaPDV(dataSel) {
   var el = document.getElementById('lista-fechada-pdv');
@@ -2566,6 +2578,11 @@ function renderListaFechadaPDV(dataSel) {
     '</div>';
   }).join('');
 
+  // 20/10/2026 (backlog 88): mais recente primeiro (Comprado_Em; empate = último lançado primeiro)
+  resolvidos = resolvidos.map(function(i,idx){return {i:i,idx:idx};}).sort(function(a,b){
+    var da = parsePtDataSimples(a.i.Comprado_Em), db = parsePtDataSimples(b.i.Comprado_Em);
+    return (db - da) || (b.idx - a.idx);
+  }).map(function(x){return x.i;});
   var resolvidosHtml = resolvidos.map(function(i){
     var qtdTxt = i.Quantidade ? ' · '+escapeHtml(String(i.Quantidade)) : '';
     var origTxt = i.Origem==='encomenda' ? ('encomenda'+(i.EncomendaRef?' · '+escapeHtml(String(i.EncomendaRef)):'')) : 'pedido de '+escapeHtml(String(i.Operador||'—'));
@@ -2578,8 +2595,11 @@ function renderListaFechadaPDV(dataSel) {
 
   var html = gruposHtml;
   if (resolvidos.length) {
-    if (gruposHtml) html += '<div style="font-size:12px;font-weight:700;color:#5F5E5A;margin:14px 0 6px;">Já comprados / recusados</div>';
-    html += resolvidosHtml;
+    // 20/10/2026 (backlog 88): começa recolhido; toque no título abre/fecha
+    var aberto = !!lfResolvidosAberto[dataSel];
+    html += '<div style="font-size:12px;font-weight:700;color:#5F5E5A;margin:14px 0 6px;cursor:pointer;display:flex;justify-content:space-between;" onclick="toggleResolvidosLF(\''+String(dataSel).replace(/'/g,"\\'")+'\')">'+
+      '<span>Já comprados / recusados ('+resolvidos.length+')</span><span>'+(aberto?'▲':'▼')+'</span></div>';
+    if (aberto) html += resolvidosHtml;
   }
   el.innerHTML = html || '<div class="empty-state">Nenhum item nessa lista</div>';
 }
@@ -2873,6 +2893,9 @@ function abrirModalCompra(nomeSugerido) {
   document.getElementById('cp-fornecedor').value='Ceagesp';
   document.getElementById('cp-produto-list').innerHTML = (estoque||[]).map(function(p){return '<option value="'+escapeHtml(p.Nome||'')+'">';}).join('');
   document.getElementById('cp-custo-out').textContent='R$ 0,00';
+  document.getElementById('cp-pagamento').value='Dinheiro';
+  document.getElementById('cp-bol-venc').value=''; document.getElementById('cp-bol-parc').value='1';
+  calcBoletosCompra(); mostrarMargemCompra();
   if(nomeSugerido) document.getElementById('cp-produto').value = nomeSugerido;
   mostrarEstoqueCompra();
   document.getElementById('modal-compra').classList.add('open');
@@ -2899,6 +2922,52 @@ function calcCompra() {
   var custo = frac>0 ? vp/frac : 0;
   document.getElementById('cp-custo-out').textContent = 'R$ '+fmt(custo);
   document.getElementById('cp-venda').value = (custo*2.5).toFixed(2);
+  mostrarMargemCompra(); calcBoletosCompra();
+}
+/* 20/10/2026: mostra o lucro do preço de venda digitado/sugerido.
+   Regra (aparece na tela): lucro por unidade = venda − custo;
+   margem = lucro ÷ venda (quanto de cada R$ vendido fica de lucro);
+   markup = venda ÷ custo (o sugerido padrão é 2,5× = margem de 60%). */
+function mostrarMargemCompra() {
+  var el = document.getElementById('cp-margem'); if (!el) return;
+  var vp = parseFloat(document.getElementById('cp-valorpago').value)||0;
+  var frac = parseFloat(document.getElementById('cp-fracionado').value)||0;
+  var custo = frac>0 ? vp/frac : 0;
+  var venda = parseFloat(document.getElementById('cp-venda').value)||0;
+  if (!custo || !venda) { el.innerHTML = ''; return; }
+  var lucro = venda - custo, margem = lucro/venda*100, markup = venda/custo;
+  var cor = margem >= 50 ? '#2E7D32' : (margem >= 30 ? '#B7791F' : '#B33A3A');
+  el.innerHTML = '💰 Lucro por unidade <strong>R$ '+fmt(lucro)+'</strong> · margem <strong style="color:'+cor+';">'+margem.toFixed(0)+'%</strong> da venda · markup '+markup.toFixed(2).replace('.',',')+'×'+
+    '<div style="font-size:11px;color:#5F5E5A;margin-top:2px;">Margem = (venda − custo) ÷ venda. Sugerido padrão: custo × 2,5 = 60% de margem.</div>';
+}
+/* 20/10/2026: compra no boleto -- 1º vencimento + nº de parcelas.
+   Divide o total (qtd × valor pago) em parcelas iguais, uma por mês a partir do
+   1º vencimento (centavos de arredondamento vão na última). O backend
+   (registrar_compra_estoque) já grava 1 linha Pendente em Pagamentos por parcela. */
+function boletosCompra() {
+  if (document.getElementById('cp-pagamento').value !== 'Boleto') return null;
+  var v1 = document.getElementById('cp-bol-venc').value; // yyyy-mm-dd
+  var n = Math.max(1, parseInt(document.getElementById('cp-bol-parc').value)||1);
+  var total = (parseFloat(document.getElementById('cp-quantidade').value)||0) * (parseFloat(document.getElementById('cp-valorpago').value)||0);
+  if (!v1 || !total) return [];
+  var p = v1.split('-'), ano = +p[0], mes = +p[1]-1, dia = +p[2];
+  var parc = Math.floor(total/n*100)/100, out = [];
+  for (var i = 0; i < n; i++) {
+    var ultimoDia = new Date(ano, mes+i+1, 0).getDate();
+    var d = new Date(ano, mes+i, Math.min(dia, ultimoDia));
+    var valor = i === n-1 ? Math.round((total - parc*(n-1))*100)/100 : parc;
+    out.push({vencimento: String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear(), valor: valor});
+  }
+  return out;
+}
+function calcBoletosCompra() {
+  var box = document.getElementById('cp-boleto-box'); if (!box) return;
+  var ehBoleto = document.getElementById('cp-pagamento').value === 'Boleto';
+  box.style.display = ehBoleto ? 'block' : 'none';
+  if (!ehBoleto) return;
+  var b = boletosCompra(), el = document.getElementById('cp-bol-resumo');
+  if (!b || !b.length) { el.textContent = 'Informe quantidade, valor pago e o 1º vencimento.'; return; }
+  el.innerHTML = b.map(function(x,i){ return (i+1)+'ª: '+x.vencimento+' — R$ '+fmt(x.valor); }).join('<br>');
 }
 async function salvarCompra() {
   if (_salvandoCompra) return;
@@ -2908,6 +2977,8 @@ async function salvarCompra() {
   var frac = parseFloat(document.getElementById('cp-fracionado').value)||0;
   if(!produto){showToast('Informe o produto',false,'warn');return;}
   if(!qtd||!vp||!frac){showToast('Preencha quantidade, valor pago e fracionado',false,'warn');return;}
+  var bols = boletosCompra();
+  if (bols && !bols.length) { showToast('Boleto: informe o 1º vencimento',false,'warn'); return; }
   _salvandoCompra = true;
   setLoading('btn-cp-text','btn-cp-text','spinner-cp',true,'Salvando…');
   showToast('Salvando compra… aguarde');
@@ -2926,6 +2997,7 @@ async function salvarCompra() {
     operador: operador||'PDV'
   };
   if (cpListaItemRef) payload.listaItem = cpListaItemRef;
+  if (bols) payload.boletos = bols;
   var ok = await enviarParaSheets(payload);
   setLoading('btn-cp-text','btn-cp-text','spinner-cp',false,'Registrar compra');
   _salvandoCompra = false;

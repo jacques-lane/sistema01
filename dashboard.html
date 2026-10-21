@@ -766,7 +766,9 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 <div class="fg2"><div class="fg"><label class="fl">Valor (R$) *</label><input class="fi" id="fs-val" type="number" min="0" step="0.01" placeholder="0,00"></div><div class="fg" id="fs-cat-wrap"><label class="fl">Categoria</label><select class="fsl" id="fs-cat" onchange="popularSubcatUnificada()"></select></div></div>
 <div class="fg" id="fs-subcat-wrap" style="display:none;"><label class="fl">Subcategoria</label><select class="fsl" id="fs-subcat-sel"></select></div>
 <div class="fg2"><div class="fg"><label class="fl">Pagamento</label><select class="fsl" id="fs-pag" onchange="onFsPagChange()"><option>Dinheiro</option><option>Pix</option><option>Crédito</option><option>Débito</option><option>Boleto</option><option>Transferência</option></select></div><div class="fg" id="fs-st-w"><label class="fl">Status</label><select class="fsl" id="fs-st"><option value="Pago">Pago</option><option value="Pendente">Pendente</option></select></div></div>
-<div id="fs-pag-ex" style="display:none;"><div class="fg"><label class="fl">Vencimento *</label><input class="fi" id="fs-venc" type="date"></div></div>
+<div id="fs-pag-ex" style="display:none;"><div class="fg"><label class="fl">Vencimento *</label><input class="fi" id="fs-venc" type="date" oninput="renFsRec()"></div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--cream);border-radius:8px;margin-bottom:10px;"><div><div style="font-size:13px;">🔁 Repetir todo mês?</div><div style="font-size:11px;color:var(--light);">Cria um pagamento por mês, no mesmo dia do vencimento</div></div><button class="tog" id="tog-fs-rec" onclick="onToggleFsRec()" aria-label="toggle repetir todo mes"></button></div>
+<div id="fs-rec-box" style="display:none;margin-bottom:12px;"><div class="fg"><label class="fl">Quantos meses (contando este)</label><input class="fi" id="fs-rec-n" type="number" min="2" max="36" value="12" oninput="renFsRec()"></div><div id="fs-rec-resumo" style="font-size:12px;color:var(--light);"></div></div></div>
 <div id="fs-cmp-x" style="display:none;"><div class="fg2"><div class="fg"><label class="fl">Fornecedor</label><input class="fi" id="fs-forn" type="text" placeholder="Fornecedor"></div><div class="fg"><label class="fl">Produto</label><input class="fi" id="fs-prod" type="text" placeholder="Nome do produto"></div></div><div class="fg2"><div class="fg"><label class="fl">Qtd</label><input class="fi" id="fs-qtd" type="number" min="1" placeholder="0"></div><div class="fg"><label class="fl">NF / Ref.</label><input class="fi" id="fs-nf" type="text" placeholder="NF-001"></div></div>
 <div id="fs-cp-venc-wrap" style="display:none;"><div class="fg"><label class="fl">Vencimento *</label><input class="fi" id="fs-cp-venc" type="date"></div></div>
 <div id="fs-cp-boleto-toggle-wrap" style="display:none;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--cream);border-radius:8px;"><div><div style="font-size:13px;">Parcelar em vários boletos?</div><div style="font-size:11px;color:var(--light);">Cada parcela pode ter valor e vencimento diferente</div></div><button class="tog" id="tog-fs-boleto" onclick="onToggleFsBoleto()" aria-label="toggle boleto parcelado saida"></button></div></div>
@@ -798,7 +800,8 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
 <div class="fg2"><div class="fg"><label class="fl">Produto *</label><input class="fi" id="cp-prod" type="text" placeholder="Nome do produto" list="cp-prod-list" oninput="onCpProdChange()"><datalist id="cp-prod-list"></datalist><div id="cp-est-info" style="font-size:11px;color:var(--mid);margin-top:4px;"></div></div><div class="fg"><label class="fl">Formato *</label><select class="fsl" id="cp-formato"><option>Caixa</option><option>Maço</option><option>Unidade</option><option>Cuia</option></select></div></div>
 <div class="fg2"><div class="fg"><label class="fl">Fornecedor</label><input class="fi" id="cp-forn" type="text" placeholder="Ex: Ceagesp"></div><div class="fg"><label class="fl">Fracionado (unid. de venda por 1 comprada) *</label><input class="fi" id="cp-frac" type="number" min="1" placeholder="Ex: 8" oninput="calcCpMargem()"></div></div>
 <div class="fg2"><div class="fg"><label class="fl">Quantidade comprada *</label><input class="fi" id="cp-qtd" type="number" min="1" placeholder="0" oninput="calcCpMargem()"></div><div class="fg"><label class="fl">Valor pago (por unidade comprada) (R$) *</label><input class="fi" id="cp-vu" type="number" min="0" step="0.01" placeholder="0,00" oninput="calcCpMargem()"></div></div>
-<div class="fg2"><div class="fg"><label class="fl">Custo unitário (calculado)</label><input class="fi" id="cp-custo" type="text" disabled style="background:var(--cream);"></div><div class="fg"><label class="fl">Venda sugerida (R$, editável)</label><input class="fi" id="cp-venda" type="number" min="0" step="0.01" placeholder="0,00"></div></div>
+<div class="fg2"><div class="fg"><label class="fl">Custo unitário (calculado)</label><input class="fi" id="cp-custo" type="text" disabled style="background:var(--cream);"></div><div class="fg"><label class="fl">Venda sugerida (R$, editável)</label><input class="fi" id="cp-venda" type="number" min="0" step="0.01" placeholder="0,00" oninput="mostrarCpLucro()"></div></div>
+<div id="cp-lucro" style="font-size:12px;margin:-4px 0 10px;"></div>
 <div class="fg2"><div class="fg"><label class="fl">Forma de pagamento</label><select class="fsl" id="cp-pag" onchange="onCpPagChange()"><option value="Dinheiro">Dinheiro</option><option value="Pix">Pix</option><option value="Debito">Débito</option><option value="CartaoC6">Cartão C6 (fecha 03, vence 10)</option><option value="CartaoItau">Cartão Itaú (fecha 02, vence 09)</option><option value="Boleto">Boleto</option></select></div><div class="fg"><label class="fl">Observação</label><input class="fi" id="cp-obs" type="text" placeholder="Opcional"></div></div>
 <div id="cp-venc-wrap" style="display:none;"><div class="fg"><label class="fl">Vencimento *</label><input class="fi" id="cp-venc" type="date"></div></div>
 <div id="cp-boleto-toggle-wrap" style="display:none;margin-bottom:10px;"><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--cream);border-radius:8px;"><div><div style="font-size:13px;">Parcelar em vários boletos?</div><div style="font-size:11px;color:var(--light);">Cada parcela pode ter valor e vencimento diferente</div></div><button class="tog" id="tog-cp-boleto" onclick="onToggleCpBoleto()" aria-label="toggle boleto parcelado compra"></button></div></div>
@@ -2958,6 +2961,18 @@ function calcCpMargem(){
   var custo=frac>0?vp/frac:0;
   document.getElementById('cp-custo').value=custo?fmt(custo):'';
   document.getElementById('cp-venda').value=custo?(custo*2.5).toFixed(2):'';
+  mostrarCpLucro();
+}
+/* 20/10/2026: lucro do preço de venda (mesma regra do PDV, explicada na tela).
+   margem = (venda − custo) ÷ venda; markup = venda ÷ custo; sugerido 2,5× = 60%. */
+function mostrarCpLucro(){
+  var el=document.getElementById('cp-lucro');if(!el)return;
+  var vp=parseFloat(document.getElementById('cp-vu').value)||0,frac=parseFloat(document.getElementById('cp-frac').value)||0;
+  var custo=frac>0?vp/frac:0,venda=parseFloat(document.getElementById('cp-venda').value)||0;
+  if(!custo||!venda){el.innerHTML='';return;}
+  var lucro=venda-custo,mg=lucro/venda*100,cor=mg>=50?'var(--vf)':(mg>=30?'#B7791F':'var(--red)');
+  el.innerHTML='💰 Lucro por unidade <b>'+fmt(lucro)+'</b> · margem <b style="color:'+cor+';">'+mg.toFixed(0)+'%</b> da venda · markup '+(venda/custo).toFixed(2).replace('.',',')+'×'+
+    '<div style="font-size:11px;color:var(--light);">Margem = (venda − custo) ÷ venda. Sugerido padrão: custo × 2,5 = 60% de margem.</div>';
 }
 async function subCompra(){
   var dt=document.getElementById('cp-dt').value,lj=document.getElementById('cp-lj').value,prod=document.getElementById('cp-prod').value.trim();
@@ -3359,7 +3374,7 @@ async function subEnt(){
 }
 
 /* ── MODAL SAÍDA ── */
-function abMSai(){saiTipo='gasto';document.getElementById('fs-dt').value=new Date().toISOString().split('T')[0];['fs-desc','fs-val','fs-obs','fs-forn','fs-prod','fs-qtd','fs-nf','fs-se-p','fs-se-q','fs-venc','fs-cp-venc'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fm-sai').className='fmsg';document.getElementById('fs-cmp-x').style.display='none';document.getElementById('fs-gst-x').style.display='block';document.getElementById('fs-pag-ex').style.display='none';document.getElementById('fs-cat-wrap').style.display='block';document.getElementById('fs-se-x').style.display='none';document.getElementById('tog-se').classList.remove('on');document.getElementById('fs-cp-venc-wrap').style.display='none';document.getElementById('fs-cp-boleto-toggle-wrap').style.display='none';document.getElementById('fs-boletos-box').style.display='none';document.getElementById('tog-fs-boleto').classList.remove('on');fsBoletos=[];document.getElementById('fs-pag').value='Dinheiro';document.querySelectorAll('#m-saida .fbtn').forEach(function(b){b.classList.remove('active');});document.getElementById('st-g').classList.add('active');popularCategoriasUnificada();document.getElementById('m-saida').classList.add('open');}
+function abMSai(){saiTipo='gasto';document.getElementById('fs-dt').value=new Date().toISOString().split('T')[0];['fs-desc','fs-val','fs-obs','fs-forn','fs-prod','fs-qtd','fs-nf','fs-se-p','fs-se-q','fs-venc','fs-cp-venc'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('fm-sai').className='fmsg';document.getElementById('fs-cmp-x').style.display='none';document.getElementById('fs-gst-x').style.display='block';document.getElementById('fs-pag-ex').style.display='none';document.getElementById('fs-cat-wrap').style.display='block';document.getElementById('fs-se-x').style.display='none';document.getElementById('tog-se').classList.remove('on');document.getElementById('fs-cp-venc-wrap').style.display='none';document.getElementById('fs-cp-boleto-toggle-wrap').style.display='none';document.getElementById('fs-boletos-box').style.display='none';document.getElementById('tog-fs-boleto').classList.remove('on');fsBoletos=[];document.getElementById('tog-fs-rec').classList.remove('on');document.getElementById('fs-rec-box').style.display='none';document.getElementById('fs-rec-n').value='12';document.getElementById('fs-pag').value='Dinheiro';document.querySelectorAll('#m-saida .fbtn').forEach(function(b){b.classList.remove('active');});document.getElementById('st-g').classList.add('active');popularCategoriasUnificada();document.getElementById('m-saida').classList.add('open');}
 function setST(t,b){
   /* 30/09/2026: compra de mercadoria tem um fluxo só (registrar_compra_estoque, com fracionamento,
      custo unitário certo e vencimento de cartão). O caminho antigo por aqui mandava o VALOR TOTAL
@@ -3382,6 +3397,24 @@ function onToggleFsBoleto(){
   fsBoletos=[];
   if(on){var vl=parseFloat(document.getElementById('fs-val').value)||0;addBoleto('fs',vl);}
   else renderBoletos('fs');
+}
+/* ── Saída recorrente (20/10/2026, backlog 80) ──
+   Só na aba "Pagamento": cria N pagamentos, um por mês, no mesmo dia do
+   vencimento (dia 31 em mês curto vira o último dia do mês). O 1º usa o
+   Status escolhido; os demais nascem Pendente. Descrição ganha " 01/12",
+   " 02/12"… (mesmo padrão já usado em parcelas, ex.: "Mariah 03/06"). */
+function onToggleFsRec(){var t=document.getElementById('tog-fs-rec');t.classList.toggle('on');document.getElementById('fs-rec-box').style.display=t.classList.contains('on')?'block':'none';renFsRec();}
+function vencsRecorrentes(isoVenc,n){
+  if(!isoVenc)return[];var p=isoVenc.split('-'),a=+p[0],m=+p[1]-1,d=+p[2],out=[];
+  for(var i=0;i<n;i++){var ult=new Date(a,m+i+1,0).getDate();var x=new Date(a,m+i,Math.min(d,ult));
+    out.push(String(x.getDate()).padStart(2,'0')+'/'+String(x.getMonth()+1).padStart(2,'0')+'/'+x.getFullYear());}
+  return out;
+}
+function renFsRec(){
+  var el=document.getElementById('fs-rec-resumo');if(!el)return;
+  var n=Math.min(36,Math.max(2,parseInt(document.getElementById('fs-rec-n').value)||0));
+  var v=vencsRecorrentes(document.getElementById('fs-venc').value||document.getElementById('fs-dt').value,n);
+  el.textContent=v.length?n+' pagamentos: de '+v[0]+' até '+v[v.length-1]:'Informe o vencimento';
 }
 /* ── Categorias unificadas (Gasto/Pagamento) — vindas da aba Categorias ── */
 function categoriasDespesaUnicas(){
@@ -3426,6 +3459,20 @@ async function subSai(){
     }
   }
   else{pl={tipo:'pagamento',loja:lj,vencimento:isoToDateBR(document.getElementById('fs-venc').value||dt),descricao:ds,categoria:ct,subcategoria:subc,valor:vl,status:st,observacao:document.getElementById('fs-obs').value};}
+  if(saiTipo==='pagamento'&&document.getElementById('tog-fs-rec').classList.contains('on')){
+    var nRec=Math.min(36,Math.max(2,parseInt(document.getElementById('fs-rec-n').value)||0));
+    var vRec=vencsRecorrentes(document.getElementById('fs-venc').value||dt,nRec),pad=function(k){return String(k).padStart(2,'0');};
+    setML('btn-fsai','sp-sai',true);var okAll=true;
+    for(var r=0;r<vRec.length;r++){
+      sFMsg('fm-sai','Lançando '+(r+1)+' de '+vRec.length+'…','');
+      var plR=Object.assign({},pl,{vencimento:vRec[r],descricao:ds+' '+pad(r+1)+'/'+pad(vRec.length),status:r===0?st:'Pendente'});
+      if(!(await apiPost(plR)))okAll=false;
+    }
+    setML('btn-fsai','sp-sai',false);
+    if(okAll){showToast(vRec.length+' pagamentos lançados ('+vRec[0]+' a '+vRec[vRec.length-1]+')');fM('saida');if(secAtiva==='saidas')renSai();}
+    else sFMsg('fm-sai','Alguns não gravaram agora — ficaram na fila e serão reenviados','err');
+    return;
+  }
   setML('btn-fsai','sp-sai',true);var ok=await apiPost(pl);setML('btn-fsai','sp-sai',false);
   if(ok){showToast('Saída registrada!');fM('saida');if(secAtiva==='compras')renCompras();if(secAtiva==='saidas')renSai();}else sFMsg('fm-sai','Erro ao salvar','err');
 }
