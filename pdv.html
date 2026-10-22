@@ -952,6 +952,21 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-edit-lista" onclick="closeModal(event,'modal-edit-lista')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="el-titulo">Editar item da lista</div>
+    <p style="font-size:12px;color:var(--mid);margin-bottom:12px;" id="el-sub">—</p>
+    <div class="form-group"><label class="form-label">Item</label><input class="form-input" id="el-item" type="text" list="lc-pdv-item-list"></div>
+    <div class="form-row" style="margin-bottom:12px;">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Quantidade</label><input class="form-input" id="el-qtd" type="text" placeholder="Ex: 1 caixa"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Fornecedor</label><input class="form-input" id="el-forn" type="text" list="lc-pdv-forn-list"></div>
+    </div>
+    <button class="btn btn-primary" onclick="salvarEditLista()"><span id="btn-el-text">Salvar</span><div class="spinner" id="spinner-el"></div></button>
+    <button class="btn btn-outline" onclick="document.getElementById('modal-edit-lista').classList.remove('open')">Cancelar</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-recusa" onclick="closeModal(event,'modal-recusa')">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -2414,6 +2429,7 @@ function renderListaComprasPDV() {
   });
   lcGrupos = ordem.map(function(forn){ return { fornecedor: forn, itens: mapa[forn] }; });
 
+  var LP = 'lc';
   el.innerHTML = lcGrupos.map(function(g, gi){
     var linhas = g.itens.map(function(i, ji){
       var qtdTxt = i.Quantidade ? ' · pedido: '+escapeHtml(String(i.Quantidade)) : '';
@@ -2424,10 +2440,11 @@ function renderListaComprasPDV() {
       return '<div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">'+
         '<div style="flex:1;min-width:110px;"><div style="font-weight:600;font-size:13px;">'+escapeHtml(String(i.Item||''))+qtdTxt+'</div>'+
         '<div style="font-size:10px;color:#5F5E5A;">'+origTxt+'</div></div>'+
-        '<input type="number" min="0" step="1" class="form-input" id="lc-g'+gi+'-it'+ji+'-qtd" value="'+qtdSug+'" placeholder="Qtd" style="width:64px;padding:6px;font-size:12px;">'+
-        '<input type="number" min="0" step="0.01" class="form-input" id="lc-g'+gi+'-it'+ji+'-valor" value="'+custoSug+'" placeholder="R$ unit." style="width:78px;padding:6px;font-size:12px;">'+
+        '<input type="number" min="0" step="1" class="form-input" id="lc-g'+gi+'-it'+ji+'-qtd" value="'+qtdSug+'" placeholder="Qtd" title="Quantas caixas/maços/unidades comprou" oninput="atualizarLinhaLote(\'lc\','+gi+','+ji+')" style="width:56px;padding:6px;font-size:12px;">'+
+        '<input type="number" min="0" step="0.01" class="form-input" id="lc-g'+gi+'-it'+ji+'-valor" value="'+custoSug+'" placeholder="R$ cx" title="Valor pago por caixa/maço/unidade comprada" oninput="atualizarLinhaLote(\'lc\','+gi+','+ji+')" style="width:70px;padding:6px;font-size:12px;"><input type="number" min="1" step="1" class="form-input" id="lc-g'+gi+'-it'+ji+'-frac" value="1" placeholder="un/cx" title="Quantas unidades de venda vêm em cada caixa/maço (1 se vende inteiro)" oninput="atualizarLinhaLote(\'lc\','+gi+','+ji+')" style="width:52px;padding:6px;font-size:12px;">'+
         '<button class="btn btn-primary" style="width:auto;padding:6px 9px;font-size:11px;" title="Comprar este item (caixa/fracionado)" onclick="abrirCompraItemLista(\''+itemEsc+'\',\''+escapeHtml(g.fornecedor).replace(/'/g,"\\'")+'\')">🛒</button>'+
         '<button class="btn btn-outline" style="width:auto;padding:6px 9px;font-size:11px;color:#B33A3A;border-color:#B33A3A;" onclick="abrirModalRecusa(\''+itemEsc+'\')">✕</button>'+
+        '<div id="'+LP+'-g'+gi+'-it'+ji+'-info" style="flex-basis:100%;font-size:11px;color:#5F5E5A;"></div>'+
         '</div>';
     }).join('');
     var fornEsc = escapeHtml(g.fornecedor).replace(/'/g,"\\'");
@@ -2438,16 +2455,22 @@ function renderListaComprasPDV() {
       '</div>'+
       linhas+
       '<div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">'+
-        '<select class="form-input" id="lc-g'+gi+'-pag" style="flex:1;min-width:110px;padding:8px;font-size:13px;">'+
+        '<select class="form-input" id="lc-g'+gi+'-pag" onchange="atualizarTotalLote(\'lc\','+gi+')" style="flex:1;min-width:110px;padding:8px;font-size:13px;">'+
           '<option>Dinheiro</option><option>Pix</option><option>CartaoC6</option><option>CartaoItau</option><option>Boleto</option><option>Transferencia</option>'+
         '</select>'+
         '<button class="btn btn-primary" style="width:auto;padding:9px 16px;font-size:13px;" onclick="darEntradaLote('+gi+')">✅ Dar entrada</button>'+
       '</div>'+
+      '<div id="lc-g'+gi+'-bol" style="display:none;margin-top:8px;"><label style="font-size:12px;font-weight:600;">Vencimento do boleto (um só pra compra toda)</label>'+
+        '<input type="date" class="form-input" id="lc-g'+gi+'-venc" style="padding:8px;font-size:13px;margin-top:4px;"></div>'+
+      '<div id="lc-g'+gi+'-total" style="font-size:12px;color:#5F5E5A;margin-top:6px;"></div>'+
     '</div>';
   }).join('');
+  atualizarTodosLote('lc');
 }
 
 async function darEntradaLote(gi) {
+  var PREF_LOTE = 'lc';
+  var fracLote = function(gi, ji){ return fracLoteDe('lc', gi, ji); };
   var g = lcGrupos[gi];
   if (!g) return;
   var fornInput = document.getElementById('lc-g'+gi+'-forn');
@@ -2463,9 +2486,13 @@ async function darEntradaLote(gi) {
     var valEl = document.getElementById('lc-g'+gi+'-it'+ji+'-valor');
     var qtd = qtdEl ? parseFloat(qtdEl.value)||0 : 0;
     var valorUnit = valEl ? parseFloat(valEl.value)||0 : 0;
+    // 21/10/2026: "un/cx" (fracionado). O estoque entra em UNIDADES DE VENDA e o custo
+    // por unidade = valor da caixa ÷ un/cx. Mandamos já convertido (qtd × un/cx unidades a
+    // valor ÷ un/cx cada) -> o total do lote (qtd × valor da caixa) não muda.
+    var frac = fracLote(gi, ji, qtdEl);
     if (qtd > 0) {
       if (!valorUnit) faltaValor = true;
-      itens.push({nome: i.Item, quantidade: qtd, valorUnit: valorUnit, listaItem: i.Item});
+      itens.push({nome: i.Item, quantidade: qtd * frac, valorUnit: valorUnit / frac, listaItem: i.Item});
     }
   });
 
@@ -2477,6 +2504,12 @@ async function darEntradaLote(gi) {
     formaPagamento: formaPagamento, itens: itens,
     operador: operador||'PDV'
   };
+  // 21/10/2026: boleto único do lote -> vencimento informado (antes ia a data da compra)
+  if (formaPagamento === 'Boleto') {
+    var vencEl = document.getElementById(PREF_LOTE+'-g'+gi+'-venc');
+    if (!vencEl || !vencEl.value) { showToast('Informe o vencimento do boleto', false, 'warn'); return; }
+    var pv = vencEl.value.split('-'); payload.vencimento = pv[2]+'/'+pv[1]+'/'+pv[0];
+  }
   if (_salvandoCompra) return;
   _salvandoCompra = true;
   showToast('Salvando entrada… aguarde');
@@ -2523,6 +2556,62 @@ function popularSelectListasFechadas() {
   else if (datas.length) { sel.value = datas[0]; renderListaFechadaPDV(datas[0]); }
   else { document.getElementById('lista-fechada-pdv').innerHTML=''; }
 }
+/* 21/10/2026: compra em lote com "un/cx" (unidades de venda por caixa) e total do lote.
+   Cada linha mostra custo por unidade e venda sugerida (custo × 2,5, mesma regra do Registrar compra);
+   o rodapé mostra o total do lote (Σ qtd × valor da caixa) e, no Boleto, pede o vencimento
+   do boleto único da compra toda. */
+function fracLoteDe(P, gi, ji) { var el = document.getElementById(P+'-g'+gi+'-it'+ji+'-frac'); return Math.max(1, parseFloat(el && el.value)||1); }
+function atualizarLinhaLote(P, gi, ji) {
+  var q = parseFloat((document.getElementById(P+'-g'+gi+'-it'+ji+'-qtd')||{}).value)||0;
+  var v = parseFloat((document.getElementById(P+'-g'+gi+'-it'+ji+'-valor')||{}).value)||0;
+  var f = fracLoteDe(P, gi, ji), info = document.getElementById(P+'-g'+gi+'-it'+ji+'-info');
+  if (info) info.textContent = (q && v) ? ('= '+(q*f)+' un no estoque · custo R$ '+fmt(v/f)+'/un · venda sugerida R$ '+fmt(v/f*2.5)+' · total R$ '+fmt(q*v)) : '';
+  atualizarTotalLote(P, gi);
+}
+function atualizarTotalLote(P, gi) {
+  var grupos = P === 'lc' ? lcGrupos : lcGruposFechados, g = grupos[gi]; if (!g) return;
+  var tot = 0; g.itens.forEach(function(i, ji){
+    tot += (parseFloat((document.getElementById(P+'-g'+gi+'-it'+ji+'-qtd')||{}).value)||0) * (parseFloat((document.getElementById(P+'-g'+gi+'-it'+ji+'-valor')||{}).value)||0);
+  });
+  var el = document.getElementById(P+'-g'+gi+'-total'); if (el) el.innerHTML = 'Total da compra: <strong>R$ '+fmt(tot)+'</strong>';
+  var pag = document.getElementById(P+'-g'+gi+'-pag'), bol = document.getElementById(P+'-g'+gi+'-bol');
+  if (bol) bol.style.display = (pag && pag.value === 'Boleto') ? 'block' : 'none';
+}
+function atualizarTodosLote(P) {
+  var grupos = P === 'lc' ? lcGrupos : lcGruposFechados;
+  grupos.forEach(function(g, gi){ g.itens.forEach(function(i, ji){ atualizarLinhaLote(P, gi, ji); }); atualizarTotalLote(P, gi); });
+}
+/* 21/10/2026 (backlog 66): editar item PENDENTE de lista fechada ou adicionar item nela.
+   Backend: tipo 'editar_item_lista' (acao editar|adicionar), acha a lista pela data+hora. */
+var elItemOriginal = null;
+function abrirEditLista(item) {
+  var lista = document.getElementById('lc-select-data').value;
+  if (!lista) { showToast('Escolha a lista primeiro', false, 'warn'); return; }
+  elItemOriginal = item;
+  var it = item ? (listaCompras||[]).find(function(x){ return x.ListaData===lista && x.Item===item && (x.Status||'')==='Pendente'; }) : null;
+  document.getElementById('el-titulo').textContent = item ? 'Editar item da lista' : 'Adicionar item na lista';
+  document.getElementById('el-sub').textContent = 'Lista de ' + lista;
+  document.getElementById('el-item').value = it ? (it.Item||'') : '';
+  document.getElementById('el-qtd').value = it ? (it.Quantidade||'') : '';
+  document.getElementById('el-forn').value = it ? (it.Fornecedor||inferirFornecedorItem(it.Item)||'') : '';
+  document.getElementById('modal-edit-lista').classList.add('open');
+}
+async function salvarEditLista() {
+  if (_salvandoCompra) return;
+  var lista = document.getElementById('lc-select-data').value;
+  var item = document.getElementById('el-item').value.trim();
+  if (!item) { showToast('Informe o item', false, 'warn'); return; }
+  var payload = { tipo:'editar_item_lista', acao: elItemOriginal ? 'editar' : 'adicionar', listaData: lista,
+    itemOriginal: elItemOriginal || '', item: item, quantidade: document.getElementById('el-qtd').value.trim(),
+    fornecedor: document.getElementById('el-forn').value.trim(), operador: operador||'PDV' };
+  _salvandoCompra = true;
+  setLoading('btn-el-text','btn-el-text','spinner-el',true,'Salvando…');
+  var ok = await enviarParaSheets(payload);
+  setLoading('btn-el-text','btn-el-text','spinner-el',false,'Salvar');
+  _salvandoCompra = false;
+  if (ok) { showToast(elItemOriginal ? 'Item atualizado!' : 'Item adicionado à lista!'); document.getElementById('modal-edit-lista').classList.remove('open'); carregarListaComprasPDV(); }
+  else showToast('Não salvou — confira se a versão nova do script foi publicada', true);
+}
 var lfResolvidosAberto = {}; // por lista: "Já comprados" aberto/fechado (começa fechado)
 function toggleResolvidosLF(d) { lfResolvidosAberto[d] = !lfResolvidosAberto[d]; renderListaFechadaPDV(d); }
 var lcGruposFechados = []; // grupos por fornecedor da lista fechada selecionada (itens ainda Pendente)
@@ -2546,6 +2635,7 @@ function renderListaFechadaPDV(dataSel) {
   });
   lcGruposFechados = ordem.map(function(forn){ return { fornecedor: forn, itens: mapa[forn] }; });
 
+  var LP = 'lf';
   var gruposHtml = lcGruposFechados.map(function(g, gi){
     var linhas = g.itens.map(function(i, ji){
       var qtdTxt = i.Quantidade ? ' · pedido: '+escapeHtml(String(i.Quantidade)) : '';
@@ -2556,10 +2646,12 @@ function renderListaFechadaPDV(dataSel) {
       return '<div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">'+
         '<div style="flex:1;min-width:110px;"><div style="font-weight:600;font-size:13px;">'+escapeHtml(String(i.Item||''))+qtdTxt+'</div>'+
         '<div style="font-size:10px;color:#5F5E5A;">'+origTxt+'</div></div>'+
-        '<input type="number" min="0" step="1" class="form-input" id="lf-g'+gi+'-it'+ji+'-qtd" value="'+qtdSug+'" placeholder="Qtd" style="width:64px;padding:6px;font-size:12px;">'+
-        '<input type="number" min="0" step="0.01" class="form-input" id="lf-g'+gi+'-it'+ji+'-valor" value="'+custoSug+'" placeholder="R$ unit." style="width:78px;padding:6px;font-size:12px;">'+
+        '<input type="number" min="0" step="1" class="form-input" id="lf-g'+gi+'-it'+ji+'-qtd" value="'+qtdSug+'" placeholder="Qtd" title="Quantas caixas/maços/unidades comprou" oninput="atualizarLinhaLote(\'lf\','+gi+','+ji+')" style="width:56px;padding:6px;font-size:12px;">'+
+        '<input type="number" min="0" step="0.01" class="form-input" id="lf-g'+gi+'-it'+ji+'-valor" value="'+custoSug+'" placeholder="R$ cx" title="Valor pago por caixa/maço/unidade comprada" oninput="atualizarLinhaLote(\'lf\','+gi+','+ji+')" style="width:70px;padding:6px;font-size:12px;"><input type="number" min="1" step="1" class="form-input" id="lf-g'+gi+'-it'+ji+'-frac" value="1" placeholder="un/cx" title="Quantas unidades de venda vêm em cada caixa/maço (1 se vende inteiro)" oninput="atualizarLinhaLote(\'lf\','+gi+','+ji+')" style="width:52px;padding:6px;font-size:12px;">'+
+        '<button class="btn btn-outline" style="width:auto;padding:6px 9px;font-size:11px;" title="Editar item" onclick="abrirEditLista(\''+itemEsc+'\')">✏️</button>'+
         '<button class="btn btn-primary" style="width:auto;padding:6px 9px;font-size:11px;" title="Comprar este item (caixa/fracionado)" onclick="abrirCompraItemLista(\''+itemEsc+'\',\''+escapeHtml(g.fornecedor).replace(/'/g,"\\'")+'\')">🛒</button>'+
         '<button class="btn btn-outline" style="width:auto;padding:6px 9px;font-size:11px;color:#B33A3A;border-color:#B33A3A;" onclick="abrirModalRecusa(\''+itemEsc+'\')">✕</button>'+
+        '<div id="'+LP+'-g'+gi+'-it'+ji+'-info" style="flex-basis:100%;font-size:11px;color:#5F5E5A;"></div>'+
         '</div>';
     }).join('');
     var fornEsc = escapeHtml(g.fornecedor).replace(/'/g,"\\'");
@@ -2570,11 +2662,14 @@ function renderListaFechadaPDV(dataSel) {
       '</div>'+
       linhas+
       '<div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap;">'+
-        '<select class="form-input" id="lf-g'+gi+'-pag" style="flex:1;min-width:110px;padding:8px;font-size:13px;">'+
+        '<select class="form-input" id="lf-g'+gi+'-pag" onchange="atualizarTotalLote(\'lf\','+gi+')" style="flex:1;min-width:110px;padding:8px;font-size:13px;">'+
           '<option>Dinheiro</option><option>Pix</option><option>CartaoC6</option><option>CartaoItau</option><option>Boleto</option><option>Transferencia</option>'+
         '</select>'+
         '<button class="btn btn-primary" style="width:auto;padding:9px 16px;font-size:13px;" onclick="darEntradaLoteFechada('+gi+')">✅ Dar entrada</button>'+
       '</div>'+
+      '<div id="lf-g'+gi+'-bol" style="display:none;margin-top:8px;"><label style="font-size:12px;font-weight:600;">Vencimento do boleto (um só pra compra toda)</label>'+
+        '<input type="date" class="form-input" id="lf-g'+gi+'-venc" style="padding:8px;font-size:13px;margin-top:4px;"></div>'+
+      '<div id="lf-g'+gi+'-total" style="font-size:12px;color:#5F5E5A;margin-top:6px;"></div>'+
     '</div>';
   }).join('');
 
@@ -2593,7 +2688,7 @@ function renderListaFechadaPDV(dataSel) {
       '</div>';
   }).join('');
 
-  var html = gruposHtml;
+  var html = '<button class="btn btn-outline" style="margin:0 0 12px;padding:9px;font-size:13px;" onclick="abrirEditLista(null)">+ Adicionar item nesta lista</button>' + gruposHtml;
   if (resolvidos.length) {
     // 20/10/2026 (backlog 88): começa recolhido; toque no título abre/fecha
     var aberto = !!lfResolvidosAberto[dataSel];
@@ -2602,8 +2697,11 @@ function renderListaFechadaPDV(dataSel) {
     if (aberto) html += resolvidosHtml;
   }
   el.innerHTML = html || '<div class="empty-state">Nenhum item nessa lista</div>';
+  atualizarTodosLote('lf');
 }
 async function darEntradaLoteFechada(gi) {
+  var PREF_LOTE = 'lf';
+  var fracLote = function(gi, ji){ return fracLoteDe('lf', gi, ji); };
   var g = lcGruposFechados[gi];
   if (!g) return;
   var fornInput = document.getElementById('lf-g'+gi+'-forn');
@@ -2619,9 +2717,13 @@ async function darEntradaLoteFechada(gi) {
     var valEl = document.getElementById('lf-g'+gi+'-it'+ji+'-valor');
     var qtd = qtdEl ? parseFloat(qtdEl.value)||0 : 0;
     var valorUnit = valEl ? parseFloat(valEl.value)||0 : 0;
+    // 21/10/2026: "un/cx" (fracionado). O estoque entra em UNIDADES DE VENDA e o custo
+    // por unidade = valor da caixa ÷ un/cx. Mandamos já convertido (qtd × un/cx unidades a
+    // valor ÷ un/cx cada) -> o total do lote (qtd × valor da caixa) não muda.
+    var frac = fracLote(gi, ji, qtdEl);
     if (qtd > 0) {
       if (!valorUnit) faltaValor = true;
-      itens.push({nome: i.Item, quantidade: qtd, valorUnit: valorUnit, listaItem: i.Item});
+      itens.push({nome: i.Item, quantidade: qtd * frac, valorUnit: valorUnit / frac, listaItem: i.Item});
     }
   });
 
@@ -2633,6 +2735,12 @@ async function darEntradaLoteFechada(gi) {
     formaPagamento: formaPagamento, itens: itens,
     operador: operador||'PDV'
   };
+  // 21/10/2026: boleto único do lote -> vencimento informado (antes ia a data da compra)
+  if (formaPagamento === 'Boleto') {
+    var vencEl = document.getElementById(PREF_LOTE+'-g'+gi+'-venc');
+    if (!vencEl || !vencEl.value) { showToast('Informe o vencimento do boleto', false, 'warn'); return; }
+    var pv = vencEl.value.split('-'); payload.vencimento = pv[2]+'/'+pv[1]+'/'+pv[0];
+  }
   if (_salvandoCompra) return;
   _salvandoCompra = true;
   showToast('Salvando entrada… aguarde');
