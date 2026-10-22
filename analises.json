@@ -1,0 +1,29 @@
+[
+ {
+  "id": "precos-markup-2026-10-21",
+  "assunto": "Preços e margem",
+  "titulo": "Produtos abaixo do markup ideal (2,5×)",
+  "data": "21/10/2026",
+  "especialista": "Financeiro",
+  "resumo": "423 de 618 produtos com custo e venda estão abaixo de 2,5×. Quase tudo é regra antiga (2×) ou produto montado (buquê/cesta); só 3 têm prejuízo e são erro de cadastro.",
+  "conteudo": "## Números (aba Estoque, 21/10/2026)\n- 689 produtos cadastrados; 618 têm custo e venda; **423 abaixo de 2,5×** (383 Juquiá, 39 Cambuci).\n- 67 sem custo e 68 sem preço de venda: não entram na conta.\n\n| Faixa de markup | Produtos |\n|---|---|\n| abaixo de 1× (prejuízo) | 3 |\n| 1× a 1,5× | 33 |\n| 1,5× a 2× | 160 |\n| 2× a 2,49× | 227 |\n\n## O que explica\n1. **Regra antiga de 2×:** 100 produtos estão exatamente em 2× (Vasos e Folhagens têm média 2,0×). Foram precificados antes da regra de 2,5×.\n2. **Produtos montados (buquês, cestas, acréscimos):** média de 1,7× a 1,9×. O custo cadastrado é só o insumo e não inclui a montagem, então o markup sobre insumo é naturalmente menor.\n3. **Erros de cadastro (prejuízo aparente):**\n- Fita rosa cetim e Fita vermelha cetim: custo R$ 41,00 (preço do rolo) e venda R$ 2,00 (por uso). O custo precisa ser por unidade de venda.\n- Terra vegetal 5l: custo R$ 20,00 e venda R$ 14,90, prejuízo real. Conferir o custo ou subir o preço.\n4. **Estoque fictício:** produtos feitos sob encomenda têm quantidade 1000/999/100 (ex.: Cesta especial para ele, Buquê van gogh grande, Assinatura semanal). Isso infla o valor do estoque no Balanço.\n\n## Decisões para o Jax\n- Vasos/Folhagens em 2×: subir para 2,5× (+25% no preço) ou manter 2× como regra própria de revenda?\n- Buquês/cestas: definir a regra (ex.: insumos × 2 + valor fixo de montagem) para o sistema sugerir o preço certo.\n- Produtos sob encomenda: zerar a quantidade fictícia (o estoque real deles é zero).\n\n## Decisão (Jax, 21/10/2026)\n- Vasos/Folhagens: **mantém 2×** por enquanto; ajustar conforme as próximas análises.\n- Buquês/cestas: **a Mayse decide** a regra, olhando o que o mercado aceita. O sistema precisa deixar ajustar e visualizar o preço.\n"
+ },
+ {
+  "id": "encomendas-2026-10-21",
+  "assunto": "Encomendas",
+  "titulo": "Situação das encomendas (Juquiá)",
+  "data": "21/10/2026",
+  "especialista": "Programador",
+  "resumo": "25 encomendas: 16 a encomendar (15 com mais de 30 dias), 4 disponíveis paradas há mais de 30 dias, 2 pares duplicados.",
+  "conteudo": "## Números\n- **A encomendar (pendentes): 16**, 15 delas pedidas há mais de 30 dias (desde junho/julho).\n- **Disponível pra retirar: 4**, todas com mais de 30 dias (ex.: Raíssa, orquídea negra, pedido em 05/06).\n- Agendadas: 2 · Finalizadas/canceladas: 3.\n- **Possíveis duplicadas:** Inês (Samambaia americana, 03/09) e Ariadni (assinaturas, 12/10) aparecem 2 vezes.\n- Uma encomenda estava como \"Disponivel\" (sem acento) e não aparecia no filtro \"Disponível\". Agora a tela trata as duas grafias igual.\n\n## O que mudou no PDV\n- As encomendas ficam em seções recolhíveis por situação, com a data do pedido e \"há X dias\" (vermelho acima de 30).\n- Botão 🛒 Lista de compras nas pendentes; mostra \"já na lista\" se já foi.\n- Aviso de possível duplicada.\n- **Bug corrigido:** mudar o status com um filtro ativo alterava a encomenda errada na planilha (usava a posição na lista filtrada).\n\n## Sugestão\nLigar para os clientes das encomendas com mais de 30 dias e cancelar as que não valem mais; cancelar uma de cada duplicada.\n"
+ },
+ {
+  "id": "dre-margens-2026-10-21",
+  "assunto": "DRE e resultado",
+  "titulo": "Margens jul–out/2026 e ajustes de regra",
+  "data": "21/10/2026",
+  "especialista": "Financeiro",
+  "resumo": "Por competência, margem bruta ~56–58% e líquida 24–29% (jul/ago). Corrigidos: parcela lida como data e compra Ada contada 2×.",
+  "conteudo": "## Margens (todas as lojas, por competência)\n| | Julho | Agosto |\n|---|---|---|\n| Margem bruta | 57,7% | 56,3% |\n| Margem líquida | 24,3% | 29,4% |\n\nPor caixa, julho dá só 3,1% de margem bruta porque as compras de junho no cartão caíram na fatura de julho. **Para comparar meses, use Por competência.**\n\n## Correções feitas em 20–21/10\n- A compra Ada Moreira/Chocolates (R$ 626, 11/09) estava contada 2×. A linha da aba Compras foi apagada e o CMV de setembro caiu R$ 626.\n- O sufixo de parcela (\"Cama 05/07\", \"Mac Marketing Site 09/10\") era lido como data na competência. Setembro: Desp. Adm 5.659,39 → 6.036,19; outubro: 8.328,83 → 7.575,23.\n- Faltam limpar à mão as linhas 693 e 696 da aba Pagamentos (dados de uma compra de Mini anturio colados por engano nas colunas I a T).\n"
+ }
+]

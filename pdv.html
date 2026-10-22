@@ -584,13 +584,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
   </div>
 
   <div id="enc-view-historico" style="display:none">
-    <div class="hist-filtros">
-      <button class="hist-filtro" onclick="filtrarEncHist('Todos',this)">Todas</button>
-      <button class="hist-filtro" onclick="filtrarEncHist('Futura',this)">Futuras</button>
-      <button class="hist-filtro" onclick="filtrarEncHist('Agendada',this)">Agendadas</button>
-      <button class="hist-filtro" onclick="filtrarEncHist('Pendente',this)">Pendentes</button>
-      <button class="hist-filtro active" onclick="filtrarEncHist('Disponível',this)">Disponível</button>
-    </div>
+    <input type="text" class="form-input" id="enc-busca" placeholder="Buscar cliente ou produto…" oninput="renderEncHistorico()" style="margin-bottom:10px;">
     <div id="enc-hist-lista"><div class="loading-state">Carregando…</div></div>
   </div>
 </div>
@@ -1098,7 +1092,7 @@ function validarPdv() {
   var url = webhookUrl + '?token=' + encodeURIComponent(tokenSecreto) +
             '&acao=validar_pdv&nome=' + encodeURIComponent(pdvNome) +
             '&loja=' + encodeURIComponent(pdvLoja);
-  fetch(url)
+  fetchComLimite(url, 8000)
     .then(function(r){return r.json();})
     .then(function(d){
       if (d.ativo === false) { mostrarBloqueado(); return; }
@@ -1167,6 +1161,15 @@ function verificarPonto() {
   var hoje = new Date().toLocaleDateString('pt-BR');
   var lojaCheck = localStorage.getItem('mayse_v3_caixaloja') || pdvLoja;
   apiGet('Caixa', 'loja=' + lojaCheck).then(function(d) {
+    // 21/10/2026 (backlog 89): sem resposta do servidor (offline/sinal fraco) e o
+    // aparelho já tem ponto+caixa de hoje -> entra direto. Antes caía na tela de
+    // ponto e pedia pra abrir o caixa de novo (abertura em dobro).
+    if (d._cache && operador && localStorage.getItem('mayse_v3_pontodata') === hoje) {
+      sessaoLoja = localStorage.getItem('mayse_v3_caixaloja') || pdvLoja;
+      atualizarHeaderLoja(); mostrarApp();
+      if (statusAlmocoHoje()) mostrarAlmocoBloqueado();
+      return;
+    }
     var linha = (d.data || []).filter(function(c) { return c.Data === hoje && !c.Hora_Fechamento; }).pop();
     if (linha) {
       operador = linha.Funcionario_Abertura;
@@ -1371,6 +1374,8 @@ function verificarCaixa() {
   var hoje = new Date().toLocaleDateString('pt-BR');
   apiGet('Caixa', 'loja=' + lojaCheck).then(function(d) {
     var linha = (d.data || []).filter(function(c) { return c.Data === hoje && !c.Hora_Fechamento; }).pop();
+    var mk = caixaLocalObter(); // 21/10: sem servidor, vale o caixa aberto neste aparelho hoje
+    if (!linha && d._cache && mk && mk.data === hoje && mk.loja === lojaCheck) linha = {Valor_Abertura: mk.valor};
     if (linha) {
       sessaoLoja = lojaCheck;
       localStorage.setItem('mayse_v3_caixaloja', sessaoLoja);
@@ -1424,12 +1429,26 @@ function abrirFecharCaixa() {
   ]).then(function(res) {
     var dc = res[0], dv = res[1], dg = res[2];
     var linha = (dc.data || []).filter(function(c) { return !c.Hora_Fechamento; })[0];
+    // 21/10/2026 (backlog 89): abertura que ainda não chegou na planilha (offline) -> usa a do aparelho
+    var mk = caixaLocalObter();
+    if (!linha && mk && mk.data === hoje && mk.loja === lojaCaixa) linha = {Valor_Abertura: mk.valor};
     if (!linha) { showToast('Nenhum caixa aberto hoje', true); return; }
-    var totalDinheiro = 0;
-    (dv.data || []).forEach(function(v) { totalDinheiro += parseFloat(v.Dinheiro || 0); });
+    var totalDinheiro = 0, idsPlanilha = {};
+    (dv.data || []).forEach(function(v) { totalDinheiro += parseFloat(v.Dinheiro || 0); if (v.ID) idsPlanilha[String(v.ID)] = 1; });
     var totalGastos = 0;
     // Gastos em dinheiro agora ficam na aba Pagamentos (Tipo='Gasto'), não mais na aba Gastos legada.
     (dg.data || []).forEach(function(g) { if (g.Tipo === 'Gasto' && g.Forma_Pagamento === 'Dinheiro') totalGastos += parseFloat(g.Valor || 0); });
+    // 21/10/2026 (backlog 89): soma também o que está guardado no aparelho esperando
+    // enviar (venda/gasto em dinheiro de hoje, desta loja). Venda que já está na
+    // planilha (mesmo ID) não conta 2x. Gasto na fila ainda não está na planilha.
+    var naFila = 0;
+    filaObter().forEach(function(it) {
+      var x = it.dados || {};
+      if (x.data !== hoje || (x.loja || x.cidade) !== lojaCaixa) return;
+      if (x.tipo === 'venda' && !idsPlanilha[String(x.id)] && x.pagamentos && x.pagamentos.Dinheiro) { totalDinheiro += parseFloat(x.pagamentos.Dinheiro) || 0; naFila++; }
+      if (x.tipo === 'gasto' && x.formaPagamento === 'Dinheiro') { totalGastos += parseFloat(x.valor) || 0; naFila++; }
+    });
+    if (naFila) showToast('Inclui ' + naFila + ' lançamento(s) em dinheiro que ainda estão no aparelho', false, 'warn');
     var esperado = parseFloat(linha.Valor_Abertura || 0) + totalDinheiro - totalGastos;
     window._caixaEsperado = esperado;
     document.getElementById('fc-abertura').textContent = 'R$ ' + fmt(linha.Valor_Abertura);
@@ -1612,7 +1631,7 @@ function atualizarIndicadorFila() {
 // vale tentar logo de novo; rede=false => o servidor respondeu com erro).
 async function postServidor(corpo) {
   var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-  var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 30000) : null;
+  var timer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 20000) : null; // 21/10: 30->20 s (sinal fraco = menos espera; reenvio protegido pelo _rid)
   try {
     // Sem cabeçalhos extras de propósito: corpo texto = requisição "simples",
     // o Apps Script responde com CORS liberado e dá pra ler o JSON
@@ -1764,11 +1783,19 @@ async function enviarParaSheets(dados) {
 // Cacheia cada leitura com sucesso e, se a rede falhar, devolve o último
 // cache salvo em vez de lista vazia — assim o PDV continua mostrando
 // estoque/preços/clientes mesmo sem internet.
+function fetchComLimite(url, ms, opts) {
+  var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  var t = ctrl ? setTimeout(function(){ ctrl.abort(); }, ms) : null;
+  return fetch(url, Object.assign({}, opts || {}, ctrl ? {signal: ctrl.signal} : {}))
+    .finally(function(){ if (t) clearTimeout(t); });
+}
 function apiGet(sheet, extra) {
   var chaveCache = 'mayse_v3_cache_' + sheet + '_' + (extra || '');
   var url = webhookUrl + '?token=' + encodeURIComponent(tokenSecreto) + '&sheet=' + sheet;
   if (extra) url += '&' + extra;
-  return fetch(url).then(function(r){return r.json();}).then(function(d){
+  // 21/10/2026 (backlog 89): com sinal fraco o celular diz "online" mas a resposta
+  // nunca chega -> o PDV ficava preso no "Carregando". Agora desiste em 12 s e usa o cache.
+  return fetchComLimite(url, 12000).then(function(r){return r.json();}).then(function(d){
     try { localStorage.setItem(chaveCache, JSON.stringify(d)); } catch(e) {}
     return d;
   }).catch(function(){
@@ -1776,7 +1803,7 @@ function apiGet(sheet, extra) {
       var cache = localStorage.getItem(chaveCache);
       if (cache) { var c = JSON.parse(cache); c._cache = true; return c; } // _cache: não veio do servidor agora
     } catch(e) {}
-    return {data:[]};
+    return {data:[], _cache:true, _semDados:true};
   });
 }
 
@@ -1837,9 +1864,19 @@ function carregarClientes() {
 function carregarEncomendas() {
   if (!webhookUrl) return;
   document.getElementById('enc-hist-lista').innerHTML = '<div class="loading-state">Carregando…</div>';
-  apiGet('Encomendas', 'loja=' + (sessaoLoja || pdvLoja)).then(function(d){
-    if (d.data) { encomendas = d.data; renderEncHistorico(); }
+  // 21/10/2026 (backlog 90): lê a aba inteira e guarda a LINHA real de cada encomenda
+  // (_linha). Antes a atualização de status usava a posição na lista filtrada
+  // (linha = índice+2) -> com filtro ativo ou encomenda de outra loja, mudava a encomenda ERRADA.
+  apiGet('Encomendas', '').then(function(d){
+    if (d.data) {
+      var lj = sessaoLoja || pdvLoja;
+      encomendas = d.data.map(function(e, i){ e._linha = i + 2; return e; })
+        .filter(function(e){ return String(e.Loja||e.Cidade||'').toLowerCase() === String(lj).toLowerCase(); });
+      renderEncHistorico();
+    }
   });
+  // pra saber quais encomendas já estão na lista de compras
+  apiGet('ListaCompras', '').then(function(d){ if (d.data) { listaCompras = d.data; renderEncHistorico(); } });
 }
 
 // ── NAV ────────────────────────────────────────────────────
@@ -2223,7 +2260,7 @@ async function finalizarVenda() {
   // Se essa venda veio da conversão de uma encomenda, marca a encomenda como Paga
   if(encomendaConvertendoIdx!==null && encomendas[encomendaConvertendoIdx]){
     encomendas[encomendaConvertendoIdx].Status = 'Pago';
-    if(webhookUrl) enviarParaSheets({tipo:'encomenda_update',linha:encomendaConvertendoIdx+2,status:'Pago'});
+    if(webhookUrl && encomendas[encomendaConvertendoIdx]._linha) enviarParaSheets({tipo:'encomenda_update',linha:encomendas[encomendaConvertendoIdx]._linha,status:'Pago'});
     renderEncHistorico();
     encomendaConvertendoIdx = null;
   }
@@ -2460,8 +2497,9 @@ function renderListaComprasPDV() {
         '</select>'+
         '<button class="btn btn-primary" style="width:auto;padding:9px 16px;font-size:13px;" onclick="darEntradaLote('+gi+')">✅ Dar entrada</button>'+
       '</div>'+
-      '<div id="lc-g'+gi+'-bol" style="display:none;margin-top:8px;"><label style="font-size:12px;font-weight:600;">Vencimento do boleto (um só pra compra toda)</label>'+
-        '<input type="date" class="form-input" id="lc-g'+gi+'-venc" style="padding:8px;font-size:13px;margin-top:4px;"></div>'+
+      '<div id="lc-g'+gi+'-bol" style="display:none;margin-top:8px;"><label style="font-size:12px;font-weight:600;">Boleto da compra toda: 1º vencimento e parcelas</label>'+
+        '<div style="display:flex;gap:8px;margin-top:4px;"><input type="date" class="form-input" id="lc-g'+gi+'-venc" oninput="atualizarTotalLote(\'lc\','+gi+')" style="flex:2;padding:8px;font-size:13px;">'+
+        '<input type="number" min="1" step="1" value="1" class="form-input" id="lc-g'+gi+'-parc" title="Parcelas (1 = boleto único)" oninput="atualizarTotalLote(\'lc\','+gi+')" style="flex:1;padding:8px;font-size:13px;"></div></div>'+
       '<div id="lc-g'+gi+'-total" style="font-size:12px;color:#5F5E5A;margin-top:6px;"></div>'+
     '</div>';
   }).join('');
@@ -2509,6 +2547,9 @@ async function darEntradaLote(gi) {
     var vencEl = document.getElementById(PREF_LOTE+'-g'+gi+'-venc');
     if (!vencEl || !vencEl.value) { showToast('Informe o vencimento do boleto', false, 'warn'); return; }
     var pv = vencEl.value.split('-'); payload.vencimento = pv[2]+'/'+pv[1]+'/'+pv[0];
+    var totLote = itens.reduce(function(a,x){ return a + x.quantidade*x.valorUnit; }, 0);
+    var bl = boletosLote(PREF_LOTE, gi, Math.round(totLote*100)/100);
+    if (bl.length > 1) payload.boletos = bl; // parcelado (precisa do pacote de backend 21/10)
   }
   if (_salvandoCompra) return;
   _salvandoCompra = true;
@@ -2573,9 +2614,25 @@ function atualizarTotalLote(P, gi) {
   var tot = 0; g.itens.forEach(function(i, ji){
     tot += (parseFloat((document.getElementById(P+'-g'+gi+'-it'+ji+'-qtd')||{}).value)||0) * (parseFloat((document.getElementById(P+'-g'+gi+'-it'+ji+'-valor')||{}).value)||0);
   });
-  var el = document.getElementById(P+'-g'+gi+'-total'); if (el) el.innerHTML = 'Total da compra: <strong>R$ '+fmt(tot)+'</strong>';
   var pag = document.getElementById(P+'-g'+gi+'-pag'), bol = document.getElementById(P+'-g'+gi+'-bol');
-  if (bol) bol.style.display = (pag && pag.value === 'Boleto') ? 'block' : 'none';
+  var ehBol = pag && pag.value === 'Boleto';
+  if (bol) bol.style.display = ehBol ? 'block' : 'none';
+  var txt = 'Total da compra: <strong>R$ '+fmt(tot)+'</strong>';
+  var parcs = ehBol ? boletosLote(P, gi, tot) : null;
+  if (parcs && parcs.length > 1) txt += '<br>' + parcs.map(function(x,i){ return (i+1)+'ª '+x.vencimento+' — R$ '+fmt(x.valor); }).join(' · ');
+  var el = document.getElementById(P+'-g'+gi+'-total'); if (el) el.innerHTML = txt;
+}
+/* Boleto do lote: parcelas mensais iguais a partir do 1º vencimento (centavos na última).
+   1 parcela = boleto único (vai como "vencimento"); 2+ vão como "boletos" (1 linha por parcela). */
+function boletosLote(P, gi, total) {
+  var v1 = (document.getElementById(P+'-g'+gi+'-venc')||{}).value, n = Math.max(1, parseInt((document.getElementById(P+'-g'+gi+'-parc')||{}).value)||1);
+  if (!v1 || !total) return [];
+  var p = v1.split('-'), ano = +p[0], mes = +p[1]-1, dia = +p[2], parc = Math.floor(total/n*100)/100, out = [];
+  for (var i = 0; i < n; i++) {
+    var d = new Date(ano, mes+i, Math.min(dia, new Date(ano, mes+i+1, 0).getDate()));
+    out.push({vencimento: String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear(), valor: i===n-1 ? Math.round((total-parc*(n-1))*100)/100 : parc});
+  }
+  return out;
 }
 function atualizarTodosLote(P) {
   var grupos = P === 'lc' ? lcGrupos : lcGruposFechados;
@@ -2667,8 +2724,9 @@ function renderListaFechadaPDV(dataSel) {
         '</select>'+
         '<button class="btn btn-primary" style="width:auto;padding:9px 16px;font-size:13px;" onclick="darEntradaLoteFechada('+gi+')">✅ Dar entrada</button>'+
       '</div>'+
-      '<div id="lf-g'+gi+'-bol" style="display:none;margin-top:8px;"><label style="font-size:12px;font-weight:600;">Vencimento do boleto (um só pra compra toda)</label>'+
-        '<input type="date" class="form-input" id="lf-g'+gi+'-venc" style="padding:8px;font-size:13px;margin-top:4px;"></div>'+
+      '<div id="lf-g'+gi+'-bol" style="display:none;margin-top:8px;"><label style="font-size:12px;font-weight:600;">Boleto da compra toda: 1º vencimento e parcelas</label>'+
+        '<div style="display:flex;gap:8px;margin-top:4px;"><input type="date" class="form-input" id="lf-g'+gi+'-venc" oninput="atualizarTotalLote(\'lf\','+gi+')" style="flex:2;padding:8px;font-size:13px;">'+
+        '<input type="number" min="1" step="1" value="1" class="form-input" id="lf-g'+gi+'-parc" title="Parcelas (1 = boleto único)" oninput="atualizarTotalLote(\'lf\','+gi+')" style="flex:1;padding:8px;font-size:13px;"></div></div>'+
       '<div id="lf-g'+gi+'-total" style="font-size:12px;color:#5F5E5A;margin-top:6px;"></div>'+
     '</div>';
   }).join('');
@@ -2740,6 +2798,9 @@ async function darEntradaLoteFechada(gi) {
     var vencEl = document.getElementById(PREF_LOTE+'-g'+gi+'-venc');
     if (!vencEl || !vencEl.value) { showToast('Informe o vencimento do boleto', false, 'warn'); return; }
     var pv = vencEl.value.split('-'); payload.vencimento = pv[2]+'/'+pv[1]+'/'+pv[0];
+    var totLote = itens.reduce(function(a,x){ return a + x.quantidade*x.valorUnit; }, 0);
+    var bl = boletosLote(PREF_LOTE, gi, Math.round(totLote*100)/100);
+    if (bl.length > 1) payload.boletos = bl; // parcelado (precisa do pacote de backend 21/10)
   }
   if (_salvandoCompra) return;
   _salvandoCompra = true;
@@ -3435,31 +3496,75 @@ function filtrarEncHist(f,btn){
   renderEncHistorico();
 }
 
+/* 21/10/2026 (backlog 90): histórico de encomendas em seções recolhíveis por situação,
+   com a data do pedido e há quantos dias foi feito (vermelho > 30 dias), aviso de
+   possível duplicada (mesmo cliente + mesmo pedido) e botão "🛒 Lista de compras"
+   nas que ainda precisam ser compradas. */
+var encSecAberta = {disp:true, pend:true, agen:true, fim:false};
+function encStatusNorm(st) { var s0 = String(st||'Pendente').trim(); return s0 === 'Disponivel' ? 'Disponível' : s0; }
+function encDiasDesde(dtTxt) { var t = parsePtDataSimples(dtTxt); if (!t) return null; var h = new Date(); h.setHours(0,0,0,0); return Math.floor((h.getTime() - t)/86400000); }
+function encNaLista(e) {
+  var ref = (e.Cliente||'') + (e.Descricao ? (' — '+e.Descricao) : '');
+  return (listaCompras||[]).some(function(i){ return i.Origem==='encomenda' && i.EncomendaRef===ref && (i.Status||'')==='Pendente'; });
+}
+function toggleEncSec(k) { encSecAberta[k] = !encSecAberta[k]; renderEncHistorico(); }
+function encParaListaCompras(idx) {
+  var e = encomendas[idx]; if (!e) return;
+  var nomeItem = e.Descricao || e.Cliente || 'Encomenda';
+  var ref = (e.Cliente||'') + (e.Descricao ? (' — '+e.Descricao) : '');
+  listaCompras.push({Item:nomeItem, Origem:'encomenda', EncomendaRef:ref, Status:'Pendente', Operador:operador||'PDV'});
+  enviarParaSheets({tipo:'add_lista_compra', item:nomeItem, origem:'encomenda', encomendaRef:ref, operador:operador||'PDV'});
+  showToast('Foi pra lista de compras!');
+  renderEncHistorico();
+}
 function renderEncHistorico(){
-  var lista=encomendas.filter(function(e){
-    if(encHistFiltro==='Todos') return true;
-    return e.Tipo===encHistFiltro||e.Status===encHistFiltro;
+  var el = document.getElementById('enc-hist-lista'); if (!el) return;
+  var busca = String((document.getElementById('enc-busca')||{}).value||'').toLowerCase().trim();
+  var dupl = {}; encomendas.forEach(function(e){ var k=(e.Cliente||'')+'|'+(e.Descricao||'')+'|'+encStatusNorm(e.Status); dupl[k]=(dupl[k]||0)+1; });
+  var secoes = {disp:[], pend:[], agen:[], fim:[]};
+  encomendas.forEach(function(e, idx){
+    if (busca && String((e.Cliente||'')+' '+(e.Descricao||'')).toLowerCase().indexOf(busca) < 0) return;
+    var st = encStatusNorm(e.Status);
+    var sec = st==='Disponível' ? 'disp' : (st==='Pendente' && e.Tipo!=='Agendada') ? 'pend' : (st==='Pendente'||st==='Confirmada') ? 'agen' : 'fim';
+    secoes[sec].push({e:e, idx:idx, st:st});
   });
-  if(!lista.length){document.getElementById('enc-hist-lista').innerHTML='<div class="empty-state">📋<br>Nenhuma encomenda encontrada</div>';return;}
-  document.getElementById('enc-hist-lista').innerHTML=lista.map(function(e,i){
-    var tipoCls=(e.Tipo||'').toLowerCase();
-    var stCls=(e.Status||'pendente').toLowerCase().replace(/\s/g,'-').replace(/[^a-z-]/g,'');
-    var acoes='';
-    if(e.Status==='Pendente'&&e.Tipo==='Agendada') acoes+='<button class="enc-act primary" onclick="updateEncStatus('+i+',\'Confirmada\')">Confirmar</button>';
-    if(e.Status==='Pendente'&&e.Tipo==='Futura')   acoes+='<button class="enc-act primary" onclick="updateEncStatus('+i+',\'Disponível\')">Disponível</button>';
-    if(e.Status==='Disponível'){
+  // mais antigas primeiro nas abertas (pra não esquecer); finalizadas: mais recentes primeiro
+  ['disp','pend','agen'].forEach(function(k){ secoes[k].sort(function(a,b){ return parsePtDataSimples(a.e.Data) - parsePtDataSimples(b.e.Data); }); });
+  secoes.fim.sort(function(a,b){ return parsePtDataSimples(b.e.Data) - parsePtDataSimples(a.e.Data); });
+  function card(x){
+    var e = x.e, i = x.idx, st = x.st, acoes = '';
+    if(st==='Pendente'&&e.Tipo==='Agendada') acoes+='<button class="enc-act primary" onclick="updateEncStatus('+i+',\'Confirmada\')">Confirmar</button>';
+    if(st==='Pendente'&&e.Tipo!=='Agendada') {
+      acoes+='<button class="enc-act primary" onclick="updateEncStatus('+i+',\'Disponível\')">Chegou / Disponível</button>';
+      acoes+= encNaLista(e) ? '<span class="badge" style="background:var(--gold-pale);color:var(--gold);">🛒 já na lista</span>'
+                            : '<button class="enc-act" onclick="encParaListaCompras('+i+')">🛒 Lista de compras</button>';
+    }
+    if(st==='Disponível'){
       acoes+='<button class="enc-act primary" onclick="converterEncVenda('+i+')">Converter em venda</button>';
       acoes+='<button class="enc-act" style="background:#25D366;color:#fff;" onclick="comunicarEncDisponivel('+i+')">📲 Comunicar</button>';
     }
-    if(e.Status==='Confirmada')                    acoes+='<button class="enc-act primary" onclick="updateEncStatus('+i+',\''+(e.Entrega==='Sim'?'Entregue':'Retirada')+'\')">Marcar '+(e.Entrega==='Sim'?'entregue':'retirada')+'</button>';
-    if(['Pendente','Confirmada','Disponível'].indexOf(e.Status)>=0) acoes+='<button class="enc-act danger" onclick="updateEncStatus('+i+',\'Cancelada\')">Cancelar</button>';
+    if(st==='Confirmada') acoes+='<button class="enc-act primary" onclick="updateEncStatus('+i+',\''+(e.Entrega==='Sim'?'Entregue':'Retirada')+'\')">Marcar '+(e.Entrega==='Sim'?'entregue':'retirada')+'</button>';
+    if(['Pendente','Confirmada','Disponível'].indexOf(st)>=0) acoes+='<button class="enc-act danger" onclick="updateEncStatus('+i+',\'Cancelada\')">Cancelar</button>';
+    var dias = encDiasDesde(e.Data), velha = dias !== null && dias > 30 && x.st !== 'Cancelada';
+    var idade = dias===null ? '' : (dias===0 ? 'hoje' : dias===1 ? 'ontem' : 'há '+dias+' dias');
+    var dup = dupl[(e.Cliente||'')+'|'+(e.Descricao||'')+'|'+st] > 1 && ['Pendente','Confirmada','Disponível'].indexOf(st)>=0;
     return '<div class="enc-card">'+
       '<div class="enc-top"><div><div class="enc-nome">'+escapeHtml(String(e.Cliente||'—'))+'</div><div style="font-size:11px;color:var(--light)">'+escapeHtml(String(e.Telefone||''))+'</div></div>'+
-      '<div class="enc-badges"><span class="badge badge-'+tipoCls+'">'+(e.Tipo||'')+'</span><span class="badge badge-'+stCls+'">'+(e.Status||'')+'</span></div></div>'+
-      '<div class="enc-desc">'+escapeHtml(String(e.Descricao||''))+(e.Data_Retirada?' · '+e.Data_Retirada+' '+(e.Hora_Retirada||''):'')+'</div>'+
+      '<div class="enc-badges"><span class="badge badge-'+String(e.Tipo||'').toLowerCase()+'">'+(e.Tipo||'')+'</span><span class="badge">'+escapeHtml(st)+'</span></div></div>'+
+      '<div style="font-size:11px;margin-bottom:4px;color:'+(velha?'#B33A3A':'var(--light)')+';font-weight:'+(velha?'700':'400')+';">📅 Pedido em '+escapeHtml(String(e.Data||'—'))+(idade?' ('+idade+')':'')+(velha?' — antiga, confirmar com o cliente':'')+'</div>'+
+      (dup?'<div style="font-size:11px;color:#B7791F;font-weight:700;margin-bottom:4px;">⚠ Possível duplicada (mesmo cliente e pedido) — cancele uma</div>':'')+
+      '<div class="enc-desc">'+escapeHtml(String(e.Descricao||''))+(e.Data_Retirada?' · retirada '+e.Data_Retirada+' '+(e.Hora_Retirada||''):'')+'</div>'+
       '<div style="margin-bottom:8px;">'+(e.Valor&&parseFloat(e.Valor)>0?'<span class="badge" style="background:var(--vj-pale);color:var(--vf);">💰 R$ '+parseFloat(e.Valor).toFixed(2)+' · '+(e.Forma_Pagamento||'—')+'</span>':'<span class="badge" style="background:var(--gold-pale);color:var(--gold);">Não pago</span>')+'</div>'+
       '<div class="enc-actions">'+acoes+'</div></div>';
+  }
+  var titulos = {disp:'✅ Disponível pra retirar', pend:'⏳ A encomendar (pendentes)', agen:'📅 Agendadas', fim:'📁 Finalizadas / canceladas'};
+  var html = ['disp','pend','agen','fim'].map(function(k){
+    var arr = secoes[k]; var aberto = busca ? true : encSecAberta[k];
+    var velhas = arr.filter(function(x){ var d=encDiasDesde(x.e.Data); return k!=='fim' && d!==null && d>30; }).length;
+    return '<div class="est-sec"><div class="est-sec-title" onclick="toggleEncSec(\''+k+'\')"><span>'+titulos[k]+' ('+arr.length+')'+(velhas?' <span style="color:#B33A3A;font-size:11px;">· '+velhas+' com +30 dias</span>':'')+'</span><span class="estoque-chevron">'+(aberto?'▲':'▼')+'</span></div>'+
+      (aberto ? '<div class="est-sec-body" style="display:block;">'+(arr.length ? arr.map(card).join('') : '<div class="empty-state" style="padding:12px;">Nada aqui</div>')+'</div>' : '')+'</div>';
   }).join('');
+  el.innerHTML = html;
 }
 
 async function updateEncStatus(idx,novoStatus){
@@ -3486,7 +3591,7 @@ async function updateEncStatus(idx,novoStatus){
   }
   renderEncHistorico();
   showToast('Status: '+novoStatus);
-  if(webhookUrl) await enviarParaSheets({tipo:'encomenda_update',linha:idx+2,status:novoStatus});
+  if(webhookUrl && encomendas[idx]._linha) await enviarParaSheets({tipo:'encomenda_update',linha:encomendas[idx]._linha,status:novoStatus});
 }
 
 // Converter encomenda em venda: preenche tela de venda (cliente + produto) e navega
@@ -3494,7 +3599,7 @@ function converterEncVenda(idx){
   var e = encomendas[idx];
   // Atualiza status
   encomendas[idx].Status = 'Convertida';
-  enviarParaSheets({tipo:'encomenda_update',linha:idx+2,status:'Convertida'});
+  if (e._linha) enviarParaSheets({tipo:'encomenda_update',linha:e._linha,status:'Convertida'});
   // Navega para aba venda
   var btnVenda = document.querySelector('.nav-btn');
   showPage('venda', btnVenda);
@@ -3761,6 +3866,12 @@ function showToast(msg,error,type){
   t.classList.add('show');
   clearTimeout(window._toastTimer);
   window._toastTimer=setTimeout(function(){t.classList.remove('show');},2800);
+}
+</script>
+<script>
+/* 21/10/2026 (backlog 89): guarda o PDV no aparelho pra abrir sem internet (ver sw.js). */
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('sw.js').catch(function(){});
 }
 </script>
 </body>

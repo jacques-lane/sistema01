@@ -293,6 +293,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <button class="si" onclick="goSec('orcamentos',this)" title="Orçamentos"><span class="ico">🧾</span><span class="si-lbl">Orçamentos</span></button>
     <button class="si" id="nav-projetos" onclick="goSec('projetos',this)" title="Projetos"><span class="ico">🗂️</span><span class="si-lbl">Projetos</span></button>
     <button class="si" onclick="goSec('equipe',this)" title="Equipe"><span class="ico">🪪</span><span class="si-lbl">Equipe</span></button>
+    <button class="si" onclick="goSec('analises',this)" title="Análises"><span class="ico">🧠</span><span class="si-lbl">Análises</span></button>
   </nav>
   <div class="sb-footer"><div class="sb-cfg" onclick="goSec('config',null)"><span style="font-size:15px">⚙️</span><span class="sb-cfg-lbl">Configurações</span></div></div>
 </div>
@@ -395,9 +396,10 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
             <button id="btn-dre-regime" onclick="toggleDreRegime()" title="Caixa = mês em que o dinheiro sai (vencimento). Competência = mês em que a compra foi feita (cartão de crédito entra no mês da compra)." style="padding:5px 10px;background:#fff;color:var(--mid);border:1px solid var(--border);border-radius:8px;font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;">📅 Por caixa</button>
             <button onclick="toggleDreRegras()" title="Como cada número do DRE é calculado" style="padding:5px 10px;background:#fff;color:var(--mid);border:1px solid var(--border);border-radius:8px;font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;">ℹ️ Regras</button>
             <button id="btn-dre-pessoal" onclick="toggleDrePessoal()" style="padding:5px 10px;background:#fff;color:var(--mid);border:1px solid var(--border);border-radius:8px;font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;">👤 Ver Pessoal</button>
+            <select id="meta-cat" class="fi-sm" title="Meta de venda ou orçamento (limite de gasto) de uma categoria" style="font-size:11px;padding:5px 6px;"><option value="">Meta de venda</option><option>Deduções da Receita</option><option>Custos/CMV</option><option>Despesas Operacionais - Administrativas</option><option>Despesas Operacionais - Vendas</option><option>Resultado Financeiro</option></select>
             <input type="month" id="meta-mes" class="fi-sm" style="width:120px;font-size:11px;padding:5px 8px;">
-            <input type="number" id="meta-valor" placeholder="Meta R$" class="fi-sm" style="width:90px;font-size:11px;padding:5px 8px;">
-            <button onclick="salvarMeta()" style="padding:5px 10px;background:var(--vf);color:white;border:none;border-radius:8px;font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;">Salvar meta</button>
+            <input type="number" id="meta-valor" placeholder="R$" class="fi-sm" style="width:90px;font-size:11px;padding:5px 8px;">
+            <button onclick="salvarMeta()" style="padding:5px 10px;background:var(--vf);color:white;border:none;border-radius:8px;font-family:'Sora',sans-serif;font-size:11px;font-weight:600;cursor:pointer;">Salvar</button>
           </div>
         </div>
         <div class="csb" style="margin:-6px 0 10px;">Por padrão mostra só as lojas da empresa (Cambuci e Juquiá). Clique em "👤 Ver Pessoal" pra alternar e ver o resumo Pessoal separado.</div>
@@ -411,7 +413,9 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
             <li>Lançamento antigo com Categoria "Compra de Mercadorias" conta como Custos/CMV. Compras antigas da aba Compras também entram como Custos/CMV › Compra de Mercadorias.</li>
             <li><b>Receita da Empresa</b> = aba Vendas, menos as vendas da loja "pessoal" (essas são Receitas do Pessoal, detalhadas pela Categoria da venda).</li>
             <li><b>Realizado x planejado:</b> Status "Pago" = realizado. Outro status = planejado (valor esmaecido, não entra no resultado). Na visão <b>Por competência</b>, compra no cartão de crédito conta como realizada mesmo pendente — desde que a data da compra (competência) já tenha passado; data futura é sempre planejado.</li>
-            <li><b>Mês de cada despesa:</b> <i>Por caixa</i> = Vencimento. <i>Por competência</i> = data da compra, só para cartão (Forma CartaoC6/CartaoItau ou itens "Fatura C6/Itau/Maga - …"): coluna Data se até 75 dias antes do vencimento → senão o "dd/mm" no fim da descrição → senão 1 mês antes do vencimento. Os demais lançamentos usam o Vencimento.</li>
+            <li><b>Mês de cada despesa:</b> <i>Por caixa</i> = Vencimento. <i>Por competência</i> = data da compra, só para cartão (Forma CartaoC6/CartaoItau ou itens "Fatura C6/Itau/Maga - …"): coluna Data se até 75 dias antes do vencimento → senão o "dd/mm" no fim da descrição (exceto quando é número de parcela: a mesma descrição aparece em 2+ meses com o mesmo total, ex. "Cama 05/07", "Cama 06/07") → senão 1 mês antes do vencimento. Os demais lançamentos usam o Vencimento.</li>
+            <li><b>Meta e orçamento:</b> o seletor ao lado de "Salvar" escolhe <i>Meta de venda</i> (aparece em Receita Bruta) ou uma categoria de despesa (orçamento = limite de gasto do mês). Na categoria aparece "orçado R$ X · Y% usado" = realizado ÷ orçado (verde até 79%, amarelo 80–100%, vermelho acima). Vale para a loja escolhida no filtro; com várias lojas, soma os orçamentos delas.</li>
+            <li><b>Margens (%):</b> calculadas sobre a <b>Receita Líquida</b> do mês, só com valores realizados (planejado não entra). <b>Margem bruta</b> = Lucro Bruto ÷ Receita Líquida (quanto sobra da venda depois do custo da mercadoria). <b>Margem operacional</b> = Resultado Operacional ÷ Receita Líquida. <b>Margem líquida</b> = Resultado Líquido ÷ Receita Líquida. Em cada categoria, "x% da receita" = despesa realizada ÷ Receita Líquida. Mês sem receita não mostra %. Para ver a margem de uma loja, filtre só aquela loja no topo. Para comparar margem entre meses, use <b>Por competência</b>: Por caixa o custo das compras no cartão cai no mês da fatura e a margem oscila muito (ex.: julho baixo, agosto alto).</li>
             <li><b>Período e loja:</b> respeita o filtro de período (corta pelo dia, 1 coluna por mês, a partir de jul/2026) e as lojas selecionadas.</li>
             <li><b>Fora do DRE:</b> aba Gastos antiga (já copiada em Pagamentos) e os espelhos automáticos antigos de compra no cartão (Observação "Gerado automaticamente da compra", sem Tipo), pra não contar em dobro.</li>
           </ol>
@@ -622,11 +626,11 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
         </div>
       </div>
       <div class="cc cc-collapsed" style="margin-bottom:20px;">
-        <div class="ch ch-tgl" onclick="toggleCC(this)"><div><div class="ct">Produtos com margem abaixo do ideal</div><div class="csb">Todo o estoque, não só compras recentes — preço de venda não cobre 3x o custo atual</div></div><span class="cc-tgl">▾</span></div>
+        <div class="ch ch-tgl" onclick="toggleCC(this)"><div><div class="ct">Produtos com margem abaixo do ideal</div><div class="csb">Todo o estoque, não só compras recentes — preço de venda abaixo de 2,5× o custo atual</div></div><span class="cc-tgl">▾</span></div>
         <div class="cc-body"><div id="cp-marg-lst"><div class="empty">Carregue os dados</div></div></div>
       </div>
       <div class="cc cc-collapsed" style="margin-bottom:20px;">
-        <div class="ch ch-tgl" onclick="toggleCC(this)"><div><div class="ct">📦 Giro desde a última compra</div><div class="csb">O que já vendeu do que comprou por último, e o que veio de compras anteriores</div></div><span class="cc-tgl">▾</span></div>
+        <div class="ch ch-tgl" onclick="toggleCC(this)"><div><div class="ct">📦 Giro desde a última compra</div><div class="csb">Por produto e loja: quanto da última compra já vendeu (%), há quantos dias, estoque atual e como girou a compra anterior</div></div><span class="cc-tgl">▾</span></div>
         <div class="cc-body"><div id="cp-giro-lst"><div class="empty">Carregue os dados</div></div></div>
       </div>
       <div class="cc cc-collapsed">
@@ -680,6 +684,17 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     </div>
 
     <!-- CONFIG -->
+    <!-- 21/10/2026: Análises — relatórios que o Claude (Financeiro, Programador…) deixa por assunto.
+         Ficam no arquivo analises.json, publicado junto com o dashboard no GitHub. -->
+    <div id="sec-analises" class="section">
+      <div class="cc" style="margin-bottom:20px;">
+        <div class="ch"><div><div class="ct">🧠 Análises</div><div class="csb">Análises pedidas ao Claude, guardadas por assunto · mais recente primeiro · toque numa análise para ler</div></div>
+          <input type="text" id="an-busca" placeholder="Buscar…" oninput="renAnalises()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:'Sora',sans-serif;font-size:12px;outline:none;">
+        </div>
+        <div id="an-lista"><div class="empty">Carregando…</div></div>
+      </div>
+    </div>
+
     <div id="sec-config" class="section">
       <div class="cc" style="margin-bottom:16px;"><div class="ct" style="margin-bottom:16px;">Conexão com Google Sheets</div>
         <div class="fg2" style="margin-bottom:12px;">
@@ -986,7 +1001,62 @@ function togSB(){document.getElementById('sb').classList.toggle('col');document.
 function openMSB(){document.getElementById('sb').classList.add('mob');document.getElementById('sb-ov').classList.add('show');}
 function closeMSB(){document.getElementById('sb').classList.remove('mob');document.getElementById('sb-ov').classList.remove('show');}
 
-var SEC_TITLES={visao:'Visão geral',financeiro:'Financeiro',entradas:'Entradas',saidas:'Saídas',conciliacao:'Conciliação',clientes:'Clientes',encomendas:'Encomendas',estoque:'Estoque',compras:'Compras',projetos:'Projetos',orcamentos:'Orçamentos',equipe:'Equipe',config:'Configurações'};
+var SEC_TITLES={visao:'Visão geral',financeiro:'Financeiro',entradas:'Entradas',saidas:'Saídas',conciliacao:'Conciliação',clientes:'Clientes',encomendas:'Encomendas',estoque:'Estoque',compras:'Compras',projetos:'Projetos',orcamentos:'Orçamentos',equipe:'Equipe',analises:'Análises',config:'Configurações'};
+/* ── ANÁLISES (21/10/2026) ──
+   Lê analises.json (mesma pasta do dashboard no GitHub): lista de
+   {id, assunto, titulo, data:'dd/mm/aaaa', especialista, resumo, conteudo (markdown simples)}.
+   Agrupa por assunto (recolhível), mais recente primeiro. */
+var ANALISES=null,anAberto={};
+function carregarAnalises(){
+  return fetch('analises.json?v='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];})
+    .then(function(a){ANALISES=Array.isArray(a)?a:[];return ANALISES;});
+}
+function mdSimples(md){
+  var linhas=String(md||'').split('\n'),out=[],lista=null,tabela=null;
+  function inl(t){return esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/`(.+?)`/g,'<code>$1</code>');}
+  function fecha(){if(lista){out.push('</'+lista+'>');lista=null;}if(tabela){out.push('</table>');tabela=null;}}
+  linhas.forEach(function(l){
+    var t=l.trim();
+    if(/^\|.*\|$/.test(t)){
+      if(/^\|[\s:|-]+\|$/.test(t))return;
+      var cel=t.slice(1,-1).split('|').map(function(c){return inl(c.trim());});
+      if(!tabela){fecha();tabela=1;out.push('<table class="dt dt-compact" style="margin:6px 0;"><tr>'+cel.map(function(c){return '<th>'+c+'</th>';}).join('')+'</tr>');}
+      else out.push('<tr>'+cel.map(function(c){return '<td>'+c+'</td>';}).join('')+'</tr>');
+      return;
+    }
+    var h=/^(#{1,3})\s+(.*)$/.exec(t),b=/^[-*]\s+(.*)$/.exec(t),n=/^\d+[.)]\s+(.*)$/.exec(t);
+    if(h){fecha();out.push('<div style="font-weight:700;font-size:'+(h[1].length===1?'15':'13')+'px;margin:10px 0 4px;">'+inl(h[2])+'</div>');}
+    else if(b||n){var tp=b?'ul':'ol';if(lista!==tp){fecha();lista=tp;out.push('<'+tp+' style="margin:4px 0 4px 18px;">');}out.push('<li>'+inl((b||n)[1])+'</li>');}
+    else if(!t){fecha();}
+    else{fecha();out.push('<p style="margin:4px 0;">'+inl(t)+'</p>');}
+  });
+  fecha();return out.join('');
+}
+function toggleAnalise(k){anAberto[k]=!anAberto[k];renAnalises();}
+function renAnalises(){
+  var el=document.getElementById('an-lista');if(!el)return;
+  if(ANALISES===null){carregarAnalises().then(renAnalises);return;}
+  var busca=String((document.getElementById('an-busca')||{}).value||'').toLowerCase().trim();
+  var lst=ANALISES.filter(function(a){return !busca||[a.assunto,a.titulo,a.resumo,a.conteudo].join(' ').toLowerCase().indexOf(busca)>=0;});
+  if(!lst.length){el.innerHTML='<div class="empty">'+(ANALISES.length?'Nada encontrado':'Nenhuma análise ainda — peça uma ao Claude que ela aparece aqui')+'</div>';return;}
+  var grupos={};lst.forEach(function(a){var g=a.assunto||'Geral';(grupos[g]=grupos[g]||[]).push(a);});
+  var dt=function(a){var t=parsePtD(a.data);return t?t.getTime():0;};
+  var nomes=Object.keys(grupos).sort(function(x,y){return Math.max.apply(null,grupos[y].map(dt))-Math.max.apply(null,grupos[x].map(dt));});
+  el.innerHTML=nomes.map(function(g){
+    var arr=grupos[g].sort(function(a,b){return dt(b)-dt(a);}),kg='g:'+g,ag=busca||anAberto[kg];
+    return '<div style="border:1px solid var(--border);border-radius:10px;margin-bottom:10px;">'+
+      '<div onclick="toggleAnalise(\''+esc(kg).replace(/'/g,"\\'")+'\')" style="cursor:pointer;padding:10px 12px;display:flex;justify-content:space-between;font-weight:700;font-size:13px;"><span>📁 '+esc(g)+' <span style="font-weight:400;color:var(--light);">('+arr.length+' · última '+esc(arr[0].data||'—')+')</span></span><span>'+(ag?'▾':'▸')+'</span></div>'+
+      (ag?arr.map(function(a){
+        var ka='a:'+(a.id||a.titulo),aa=anAberto[ka];
+        return '<div style="border-top:1px solid var(--border);padding:10px 12px;">'+
+          '<div onclick="toggleAnalise(\''+esc(ka).replace(/'/g,"\\'")+'\')" style="cursor:pointer;"><div style="font-weight:600;font-size:13px;">'+(aa?'▾ ':'▸ ')+esc(a.titulo||'')+'</div>'+
+          '<div style="font-size:11px;color:var(--light);">'+esc(a.data||'')+(a.especialista?' · '+esc(a.especialista):'')+'</div>'+
+          (a.resumo?'<div style="font-size:12px;margin-top:4px;">'+esc(a.resumo)+'</div>':'')+'</div>'+
+          (aa?'<div style="font-size:12px;line-height:1.55;margin-top:8px;background:var(--cream);border-radius:8px;padding:10px 12px;">'+mdSimples(a.conteudo)+'</div>':'')+
+        '</div>';
+      }).join(''):'')+'</div>';
+  }).join('');
+}
 function goSec(id,btn){
   document.querySelectorAll('.section').forEach(function(s){s.classList.remove('active');});
   document.querySelectorAll('.si').forEach(function(b){b.classList.remove('active');});
@@ -1001,6 +1071,7 @@ function goSec(id,btn){
   if(lc)lc.style.display=(id==='conciliacao')?'none':'';
   if(pb)pb.style.display=(id==='conciliacao')?'none':'';
   if(id==='config')initCfg();
+  if(id==='analises')renAnalises();
   if(D.vendas.length){
     if(id==='estoque')renEst();
     if(id==='encomendas')renEnc();
@@ -1771,6 +1842,7 @@ function renderFinanceiro(){
    Respeita o filtro de período (corta pelo dia; 1 coluna por mês) e a loja
    selecionada (via gLojaOnly + dentroPer, não usa gDL porque a data depende do regime). */
 var dreExpand={};
+var MARKUP_IDEAL=2.5; // 21/10/2026: ideal = preço sugerido na compra (custo × 2,5 = 60% de margem). Usado no card de margem e no histórico de compras.
 function toggleDreExpand(key){dreExpand[key]=!dreExpand[key];renderDREMensal();}
 
 /* ── FUSÃO Compras/Gastos/Pagamentos ──
@@ -1835,6 +1907,7 @@ function dataCompetencia(p){
   var d=parsePtD(p.Data);
   if(d&&d.getTime()<=v.getTime()&&v.getTime()-d.getTime()<=LIM)return d;
   var m=/(\d{2})\/(\d{2})\s*$/.exec(String(p.Descricao||'').trim());
+  if(m&&ehSufixoParcela(p.Descricao))m=null; // 21/10/2026: "Cama 05/07" = parcela 5 de 7, não data
   if(m){
     var dia=parseInt(m[1],10),mes=parseInt(m[2],10);
     if(dia>=1&&dia<=31&&mes>=1&&mes<=12){
@@ -1844,6 +1917,23 @@ function dataCompetencia(p){
     }
   }
   return new Date(v.getFullYear(),v.getMonth()-1,Math.min(v.getDate(),28));
+}
+/* 21/10/2026 (backlog 96): o sufixo "NN/MM" no fim da descrição pode ser DATA da compra
+   ("Flora Fujino 01/09") ou PARCELA ("Cama 05/07" = 5ª de 7). É parcela quando a mesma
+   descrição (sem o sufixo) aparece em 2+ lançamentos com o mesmo total de parcelas (MM)
+   e números diferentes (NN), e NN ≤ MM. Parcela usa a regra "1 mês antes do vencimento". */
+var _serieParcelas=null,_serieParcelasLen=-1;
+function ehSufixoParcela(desc){
+  var arr=D.pagamentos||[];
+  if(!_serieParcelas||_serieParcelasLen!==arr.length){
+    var g={};
+    arr.forEach(function(p){var mm=/^(.*?)\s*(\d{2})\/(\d{2})\s*$/.exec(String(p.Descricao||'').trim());if(!mm)return;
+      var k=mm[1].toLowerCase().replace(/\s+/g,' ')+'|'+mm[3];(g[k]=g[k]||{})[mm[2]]=1;});
+    _serieParcelas={};Object.keys(g).forEach(function(k){if(Object.keys(g[k]).length>=2)_serieParcelas[k]=1;});
+    _serieParcelasLen=arr.length;
+  }
+  var m=/^(.*?)\s*(\d{2})\/(\d{2})\s*$/.exec(String(desc||'').trim());if(!m)return false;
+  return parseInt(m[2],10)<=parseInt(m[3],10)&&!!_serieParcelas[m[1].toLowerCase().replace(/\s+/g,' ')+'|'+m[3]];
 }
 function dataDRE(p){return dreRegime==='competencia'?dataCompetencia(p):parsePtD(p.Vencimento);}
 function pagoDRE(p){
@@ -1899,8 +1989,13 @@ function renderDREMensal(){
     var d=parsePtD(v.Data);if(!d)return;var k=chaveMes(d);if(!(k in receitaPorMes))return;
     receitaPorMes[k]+=parseFloat(v.Total||0);
   });
-  var metaPorMes=zeroMap();
-  metas.forEach(function(m){if(m.AnoMes in metaPorMes)metaPorMes[m.AnoMes]+=parseFloat(m.ValorMeta||0);});
+  var metaPorMes=zeroMap(),orcPorCatMes={};
+  metas.forEach(function(m){
+    if(!(m.AnoMes in metaPorMes))return;
+    var c=String(m.Categoria||'').trim();
+    if(!c)metaPorMes[m.AnoMes]+=parseFloat(m.ValorMeta||0); // meta de venda
+    else{(orcPorCatMes[c]=orcPorCatMes[c]||zeroMap())[m.AnoMes]+=parseFloat(m.ValorMeta||0);} // orçamento de despesa
+  });
 
   // ── Receitas Pessoal = Vendas loja="pessoal", com detalhe por Categoria (Salário/Pro Labore/etc) ──
   var receitaPesPorMes=zeroMap(),receitaPesCatPorMes={},receitaPesCatSet={};
@@ -1963,10 +2058,13 @@ function renderDREMensal(){
       return '<td style="text-align:right;font-size:12px;color:'+(v>0?cor:'var(--light)')+';">'+(v>0?fmt(v):'—')+'</td>';
     }).join('')+'</tr>';
   }
-  function linhaSubtotal(label,porMes,top){
+  /* 21/10/2026 (backlog 25): margem % = valor ÷ Receita Líquida do mês (só realizado). */
+  var baseMargem=null; // preenchido depois que a Receita Líquida é calculada
+  function pctRL(v,k){var b=baseMargem&&baseMargem[k];if(!b||b<=0)return '';return (v/b*100).toFixed(1).replace('.',',')+'%';}
+  function linhaSubtotal(label,porMes,top,nomeMargem){
     return '<tr style="'+(top?'border-top:2px solid var(--border);':'')+'"><td style="font-weight:700;">'+esc(label)+'</td>'+meses.map(function(k){
-      var v=porMes[k]||0;
-      return '<td style="text-align:right;font-weight:700;color:'+(v>=0?'var(--vf)':'var(--red)')+';">'+fmt(v)+'</td>';
+      var v=porMes[k]||0,pc=nomeMargem?pctRL(v,k):'';
+      return '<td style="text-align:right;font-weight:700;color:'+(v>=0?'var(--vf)':'var(--red)')+';">'+fmt(v)+(pc?'<div style="font-size:10px;font-weight:600;opacity:.75;">'+nomeMargem+' '+pc+'</div>':'')+'</td>';
     }).join('')+'</tr>';
   }
   function linhaCategoria(cat){
@@ -1974,7 +2072,10 @@ function renderDREMensal(){
     var key='catE_'+cat,aberto=!!dreExpand[key];
     var row='<tr'+(subs.length?' style="cursor:pointer;" onclick="toggleDreExpand(\''+key+'\')"':'')+'><td>'+(subs.length?(aberto?'▾ ':'▸ '):'')+esc(cat)+'</td>'+meses.map(function(k){
       var v=despEmpPorCatMes[cat][k]||0,vp=despEmpPlanPorCatMes[cat][k]||0;
-      return '<td style="text-align:right;color:'+(v>0?'var(--red)':'var(--light)')+';">'+(v>0?'-'+fmt(v):'—')+(vp>0?'<div style="opacity:.45;font-size:10px;">planejado -'+fmt(vp)+'</div>':'')+'</td>';
+      var pc=v>0?pctRL(v,k):'';
+      var orc=(orcPorCatMes[cat]||{})[k]||0,orcTxt='';
+      if(orc>0){var uso=v/orc*100;orcTxt='<div style="font-size:10px;font-weight:600;color:'+(uso>100?'var(--red)':(uso>=80?'#B7791F':'var(--vf)'))+';">orçado '+fmt(orc)+' · '+uso.toFixed(0)+'% usado</div>';}
+      return '<td style="text-align:right;color:'+(v>0?'var(--red)':'var(--light)')+';">'+(v>0?'-'+fmt(v):'—')+(pc?'<div style="font-size:10px;opacity:.6;">'+pc+' da receita</div>':'')+orcTxt+(vp>0?'<div style="opacity:.45;font-size:10px;">planejado -'+fmt(vp)+'</div>':'')+'</td>';
     }).join('')+'</tr>';
     if(aberto)subs.forEach(function(sc){row+=linhaDetalhe(sc,subEmpPorCatMes[cat][sc],'var(--red)');});
     return row;
@@ -1993,18 +2094,19 @@ function renderDREMensal(){
   linhas+=linhaCategoria(CAT_DEDUCOES);
   var receitaLiqPorMes=zeroMap();
   meses.forEach(function(k){receitaLiqPorMes[k]=receitaPorMes[k]-(despEmpPorCatMes[CAT_DEDUCOES][k]||0);});
+  baseMargem=receitaLiqPorMes;
   linhas+=linhaSubtotal('= Receita Líquida',receitaLiqPorMes,false);
 
   linhas+=linhaCategoria(CAT_CMV);
   var lucroBrutoPorMes=zeroMap();
   meses.forEach(function(k){lucroBrutoPorMes[k]=receitaLiqPorMes[k]-(despEmpPorCatMes[CAT_CMV][k]||0);});
-  linhas+=linhaSubtotal('= Lucro Bruto',lucroBrutoPorMes,false);
+  linhas+=linhaSubtotal('= Lucro Bruto',lucroBrutoPorMes,false,'margem bruta');
 
   linhas+=linhaCategoria(CAT_ADM);
   linhas+=linhaCategoria(CAT_VENDAS);
   var resOpPorMes=zeroMap();
   meses.forEach(function(k){resOpPorMes[k]=lucroBrutoPorMes[k]-(despEmpPorCatMes[CAT_ADM][k]||0)-(despEmpPorCatMes[CAT_VENDAS][k]||0);});
-  linhas+=linhaSubtotal('= Resultado Operacional',resOpPorMes,false);
+  linhas+=linhaSubtotal('= Resultado Operacional',resOpPorMes,false,'margem operacional');
 
   linhas+=linhaCategoria(CAT_FIN);
   var temNaoCat=meses.some(function(k){return(despEmpPorCatMes['Não categorizado'][k]||0)>0||(despEmpPlanPorCatMes['Não categorizado'][k]||0)>0;});
@@ -2016,7 +2118,7 @@ function renderDREMensal(){
   }
   var resLiqEmpPorMes=zeroMap();
   meses.forEach(function(k){resLiqEmpPorMes[k]=resOpPorMes[k]-(despEmpPorCatMes[CAT_FIN][k]||0)-(despEmpPorCatMes['Não categorizado'][k]||0);});
-  linhas+=linhaSubtotal('= Resultado Líquido (Empresa)',resLiqEmpPorMes,true);
+  linhas+=linhaSubtotal('= Resultado Líquido (Empresa)',resLiqEmpPorMes,true,'margem líquida');
 
   var acEmp=0,acLinhaEmp='<tr><td style="font-weight:700;">Acumulado (Empresa)</td>';
   meses.forEach(function(k){acEmp+=resLiqEmpPorMes[k]||0;acLinhaEmp+='<td style="text-align:right;font-weight:700;color:'+(acEmp>=0?'var(--vf)':'var(--red)')+';">'+fmt(acEmp)+'</td>';});
@@ -2197,15 +2299,19 @@ function renderBalancoPatrimonial(){
     conf.innerHTML=linha1+'<strong style="color:var(--gold);">⚠ Diferença de '+fmt(Math.abs(dif))+'</strong> ('+(dif>0?'Ativo maior':'Passivo+PL maior')+') — normal enquanto faltar preencher saldo de banco/caixa e Capital Social na aba Patrimonio, ou por lucro acumulado antes de jul/2026 (não capturado pelo sistema novo).';
   }
 }
+/* 21/10/2026 (backlog 27): o mesmo controle salva a meta de venda (Categoria vazia) ou o
+   orçamento de uma categoria de despesa (aba Metas, coluna Categoria). Loja = 1ª loja do filtro. */
 function salvarMeta(){
   var mes=document.getElementById('meta-mes').value;
   var valor=parseFloat(document.getElementById('meta-valor').value);
-  if(!mes||!valor){showToast('Preencha mês e valor da meta','warn');return;}
+  var cat=(document.getElementById('meta-cat')||{}).value||'';
+  if(!mes||!valor){showToast('Preencha mês e valor','warn');return;}
   var lj=[...lojasAtivas][0]||'juquia';
-  apiPost({tipo:'definir_meta',anoMes:mes,loja:lj,valorMeta:valor,operador:'Jax'});
-  var idx=D.metas.findIndex(function(m){return m.AnoMes===mes&&lSlug(m.Loja||'')===lj;});
-  if(idx>-1)D.metas[idx].ValorMeta=valor;else D.metas.push({AnoMes:mes,Loja:lj,ValorMeta:valor});
-  showToast('Meta salva!');
+  if(lojasAtivas.size>1&&!confirm('Vai salvar para '+(LNOMES[lj]||lj)+' (1ª loja do filtro). Para outra loja, filtre só ela no topo. Continuar?'))return;
+  apiPost({tipo:'definir_meta',anoMes:mes,loja:lj,valorMeta:valor,categoria:cat,operador:'Jax'});
+  var idx=D.metas.findIndex(function(m){return m.AnoMes===mes&&lSlug(m.Loja||'')===lj&&String(m.Categoria||'')===cat;});
+  if(idx>-1)D.metas[idx].ValorMeta=valor;else D.metas.push({AnoMes:mes,Loja:lj,ValorMeta:valor,Categoria:cat});
+  showToast(cat?'Orçamento salvo!':'Meta salva!');
   document.getElementById('meta-valor').value='';
   renderDREMensal();
 }
@@ -2809,21 +2915,22 @@ function renCompras(){
     var custo=parseFloat(c.Valor_Unit||0);
     var marg=margemAtual(pv,custo);
     var margTxt='—',margCor='var(--light)';
-    if(marg!==null){margTxt=marg.toFixed(1)+'x';margCor=marg>=3?'var(--vf)':'var(--red)';}
+    if(marg!==null){margTxt=marg.toFixed(1)+'x';margCor=marg>=MARKUP_IDEAL-0.01?'var(--vf)':'var(--red)';}
     return '<tr><td>'+esc(c.Data||'—')+'</td><td title="'+esc(c.Produto||'')+'">'+esc(c.Produto||'—')+'</td><td>'+esc(c.Fornecedor||'—')+'</td><td><span class="lb '+LPILL[lj]+'">'+esc(LNOMES[lj]||c.Loja)+'</span></td><td>'+esc(c.Qtd||'—')+'</td><td>'+fmt(custo)+'</td><td style="font-weight:600;">'+fmt(c.Valor_Total)+'</td><td style="font-weight:700;color:'+margCor+';">'+margTxt+'</td></tr>';
   });
   document.getElementById('tb-compras').innerHTML=rows.join('')||'<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--light);">Nenhuma compra no período</td></tr>';
   var dl=document.getElementById('cp-prod-list');
   if(dl){var nomes=[...new Set(D.estoque.filter(estComprado).map(function(p){return p.Nome;}))];dl.innerHTML=nomes.map(function(n){return '<option value="'+esc(n)+'">';}).join('');}
 
-  /* Produtos com margem atual abaixo do ideal (3x), independente de terem sido comprados recentemente */
-  var todosMarg=est.map(function(p){var marg=margemAtual(p.Preco_Venda,p.Preco_Custo);return{p:p,i:D.estoque.indexOf(p),marg:marg};}).filter(function(x){return x.marg!==null&&x.marg<3;});
+  /* Produtos com margem atual abaixo do ideal, independente de terem sido comprados recentemente.
+     21/10/2026 (decisão Jax): ideal = sugerido da compra = custo × 2,5 (MARKUP_IDEAL). Tolerância de 1 centavo no markup. */
+  var todosMarg=est.map(function(p){var marg=margemAtual(p.Preco_Venda,p.Preco_Custo);return{p:p,i:D.estoque.indexOf(p),marg:marg};}).filter(function(x){return x.marg!==null&&x.marg<MARKUP_IDEAL-0.01;});
   todosMarg.sort(function(a,b){return a.marg-b.marg;});
   sEl('cp-marg-n',todosMarg.length);
   var elMarg=document.getElementById('cp-marg-lst');
   if(elMarg){
     elMarg.innerHTML=todosMarg.length?todosMarg.map(function(x){
-      var p=x.p,lj=lSlug(p.Loja||''),ideal=parseFloat(p.Preco_Custo||0)*3;
+      var p=x.p,lj=lSlug(p.Loja||''),ideal=parseFloat(p.Preco_Custo||0)*MARKUP_IDEAL;
       return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);">'+
         '<div><div style="font-weight:600;font-size:13px;">'+(p.Emoji||'🌷')+' '+esc(p.Nome||'')+'</div>'+
         '<div style="font-size:11px;color:var(--light);">'+(LNOMES[lj]||p.Loja)+' · custo '+fmt(p.Preco_Custo)+' · venda atual '+fmt(p.Preco_Venda)+'</div></div>'+
@@ -2846,43 +2953,62 @@ function parseProdutosVenda(v){
   });
   return out;
 }
+/* ── GIRO DESDE A ÚLTIMA COMPRA (21/10/2026, backlog 14) ──
+   Por produto + loja (respeita o filtro de LOJA, ignora o de período — a última
+   compra pode ser antiga):
+   - Última compra = data mais recente; qtd = soma das compras desse dia (unidades).
+   - Vendido desde então = vendas (não canceladas) da mesma loja com data >= última compra.
+   - % vendido = vendido ÷ qtd da última compra.
+   - Ciclo anterior = penúltima compra (qtd) e o que vendeu entre ela e a última.
+   - Estoque atual = aba Estoque (mesma loja).
+   Nome comparado sem acento/maiúscula. PARADO = nenhuma venda direta E estoque não caiu abaixo do
+   que foi comprado. Sem venda direta mas estoque caiu = "usado em arranjo/perda" (sai por outro nome).
+   Ordem: parados primeiro, depois menor % vendido. */
+function normProdGiro(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim();}
 function renGiroCompras(){
   var el=document.getElementById('cp-giro-lst');
   if(!el)return;
-  var cmp=gDL(comprasFundidas());
+  var cmp=gLojaOnly(comprasFundidas());
   if(!cmp.length){el.innerHTML='<div class="empty">Nenhuma compra registrada</div>';return;}
-  var porProd={};
+  var prods={}; // chave loja|nome -> {nome,loja,dias:{ts:qtd}}
   cmp.forEach(function(c){
-    var nome=String(c.Produto||'').trim();if(!nome)return;
-    var d=parsePtD(c.Data);
-    if(!porProd[nome]||(d&&(!porProd[nome].data||d.getTime()>porProd[nome].data.getTime()))){
-      porProd[nome]={data:d,dataTxt:c.Data,qtd:parseInt(c.Qtd||0)};
-    }
+    var nome=String(c.Produto||'').trim(),d=parsePtD(c.Data);if(!nome||!d)return;
+    var lj=lSlug(c.Loja||''),k=lj+'|'+normProdGiro(nome);
+    if(!prods[k])prods[k]={nome:nome,loja:lj,dias:{}};
+    var t=new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime();
+    prods[k].dias[t]=(prods[k].dias[t]||0)+(parseFloat(c.Qtd)||0);
   });
-  var vendAntes={},vendDepois={};
-  vendasValidas(gDL(D.vendas)).forEach(function(v){
-    var dv=parsePtD(v.Data);
-    parseProdutosVenda(v).forEach(function(it){
-      var ref=porProd[it.nome];
-      if(!ref)return;
-      if(ref.data&&dv&&dv.getTime()>=ref.data.getTime())vendDepois[it.nome]=(vendDepois[it.nome]||0)+it.qtd;
-      else vendAntes[it.nome]=(vendAntes[it.nome]||0)+it.qtd;
-    });
+  var vendas={}; // chave -> [{t,qtd}]
+  vendasValidas(gLojaOnly(D.vendas)).forEach(function(v){
+    var dv=parsePtD(v.Data);if(!dv)return;var lj=lSlug(v.Loja||v.Cidade||'');
+    parseItensVenda(v).forEach(function(it){var k=lj+'|'+normProdGiro(it.raw);if(!prods[k])return;(vendas[k]=vendas[k]||[]).push({t:dv.getTime(),q:it.qtd||0});});
   });
-  var linhas=Object.keys(porProd).map(function(nome){
-    return{nome:nome,ref:porProd[nome],depois:vendDepois[nome]||0,antes:vendAntes[nome]||0};
+  var estq={};(D.estoque||[]).forEach(function(e){estq[lSlug(e.Loja||'')+'|'+normProdGiro(e.Nome)]=(estq[lSlug(e.Loja||'')+'|'+normProdGiro(e.Nome)]||0)+(parseFloat(e.Qtd)||0);});
+  var hoje=new Date();hoje.setHours(0,0,0,0);
+  var fd=function(t){var d=new Date(+t);return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();};
+  var linhas=Object.keys(prods).map(function(k){
+    var p=prods[k],ts=Object.keys(p.dias).map(Number).sort(function(a,b){return b-a;});
+    var ult=ts[0],pen=ts[1],qUlt=p.dias[ult],vs=vendas[k]||[];
+    var depois=vs.filter(function(x){return x.t>=ult;}).reduce(function(a,x){return a+x.q;},0);
+    var cicloAnt=pen?vs.filter(function(x){return x.t>=pen&&x.t<ult;}).reduce(function(a,x){return a+x.q;},0):null;
+    return{nome:p.nome,loja:p.loja,ult:ult,qUlt:qUlt,depois:depois,pct:qUlt>0?depois/qUlt*100:0,
+      dias:Math.round((hoje-ult)/86400000),pen:pen,qPen:pen?p.dias[pen]:0,cicloAnt:cicloAnt,est:estq[k]};
   });
-  linhas.sort(function(a,b){return a.depois-b.depois;});
-  el.innerHTML=linhas.map(function(l){
-    var parado=l.depois===0;
+  linhas.forEach(function(l){l.parado=l.depois===0&&(l.est===undefined||l.est>=l.qUlt);l.semDireta=l.depois===0&&!l.parado;});
+  linhas.sort(function(a,b){return (a.parado?0:1)-(b.parado?0:1)||a.pct-b.pct;});
+  var multiLoja=lojasAtivas.size>1;
+  el.innerHTML='<div style="font-size:11px;color:var(--light);margin-bottom:6px;">Ignora o filtro de período (última compra pode ser antiga); respeita a loja. % = vendido desde a última compra ÷ quantidade comprada nela. PARADO = sem venda e estoque não baixou; "sem venda direta" = estoque baixou mas não há venda com esse nome (usado em arranjo, perda ou vendido com outro nome).</div>'+linhas.map(function(l){
+    var parado=l.parado,cor=parado?'var(--red)':(l.semDireta||l.pct<70?'var(--gold)':'var(--vf)');
+    var ant=l.pen?('Compra anterior '+fd(l.pen)+': '+l.qPen+' un, vendeu '+l.cicloAnt+' até a seguinte'):'Primeira compra registrada';
     return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);'+(parado?'background:var(--gold-pale);margin:0 -4px;padding-left:4px;padding-right:4px;border-radius:6px;':'')+'">'+
-      '<div><div style="font-weight:600;font-size:13px;">'+esc(l.nome)+'</div>'+
-      '<div style="font-size:11px;color:var(--light);">Última compra '+esc(l.ref.dataTxt||'—')+' · '+l.ref.qtd+' un</div></div>'+
-      '<div style="text-align:right;">'+
-      '<div style="font-size:12px;font-weight:700;color:'+(parado?'var(--red)':'var(--vf)')+';">'+l.depois+' vendido'+(parado?' — PARADO':'')+'</div>'+
-      '<div style="font-size:11px;color:var(--light);">'+l.antes+' vendido de compras anteriores</div>'+
+      '<div><div style="font-weight:600;font-size:13px;">'+esc(l.nome)+(multiLoja?' <span style="font-size:10px;color:var(--light);">· '+esc(LNOMES[l.loja]||l.loja)+'</span>':'')+'</div>'+
+      '<div style="font-size:11px;color:var(--light);">Última compra '+fd(l.ult)+' ('+l.dias+' dias) · '+l.qUlt+' un'+(l.est!==undefined?' · estoque agora '+l.est:'')+'</div>'+
+      '<div style="font-size:11px;color:var(--light);">'+ant+'</div></div>'+
+      '<div style="text-align:right;white-space:nowrap;">'+
+      '<div style="font-size:13px;font-weight:700;color:'+cor+';">'+(parado?'PARADO':(l.semDireta?'sem venda direta':l.pct.toFixed(0)+'% vendido'))+'</div>'+
+      '<div style="font-size:11px;color:var(--light);">'+(l.semDireta?'estoque caiu — arranjo/perda?':l.depois+' de '+l.qUlt+' un')+'</div>'+
       '</div></div>';
-  }).join('')||'<div class="empty">Sem dados suficientes</div>';
+  }).join('');
 }
 function abMCompra(nome,loja,fornecedor){
   document.getElementById('fm-compra').className='fmsg';
@@ -2954,13 +3080,13 @@ function onCpProdChange(){
   }
   calcCpMargem();
 }
-// Mesma conta do PDV: custo unitário = valor pago (por unidade comprada) / fracionamento; venda sugerida = custo×3 (markup ideal).
+// Mesma conta do PDV: custo unitário = valor pago (por unidade comprada) / fracionamento; venda sugerida = custo×2,5 (MARKUP_IDEAL).
 function calcCpMargem(){
   var vp=parseFloat(document.getElementById('cp-vu').value)||0;
   var frac=parseFloat(document.getElementById('cp-frac').value)||0;
   var custo=frac>0?vp/frac:0;
   document.getElementById('cp-custo').value=custo?fmt(custo):'';
-  document.getElementById('cp-venda').value=custo?(custo*2.5).toFixed(2):'';
+  document.getElementById('cp-venda').value=custo?(custo*MARKUP_IDEAL).toFixed(2):'';
   mostrarCpLucro();
 }
 /* 20/10/2026: lucro do preço de venda (mesma regra do PDV, explicada na tela).
@@ -3002,7 +3128,7 @@ async function subCompra(){
   if(ok){
     var custoUnit=frac>0?vp/frac:0;
     var statusLocal=(forma==='CartaoC6'||forma==='CartaoItau'||forma==='Boleto')?'Pendente':'Pago'; // igual ao backend
-    D.pagamentos.push({Vencimento:pl.data,Loja:lj,Descricao:'Compra'+(forn?' - '+forn:''),Categoria:'Compra de Mercadorias',Subcategoria:'',
+    D.pagamentos.push({Vencimento:pl.data,Loja:lj,Descricao:'Compra '+(forn||'Ceagesp')+' - '+prod,Categoria:'Custos/CMV',Subcategoria:'Compra de Mercadorias',
       Valor:qtd*vp,Status:statusLocal,Observacao:pl.observacao||'',Tipo:'Compra',Data:pl.data,Grupo:'',
       Fornecedor:forn,Produto:prod,Qtd:qtd*frac,Valor_Unit:custoUnit, /* backend grava unidades de venda (qtd x fracionado) */ Valor_Venda:venda,Forma_Pagamento:forma,Gera_Estoque:'Sim',Operador:'Jax'});
     var p=D.estoque.find(function(x){return x.Nome===prod&&lSlug(x.Loja||'')===lj;});
