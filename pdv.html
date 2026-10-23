@@ -897,6 +897,11 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
       </div>
       <div id="cp-bol-resumo" style="font-size:12px;color:#5F5E5A;"></div>
     </div>
+    <div class="form-row" style="margin-bottom:12px;">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Categoria</label><select class="form-input" id="cp-categoria"></select></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Validade (opcional)</label><input class="form-input" id="cp-validade" type="date"></div>
+    </div>
+    <div style="font-size:11px;color:#5F5E5A;margin:-6px 0 12px;">O Lote do produto recebe a data da compra automaticamente. Validade só para perecível (chocolate etc.).</div>
     <div class="form-group"><label class="form-label">Observação (opcional)</label><input class="form-input" id="cp-obs" type="text" placeholder="Opcional"></div>
     <button class="btn btn-primary" onclick="salvarCompra()">
       <span id="btn-cp-text">Registrar compra</span>
@@ -1847,8 +1852,8 @@ function popularListaComprasItemDatalist() {
     return String(a.Nome||'').localeCompare(String(b.Nome||''));
   });
   dl.innerHTML = lista.map(function(p){
-    var qtd=parseInt(p.Qtd||0), alerta=parseInt(p.Alerta_Minimo||5);
-    var tag = qtd===0?' (zerado)':(qtd<=alerta?' (estoque baixo)':'');
+    var qtd=qtdVenda(p), alerta=parseInt(p.Alerta_Minimo||5);
+    var tag = ehSobEnc(p)?' (sob encomenda)':(qtd===0?' (zerado)':(qtd<=alerta?' (estoque baixo)':''));
     var prTag = p.Prioridade ? ' ⭐'+p.Prioridade : '';
     return '<option value="'+escapeHtml(p.Nome||'')+'">'+escapeHtml(p.Nome||'')+prTag+tag+'</option>';
   }).join('');
@@ -1981,10 +1986,19 @@ function checkCliente(val) {
       ? totalCompras + ' compra'+(totalCompras>1?'s':'')+' recente'+(totalCompras>1?'s':'')+' · última: '+vendasCliente[0].data
       : 'Cliente cadastrado';
 
+    // 23/10/2026: "Completar cadastro" -- corrige/completa o nome de cliente já cadastrado
+    // (muitos sem sobrenome). Nome com 1 palavra só ganha aviso.
+    var nomeAtual = String(c.Nome||'').trim(), semSobrenome = nomeAtual.split(/\s+/).length < 2;
     known.innerHTML =
       '<div class="ck-top">'+
-        '<span class="ck-nome">✓ '+escapeHtml(String(c.Nome||''))+'</span>'+
+        '<span class="ck-nome">✓ '+escapeHtml(nomeAtual||'(sem nome)')+'</span>'+
+        '<button class="ck-hist-btn" onclick="abrirEditNomeCliente()">✏️ '+(semSobrenome?'Completar cadastro':'Ajustar nome')+'</button>'+
         (vendasCliente.length ? '<button class="ck-hist-btn" onclick="toggleHistCliente()">Ver compras</button>' : '')+
+      '</div>'+
+      (semSobrenome ? '<div style="font-size:11px;color:#B7791F;font-weight:600;margin-top:2px;">⚠ Cadastro sem sobrenome — pergunte o nome completo</div>' : '')+
+      '<div id="ck-edit-nome" style="display:none;margin-top:8px;gap:6px;">'+
+        '<input class="form-input" id="ck-nome-novo" type="text" value="'+escapeHtml(nomeAtual)+'" placeholder="Nome e sobrenome" style="flex:1;min-width:0;">'+
+        '<button class="btn btn-primary" style="width:auto;padding:8px 14px;font-size:13px;" onclick="salvarNomeCliente(\''+tel+'\')">Salvar</button>'+
       '</div>'+
       '<div class="ck-meta">'+metaTexto+'</div>'+
       histHTML;
@@ -1997,6 +2011,22 @@ function checkCliente(val) {
   }
 }
 
+function abrirEditNomeCliente() {
+  var box = document.getElementById('ck-edit-nome'); if (!box) return;
+  box.style.display = box.style.display === 'flex' ? 'none' : 'flex';
+  var inp = document.getElementById('ck-nome-novo'); if (inp && box.style.display === 'flex') { inp.focus(); inp.select(); }
+}
+async function salvarNomeCliente(tel) {
+  var novo = String((document.getElementById('ck-nome-novo')||{}).value||'').trim().replace(/\s+/g,' ');
+  if (!novo) { showToast('Digite o nome', false, 'warn'); return; }
+  var c = clientes.find(function(x){ return String(x.Telefone||'').replace(/\D/g,'') === tel; });
+  if (c) c.Nome = novo;
+  document.getElementById('nome').value = novo;
+  showToast('Salvando nome…');
+  var ok = await enviarParaSheets({tipo:'upsert_cliente', telefone: c ? c.Telefone : tel, nome: novo, loja:(sessaoLoja||pdvLoja), atualizarNome:true, operador: operador||'PDV'});
+  showToast(ok ? 'Cadastro atualizado: '+novo : 'Erro ao salvar o nome', !ok);
+  checkCliente(document.getElementById('telefone').value);
+}
 function toggleHistCliente() {
   var hist = document.getElementById('ck-hist-detalhe');
   if (hist) {
@@ -2027,9 +2057,10 @@ function renderProdutos() {
     div.className = 'produto-card';
     div.id = 'card-'+p.id;
     var opts = estoque.map(function(ep){
-      var qtd = parseInt(ep.Qtd||0);
+      var qtd = qtdVenda(ep);
       var disabled = qtd===0?'disabled':'';
-      var label = qtd===0
+      var label = ehSobEnc(ep) ? (ep.Emoji||'🌷')+' '+escapeHtml(ep.Nome)+'  R$ '+fmt(ep.Preco_Venda)+' · sob encomenda'
+        : qtd===0
         ? (ep.Emoji||'🌷')+' '+escapeHtml(ep.Nome)+' — ZERADO'
         : qtd<=parseInt(ep.Alerta_Minimo||5)
           ? (ep.Emoji||'🌷')+' '+escapeHtml(ep.Nome)+' (⚠️ '+qtd+') R$ '+fmt(ep.Preco_Venda)
@@ -2082,10 +2113,10 @@ function filtrarProdOpts(id, q) {
     drop.classList.add('open'); return;
   }
   drop.innerHTML = filtered.map(function(ep){
-    var qtd = parseInt(ep.Qtd||0);
+    var qtd = qtdVenda(ep);
     var isZero = qtd===0, isLow = qtd>0&&qtd<=parseInt(ep.Alerta_Minimo||5);
     var badge = isZero?'🔴':isLow?'🟡':'';
-    var info = isZero?'Zerado':isLow?'⚠️ '+qtd+' restantes · R$ '+fmt(ep.Preco_Venda):'R$ '+fmt(ep.Preco_Venda)+' · '+qtd+' un.';
+    var info = ehSobEnc(ep)?'R$ '+fmt(ep.Preco_Venda)+' · sob encomenda':isZero?'Zerado':isLow?'⚠️ '+qtd+' restantes · R$ '+fmt(ep.Preco_Venda):'R$ '+fmt(ep.Preco_Venda)+' · '+qtd+' un.';
     return '<div class="prod-option'+(isZero?' disabled':'')+'" onmousedown="selecionarProduto('+id+',\''+escapeHtml(ep.Nome)+'\','+ep.Preco_Venda+','+qtd+','+(ep.Alerta_Minimo||5)+',\''+escapeHtml(String(ep.Categoria||''))+'\')">'+
       '<span class="prod-option-name">'+badge+' '+(ep.Emoji||'🌷')+' '+escapeHtml(String(ep.Nome||''))+'</span>'+
       '<span class="prod-option-info">'+info+'</span></div>';
@@ -2107,7 +2138,8 @@ function selecionarProduto(id, nome, preco, qtdEst, alMin, categoria) {
   if (subEl)    subEl.textContent = 'R$ '+fmt(p.qtd*p.valorUnit);
   if (drop)     drop.classList.remove('open');
   if (infoEl) {
-    if (qtdEst===0)      infoEl.innerHTML='<span class="stock-badge zero">🔴 Zerado</span>';
+    if (qtdEst>=9999)    infoEl.innerHTML='<span class="stock-badge ok">✓ Sob encomenda</span>';
+    else if (qtdEst===0) infoEl.innerHTML='<span class="stock-badge zero">🔴 Zerado</span>';
     else if (qtdEst<=alMin) infoEl.innerHTML='<span class="stock-badge low">🟡 Baixo — '+qtdEst+' restantes</span>';
     else                 infoEl.innerHTML='<span class="stock-badge ok">✓ '+qtdEst+' disponíveis</span>';
   }
@@ -2335,9 +2367,13 @@ function novaVenda() {
 }
 
 // ── ESTOQUE ────────────────────────────────────────────────
+/* 23/10/2026: produto "Sob encomenda" (coluna Sob_Encomenda = Sim) -- feito na hora
+   (buquê, cesta, serviço, taxa): vende sem olhar quantidade, fora dos alertas de estoque. */
+function ehSobEnc(p) { return /^(sim|s|true|1)$/i.test(String((p&&p.Sob_Encomenda)||'').trim()); }
+function qtdVenda(p) { return ehSobEnc(p) ? 9999 : parseInt(p.Qtd||0); }
 function atualizarAlertas() {
-  var zeros = estoque.filter(function(p){return parseInt(p.Qtd||0)===0;});
-  var lows  = estoque.filter(function(p){var q=parseInt(p.Qtd||0),m=parseInt(p.Alerta_Minimo||5);return q>0&&q<=m;});
+  var zeros = estoque.filter(function(p){return qtdVenda(p)===0;});
+  var lows  = estoque.filter(function(p){var q=qtdVenda(p),m=parseInt(p.Alerta_Minimo||5);return q>0&&q<=m;});
   var total = zeros.length + lows.length;
   var badge = document.getElementById('badge-alertas');
   badge.textContent=total; badge.style.display=total>0?'inline':'none';
@@ -2481,7 +2517,13 @@ function renderListaComprasPDV() {
         '<input type="number" min="0" step="0.01" class="form-input" id="lc-g'+gi+'-it'+ji+'-valor" value="'+custoSug+'" placeholder="R$ cx" title="Valor pago por caixa/maço/unidade comprada" oninput="atualizarLinhaLote(\'lc\','+gi+','+ji+')" style="width:70px;padding:6px;font-size:12px;"><input type="number" min="1" step="1" class="form-input" id="lc-g'+gi+'-it'+ji+'-frac" value="1" placeholder="un/cx" title="Quantas unidades de venda vêm em cada caixa/maço (1 se vende inteiro)" oninput="atualizarLinhaLote(\'lc\','+gi+','+ji+')" style="width:52px;padding:6px;font-size:12px;">'+
         '<button class="btn btn-primary" style="width:auto;padding:6px 9px;font-size:11px;" title="Comprar este item (caixa/fracionado)" onclick="abrirCompraItemLista(\''+itemEsc+'\',\''+escapeHtml(g.fornecedor).replace(/'/g,"\\'")+'\')">🛒</button>'+
         '<button class="btn btn-outline" style="width:auto;padding:6px 9px;font-size:11px;color:#B33A3A;border-color:#B33A3A;" onclick="abrirModalRecusa(\''+itemEsc+'\')">✕</button>'+
-        '<div id="'+LP+'-g'+gi+'-it'+ji+'-info" style="flex-basis:100%;font-size:11px;color:#5F5E5A;"></div>'+
+        '<div style="flex-basis:100%;font-size:11px;color:#5F5E5A;" id="'+LP+'-g'+gi+'-it'+ji+'-info"></div>'+
+        '<div style="flex-basis:100%;display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:11px;">'+
+          '<span>Venda/un R$</span><input type="number" min="0" step="0.01" class="form-input" id="'+LP+'-g'+gi+'-it'+ji+'-venda" placeholder="0,00" title="Preço de venda por unidade (sugerido = custo × 2,5; pode mudar)" oninput="this.dataset.ed=1;atualizarLinhaLote(\''+LP+'\','+gi+','+ji+')" style="width:72px;padding:5px;font-size:12px;">'+
+          (produtoEstoque(i.Item) ? '' : '<select class="form-input" id="'+LP+'-g'+gi+'-it'+ji+'-cat" title="Produto novo: escolha a categoria" style="width:auto;padding:5px;font-size:12px;">'+optsCategoria('')+'</select>')+
+          '<span>Validade</span><input type="date" class="form-input" id="'+LP+'-g'+gi+'-it'+ji+'-val" title="Opcional, só pra perecível" style="width:auto;padding:4px;font-size:11px;">'+
+        '</div>'+
+        '<div style="flex-basis:100%;font-size:12px;" id="'+LP+'-g'+gi+'-it'+ji+'-lucro"></div>'+
         '</div>';
     }).join('');
     var fornEsc = escapeHtml(g.fornecedor).replace(/'/g,"\\'");
@@ -2530,7 +2572,11 @@ async function darEntradaLote(gi) {
     var frac = fracLote(gi, ji, qtdEl);
     if (qtd > 0) {
       if (!valorUnit) faltaValor = true;
-      itens.push({nome: i.Item, quantidade: qtd * frac, valorUnit: valorUnit / frac, listaItem: i.Item});
+      var vendaEl = document.getElementById(PREF_LOTE+'-g'+gi+'-it'+ji+'-venda'), catEl = document.getElementById(PREF_LOTE+'-g'+gi+'-it'+ji+'-cat'), valEl2 = document.getElementById(PREF_LOTE+'-g'+gi+'-it'+ji+'-val');
+      var itx = {nome: i.Item, quantidade: qtd * frac, valorUnit: valorUnit / frac, listaItem: i.Item, valorVenda: parseFloat(vendaEl && vendaEl.value)||0};
+      if (catEl && catEl.value) itx.categoria = catEl.value;
+      if (valEl2 && valEl2.value) { var pv2 = valEl2.value.split('-'); itx.validade = pv2[2]+'/'+pv2[1]+'/'+pv2[0]; }
+      itens.push(itx);
     }
   });
 
@@ -2592,7 +2638,13 @@ function popularSelectListasFechadas() {
   (listaCompras||[]).forEach(function(i){ if (i.ListaData && datas.indexOf(i.ListaData)===-1) datas.push(i.ListaData); });
   datas.sort(function(a,b){ return parsePtDataSimples(b) - parsePtDataSimples(a); });
   var atual = sel.value;
-  sel.innerHTML = '<option value="">Selecione uma data…</option>' + datas.map(function(d){return '<option value="'+d+'">Lista de '+d+'</option>';}).join('');
+  // 23/10/2026: status na frente de cada lista (itens ainda pendentes x finalizada)
+  sel.innerHTML = '<option value="">Selecione uma lista…</option>' + datas.map(function(d){
+    var it = (listaCompras||[]).filter(function(i){ return i.ListaData===d; });
+    var pend = it.filter(function(i){ return (i.Status||'')==='Pendente'; }).length;
+    var st = pend ? '⏳ em aberto · '+pend+' de '+it.length+' pendente'+(pend>1?'s':'') : '✅ finalizada · '+it.length+' ite'+(it.length>1?'ns':'m');
+    return '<option value="'+d+'">Lista de '+d+' — '+st+'</option>';
+  }).join('');
   if (datas.indexOf(atual)>=0) { sel.value = atual; renderListaFechadaPDV(atual); }
   else if (datas.length) { sel.value = datas[0]; renderListaFechadaPDV(datas[0]); }
   else { document.getElementById('lista-fechada-pdv').innerHTML=''; }
@@ -2606,7 +2658,11 @@ function atualizarLinhaLote(P, gi, ji) {
   var q = parseFloat((document.getElementById(P+'-g'+gi+'-it'+ji+'-qtd')||{}).value)||0;
   var v = parseFloat((document.getElementById(P+'-g'+gi+'-it'+ji+'-valor')||{}).value)||0;
   var f = fracLoteDe(P, gi, ji), info = document.getElementById(P+'-g'+gi+'-it'+ji+'-info');
-  if (info) info.textContent = (q && v) ? ('= '+(q*f)+' un no estoque · custo R$ '+fmt(v/f)+'/un · venda sugerida R$ '+fmt(v/f*2.5)+' · total R$ '+fmt(q*v)) : '';
+  // 23/10/2026: venda por unidade editável (sugerido custo × 2,5 até a pessoa mudar) + linha de lucro padrão
+  var vEl = document.getElementById(P+'-g'+gi+'-it'+ji+'-venda'), lEl = document.getElementById(P+'-g'+gi+'-it'+ji+'-lucro');
+  if (vEl && !vEl.dataset.ed) vEl.value = v ? (v/f*2.5).toFixed(2) : '';
+  if (info) info.textContent = (q && v) ? ('= '+(q*f)+' un no estoque · custo R$ '+fmt(v/f)+'/un · total R$ '+fmt(q*v)) : '';
+  if (lEl) lEl.innerHTML = (q && v) ? linhaLucroHTML(v/f, vEl ? vEl.value : v/f*2.5) : '';
   atualizarTotalLote(P, gi);
 }
 function atualizarTotalLote(P, gi) {
@@ -2708,7 +2764,13 @@ function renderListaFechadaPDV(dataSel) {
         '<button class="btn btn-outline" style="width:auto;padding:6px 9px;font-size:11px;" title="Editar item" onclick="abrirEditLista(\''+itemEsc+'\')">✏️</button>'+
         '<button class="btn btn-primary" style="width:auto;padding:6px 9px;font-size:11px;" title="Comprar este item (caixa/fracionado)" onclick="abrirCompraItemLista(\''+itemEsc+'\',\''+escapeHtml(g.fornecedor).replace(/'/g,"\\'")+'\')">🛒</button>'+
         '<button class="btn btn-outline" style="width:auto;padding:6px 9px;font-size:11px;color:#B33A3A;border-color:#B33A3A;" onclick="abrirModalRecusa(\''+itemEsc+'\')">✕</button>'+
-        '<div id="'+LP+'-g'+gi+'-it'+ji+'-info" style="flex-basis:100%;font-size:11px;color:#5F5E5A;"></div>'+
+        '<div style="flex-basis:100%;font-size:11px;color:#5F5E5A;" id="'+LP+'-g'+gi+'-it'+ji+'-info"></div>'+
+        '<div style="flex-basis:100%;display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:11px;">'+
+          '<span>Venda/un R$</span><input type="number" min="0" step="0.01" class="form-input" id="'+LP+'-g'+gi+'-it'+ji+'-venda" placeholder="0,00" title="Preço de venda por unidade (sugerido = custo × 2,5; pode mudar)" oninput="this.dataset.ed=1;atualizarLinhaLote(\''+LP+'\','+gi+','+ji+')" style="width:72px;padding:5px;font-size:12px;">'+
+          (produtoEstoque(i.Item) ? '' : '<select class="form-input" id="'+LP+'-g'+gi+'-it'+ji+'-cat" title="Produto novo: escolha a categoria" style="width:auto;padding:5px;font-size:12px;">'+optsCategoria('')+'</select>')+
+          '<span>Validade</span><input type="date" class="form-input" id="'+LP+'-g'+gi+'-it'+ji+'-val" title="Opcional, só pra perecível" style="width:auto;padding:4px;font-size:11px;">'+
+        '</div>'+
+        '<div style="flex-basis:100%;font-size:12px;" id="'+LP+'-g'+gi+'-it'+ji+'-lucro"></div>'+
         '</div>';
     }).join('');
     var fornEsc = escapeHtml(g.fornecedor).replace(/'/g,"\\'");
@@ -2781,7 +2843,11 @@ async function darEntradaLoteFechada(gi) {
     var frac = fracLote(gi, ji, qtdEl);
     if (qtd > 0) {
       if (!valorUnit) faltaValor = true;
-      itens.push({nome: i.Item, quantidade: qtd * frac, valorUnit: valorUnit / frac, listaItem: i.Item});
+      var vendaEl = document.getElementById(PREF_LOTE+'-g'+gi+'-it'+ji+'-venda'), catEl = document.getElementById(PREF_LOTE+'-g'+gi+'-it'+ji+'-cat'), valEl2 = document.getElementById(PREF_LOTE+'-g'+gi+'-it'+ji+'-val');
+      var itx = {nome: i.Item, quantidade: qtd * frac, valorUnit: valorUnit / frac, listaItem: i.Item, valorVenda: parseFloat(vendaEl && vendaEl.value)||0};
+      if (catEl && catEl.value) itx.categoria = catEl.value;
+      if (valEl2 && valEl2.value) { var pv2 = valEl2.value.split('-'); itx.validade = pv2[2]+'/'+pv2[1]+'/'+pv2[0]; }
+      itens.push(itx);
     }
   });
 
@@ -2857,10 +2923,10 @@ function sNumJs(v) {
 }
 
 function renderEstoqueItemHTML(p, idx) {
-  var qtd=parseInt(p.Qtd||0),min=parseInt(p.Alerta_Minimo||5);
-  var cls=qtd===0?'zero':qtd<=min?'low':'';
-  var qtdCls=qtd===0?'zero':qtd<=min?'low':'';
-  var tag=qtd===0?'<span class="alert-tag zero">Zerado</span>':qtd<=min?'<span class="alert-tag low">Estoque baixo</span>':'';
+  var qtd=parseInt(p.Qtd||0),min=parseInt(p.Alerta_Minimo||5),sob=ehSobEnc(p);
+  var cls=sob?'':qtd===0?'zero':qtd<=min?'low':'';
+  var qtdCls=cls;
+  var tag=sob?'<span class="alert-tag" style="background:var(--gold-pale,#fdf3e1);color:#B7791F;">Sob encomenda</span>':qtd===0?'<span class="alert-tag zero">Zerado</span>':qtd<=min?'<span class="alert-tag low">Estoque baixo</span>':'';
   var nomeSeg=escapeHtml(String(p.Nome||'')).replace(/'/g,"\\'");
   var nome=String(p.Nome||'');
   var expandido = !!estExpandido[nome];
@@ -2881,10 +2947,12 @@ function renderEstoqueItemHTML(p, idx) {
         '<div style="display:flex;gap:8px;align-items:center;">'+
           '<div style="flex:1;min-width:0;display:flex;align-items:center;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--branco);padding-left:12px;">'+
             '<span style="font-size:16px;font-weight:600;color:var(--mid);">R$</span>'+
-            '<input type="number" inputmode="decimal" step="0.01" min="0" class="form-input" id="'+precoInputId+'" value="'+sNumJs(p.Preco_Venda)+'" style="border:none;font-size:20px;font-weight:700;padding:12px 10px;min-width:0;" onfocus="this.select()">'+
+            '<input type="number" inputmode="decimal" step="0.01" min="0" class="form-input" id="'+precoInputId+'" value="'+sNumJs(p.Preco_Venda)+'" style="border:none;font-size:20px;font-weight:700;padding:12px 10px;min-width:0;" onfocus="this.select()" oninput="document.getElementById(\'lucro-edit-'+idx+'\').innerHTML=linhaLucroHTML('+(parseFloat(p.Preco_Custo)||0)+',this.value)">'+
           '</div>'+
           '<button class="btn btn-primary" style="width:auto;padding:12px 18px;font-size:14px;flex-shrink:0;" id="btn-salvar-prod-'+idx+'" onclick="salvarProdutoEstoque(\''+nomeSeg+'\','+idx+')">Salvar</button>'+
         '</div>'+
+        '<div id="lucro-edit-'+idx+'" style="font-size:12px;margin-top:6px;">'+(parseFloat(p.Preco_Custo)>0?linhaLucroHTML(p.Preco_Custo,p.Preco_Venda):'<span style="color:#5F5E5A;">Sem custo cadastrado — lucro não calculado</span>')+'</div>'+
+        '<div style="font-size:11px;color:#5F5E5A;margin-top:2px;">Custo R$ '+fmt(p.Preco_Custo)+(p.Lote?' · Lote '+escapeHtml(String(p.Lote)):'')+(p.Validade?' · Validade '+escapeHtml(String(p.Validade)):'')+'</div>'+
       '</div>'+
       '<div style="margin-top:10px;">'+
         '<button class="perda-btn" onclick="abrirModalPerda(\''+nomeSeg+'\')">Registrar perda</button>'+
@@ -2913,7 +2981,7 @@ function renderEstoque() {
   if(titTodos) titTodos.textContent='🔍 Localizar / todos os produtos ('+(estoque||[]).length+')';
   var lista = document.getElementById('lista-estoque');
   var filtered = estoqueFiltered.filter(function(p){
-    var qtd=parseInt(p.Qtd||0), alerta=parseInt(p.Alerta_Minimo||5);
+    var qtd=qtdVenda(p), alerta=parseInt(p.Alerta_Minimo||5);
     if(estFiltroAtivo==='alertas') return qtd>0&&qtd<=alerta;
     if(estFiltroAtivo==='zerados') return qtd===0;
     return true;
@@ -3064,6 +3132,7 @@ function abrirModalCompra(nomeSugerido) {
   document.getElementById('cp-custo-out').textContent='R$ 0,00';
   document.getElementById('cp-pagamento').value='Dinheiro';
   document.getElementById('cp-bol-venc').value=''; document.getElementById('cp-bol-parc').value='1';
+  document.getElementById('cp-validade').value=''; document.getElementById('cp-categoria').innerHTML=optsCategoria('');
   calcBoletosCompra(); mostrarMargemCompra();
   if(nomeSugerido) document.getElementById('cp-produto').value = nomeSugerido;
   mostrarEstoqueCompra();
@@ -3072,6 +3141,9 @@ function abrirModalCompra(nomeSugerido) {
 /* 01/10/2026 (backlog 65): mostra quanto já tem do produto no estoque da loja
    da sessão (e o preço de venda atual) enquanto digita, pra decidir quanto comprar. */
 function mostrarEstoqueCompra() {
+  // 23/10: categoria acompanha o produto digitado (produto existente já vem com a dele)
+  var selCat = document.getElementById('cp-categoria');
+  if (selCat) { var pe = produtoEstoque(document.getElementById('cp-produto').value); var atualCat = selCat.value; selCat.innerHTML = optsCategoria(pe && pe.Categoria ? String(pe.Categoria) : atualCat); }
   var el = document.getElementById('cp-estoque-info');
   if (!el) return;
   var nome = String(document.getElementById('cp-produto').value||'').trim().toLowerCase();
@@ -3097,6 +3169,29 @@ function calcCompra() {
    Regra (aparece na tela): lucro por unidade = venda − custo;
    margem = lucro ÷ venda (quanto de cada R$ vendido fica de lucro);
    markup = venda ÷ custo (o sugerido padrão é 2,5× = margem de 60%). */
+/* 23/10/2026: linha padrão de lucro (mesma regra em todas as telas do PDV):
+   lucro/un = venda − custo · margem = lucro ÷ venda · markup = venda ÷ custo.
+   Cor da margem: ≥50% verde, 30–49% amarelo, <30% vermelho. */
+function linhaLucroHTML(custo, venda) {
+  custo = parseFloat(custo)||0; venda = parseFloat(venda)||0;
+  if (!custo || !venda) return '';
+  var lucro = venda - custo, margem = lucro/venda*100, markup = venda/custo;
+  var cor = margem >= 50 ? '#2E7D32' : (margem >= 30 ? '#B7791F' : '#B33A3A');
+  return '💰 Lucro por unidade <strong>R$ '+fmt(lucro)+'</strong> · margem <strong style="color:'+cor+';">'+margem.toFixed(0)+'%</strong> da venda · markup '+markup.toFixed(2).replace('.',',')+'×';
+}
+/* Categorias já usadas no Estoque (mais usadas primeiro, sem repetir maiúscula/minúscula) */
+function categoriasEstoque() {
+  var cont = {}, nome = {};
+  (estoque||[]).forEach(function(p){ var c = String(p.Categoria||'').trim(); if (!c) return; var k = c.toLowerCase(); cont[k] = (cont[k]||0)+1; if (!nome[k] || c[0] === c[0].toUpperCase()) nome[k] = c; });
+  return Object.keys(cont).sort(function(a,b){ return cont[b]-cont[a]; }).map(function(k){ return nome[k]; });
+}
+function optsCategoria(sel) {
+  return '<option value="">Categoria…</option>' + categoriasEstoque().map(function(c){ return '<option'+(c===sel?' selected':'')+'>'+escapeHtml(c)+'</option>'; }).join('');
+}
+function produtoEstoque(nome) {
+  var n = String(nome||'').trim().toLowerCase();
+  return (estoque||[]).find(function(p){ return String(p.Nome||'').trim().toLowerCase() === n; }) || null;
+}
 function mostrarMargemCompra() {
   var el = document.getElementById('cp-margem'); if (!el) return;
   var vp = parseFloat(document.getElementById('cp-valorpago').value)||0;
@@ -3104,9 +3199,7 @@ function mostrarMargemCompra() {
   var custo = frac>0 ? vp/frac : 0;
   var venda = parseFloat(document.getElementById('cp-venda').value)||0;
   if (!custo || !venda) { el.innerHTML = ''; return; }
-  var lucro = venda - custo, margem = lucro/venda*100, markup = venda/custo;
-  var cor = margem >= 50 ? '#2E7D32' : (margem >= 30 ? '#B7791F' : '#B33A3A');
-  el.innerHTML = '💰 Lucro por unidade <strong>R$ '+fmt(lucro)+'</strong> · margem <strong style="color:'+cor+';">'+margem.toFixed(0)+'%</strong> da venda · markup '+markup.toFixed(2).replace('.',',')+'×'+
+  el.innerHTML = linhaLucroHTML(custo, venda)+
     '<div style="font-size:11px;color:#5F5E5A;margin-top:2px;">Margem = (venda − custo) ÷ venda. Sugerido padrão: custo × 2,5 = 60% de margem.</div>';
 }
 /* 20/10/2026: compra no boleto -- 1º vencimento + nº de parcelas.
@@ -3167,6 +3260,8 @@ async function salvarCompra() {
   };
   if (cpListaItemRef) payload.listaItem = cpListaItemRef;
   if (bols) payload.boletos = bols;
+  payload.categoria = (document.getElementById('cp-categoria')||{}).value || '';
+  var vd = (document.getElementById('cp-validade')||{}).value; if (vd) { var pvd = vd.split('-'); payload.validade = pvd[2]+'/'+pvd[1]+'/'+pvd[0]; }
   var ok = await enviarParaSheets(payload);
   setLoading('btn-cp-text','btn-cp-text','spinner-cp',false,'Registrar compra');
   _salvandoCompra = false;
