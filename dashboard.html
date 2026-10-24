@@ -293,6 +293,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <button class="si" onclick="goSec('orcamentos',this)" title="Orçamentos"><span class="ico">🧾</span><span class="si-lbl">Orçamentos</span></button>
     <button class="si" id="nav-projetos" onclick="goSec('projetos',this)" title="Projetos"><span class="ico">🗂️</span><span class="si-lbl">Projetos</span></button>
     <button class="si" onclick="goSec('equipe',this)" title="Equipe"><span class="ico">🪪</span><span class="si-lbl">Equipe</span></button>
+    <button class="si" onclick="goSec('marketing',this)" title="Marketing"><span class="ico">📣</span><span class="si-lbl">Marketing</span></button>
     <button class="si" onclick="goSec('analises',this)" title="Análises"><span class="ico">🧠</span><span class="si-lbl">Análises</span></button>
   </nav>
   <div class="sb-footer"><div class="sb-cfg" onclick="goSec('config',null)"><span style="font-size:15px">⚙️</span><span class="sb-cfg-lbl">Configurações</span></div></div>
@@ -355,10 +356,22 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
           <div id="vg-proj-resumo"><div class="empty">Carregue os dados</div></div>
         </div>
       </div>
+      <div class="cc" style="margin-top:20px;">
+        <div class="ch"><div><div class="ct">📊 Canal de venda e origem dos clientes</div><div class="csb">Canal = Presencial / WhatsApp marcado no PDV (registrado desde 10/10/2026) · Origem = resposta "Como nos conheceu?" na venda · respeita loja e período</div></div></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;">
+          <div><div style="font-size:12px;font-weight:700;color:var(--mid);margin-bottom:6px;">Canal de venda</div><div id="vg-canal"><div class="empty">Carregue os dados</div></div></div>
+          <div><div style="font-size:12px;font-weight:700;color:var(--mid);margin-bottom:6px;">Como nos conheceu</div><div id="vg-origem"><div class="empty">Carregue os dados</div></div></div>
+        </div>
+      </div>
     </div>
 
     <!-- FINANCEIRO -->
     <div id="sec-financeiro" class="section">
+      <!-- 23/10/2026: checklist do que mandar pra contabilidade todo mês (marcações ficam neste navegador) -->
+      <div class="cc cc-collapsed" id="cc-contab" style="margin-bottom:20px;">
+        <div class="ch ch-tgl" onclick="toggleCC(this)"><div><div class="ct" id="contab-tit">📤 Fechamento do mês — enviar para a contabilidade</div><div class="csb" id="contab-sub">—</div></div><span class="cc-tgl">▾</span></div>
+        <div class="cc-body"><div id="contab-lst"></div></div>
+      </div>
       <div class="kgrid">
         <div class="kpi gn"><div class="ki">💰</div><div class="kl">Receita bruta</div><div class="kv" id="fin-receita">—</div><div class="ks" id="fin-receita-sub">faturamento</div></div>
         <div class="kpi ro"><div class="ki">💸</div><div class="kl">Despesas pagas</div><div class="kv ro" id="fin-despesas">—</div><div class="ks" id="fin-despesas-sub">contas pagas</div></div>
@@ -414,6 +427,7 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
             <li><b>Receita da Empresa</b> = aba Vendas, menos as vendas da loja "pessoal" (essas são Receitas do Pessoal, detalhadas pela Categoria da venda).</li>
             <li><b>Realizado x planejado:</b> Status "Pago" = realizado. Outro status = planejado (valor esmaecido, não entra no resultado). Na visão <b>Por competência</b>, compra no cartão de crédito conta como realizada mesmo pendente — desde que a data da compra (competência) já tenha passado; data futura é sempre planejado.</li>
             <li><b>Mês de cada despesa:</b> <i>Por caixa</i> = Vencimento. <i>Por competência</i> = data da compra, só para cartão (Forma CartaoC6/CartaoItau ou itens "Fatura C6/Itau/Maga - …"): coluna Data se até 75 dias antes do vencimento → senão o "dd/mm" no fim da descrição (exceto quando é número de parcela: a mesma descrição aparece em 2+ meses com o mesmo total, ex. "Cama 05/07", "Cama 06/07") → senão 1 mês antes do vencimento. Os demais lançamentos usam o Vencimento.</li>
+            <li><b>Rateio entre lojas:</b> custos compartilhados da Empresa com Subcategoria <b>Contabilidade</b>, <b>Sistemas</b> ou <b>Marketing</b> são divididos entre as lojas pelo % do faturamento de cada uma no mês (ex.: Juquiá vendeu 90% → fica com 90% da contabilidade), não importa em qual loja foram lançados. Com todas as lojas no filtro o total não muda. Mês sem venda: fica na loja lançada. Na lista de lançamentos aparece "rateado x%".</li>
             <li><b>Meta e orçamento:</b> o seletor ao lado de "Salvar" escolhe <i>Meta de venda</i> (aparece em Receita Bruta) ou uma categoria de despesa (orçamento = limite de gasto do mês). Na categoria aparece "orçado R$ X · Y% usado" = realizado ÷ orçado (verde até 79%, amarelo 80–100%, vermelho acima). Vale para a loja escolhida no filtro; com várias lojas, soma os orçamentos delas.</li>
             <li><b>Margens (%):</b> calculadas sobre a <b>Receita Líquida</b> do mês, só com valores realizados (planejado não entra). <b>Margem bruta</b> = Lucro Bruto ÷ Receita Líquida (quanto sobra da venda depois do custo da mercadoria). <b>Margem operacional</b> = Resultado Operacional ÷ Receita Líquida. <b>Margem líquida</b> = Resultado Líquido ÷ Receita Líquida. Em cada categoria, "x% da receita" = despesa realizada ÷ Receita Líquida. Mês sem receita não mostra %. Para ver a margem de uma loja, filtre só aquela loja no topo. Para comparar margem entre meses, use <b>Por competência</b>: Por caixa o custo das compras no cartão cai no mês da fatura e a margem oscila muito (ex.: julho baixo, agosto alto).</li>
             <li><b>Período e loja:</b> respeita o filtro de período (corta pelo dia, 1 coluna por mês, a partir de jul/2026) e as lojas selecionadas.</li>
@@ -686,6 +700,28 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <!-- CONFIG -->
     <!-- 21/10/2026: Análises — relatórios que o Claude (Financeiro, Programador…) deixa por assunto.
          Ficam no arquivo analises.json, publicado junto com o dashboard no GitHub. -->
+    <!-- 23/10/2026: Marketing — lê marketing.json (plano, campanhas, métricas, calendário), mantido pelo Claude na rotina de marketing -->
+    <div id="sec-marketing" class="section">
+      <div class="kgrid" id="mk-kpis"></div>
+      <div class="cc" style="margin-bottom:20px;">
+        <div class="ch"><div><div class="ct">📈 Vendas x Campanhas</div><div class="csb">Faturamento por dia (lojas do filtro, últimos 120 dias + próximos 45) · faixas coloridas = período de cada campanha · compare com a média fora das campanhas</div></div></div>
+        <div style="height:240px;"><canvas id="c-mk"></canvas></div>
+        <div id="mk-camp-res" style="margin-top:10px;"></div>
+      </div>
+      <div class="cc" style="margin-bottom:20px;">
+        <div class="ch"><div><div class="ct">🗓️ Próximos posts</div><div class="csb">Calendário do mês (pasta marketing/AAAA-MM) · status atualizado na rotina semanal</div></div></div>
+        <div id="mk-cal"></div>
+      </div>
+      <div class="cc cc-collapsed" style="margin-bottom:20px;">
+        <div class="ch ch-tgl" onclick="toggleCC(this)"><div><div class="ct">🎯 Plano de marketing (inicial)</div><div class="csb">Objetivo, posicionamento, pilares de conteúdo, como medir e plano de ação</div></div><span class="cc-tgl">▾</span></div>
+        <div class="cc-body"><div id="mk-plano"></div></div>
+      </div>
+      <div class="cc cc-collapsed" style="margin-bottom:20px;">
+        <div class="ch ch-tgl" onclick="toggleCC(this)"><div><div class="ct">📊 Métricas das redes (histórico)</div><div class="csb">Seguidores, alcance, mensagens sem resposta e Google — preenchido todo mês na rotina</div></div><span class="cc-tgl">▾</span></div>
+        <div class="cc-body"><div id="mk-met"></div></div>
+      </div>
+    </div>
+
     <div id="sec-analises" class="section">
       <div class="cc" style="margin-bottom:20px;">
         <div class="ch"><div><div class="ct">🧠 Análises</div><div class="csb">Análises pedidas ao Claude, guardadas por assunto · mais recente primeiro · toque numa análise para ler</div></div>
@@ -1002,12 +1038,72 @@ function togSB(){document.getElementById('sb').classList.toggle('col');document.
 function openMSB(){document.getElementById('sb').classList.add('mob');document.getElementById('sb-ov').classList.add('show');}
 function closeMSB(){document.getElementById('sb').classList.remove('mob');document.getElementById('sb-ov').classList.remove('show');}
 
-var SEC_TITLES={visao:'Visão geral',financeiro:'Financeiro',entradas:'Entradas',saidas:'Saídas',conciliacao:'Conciliação',clientes:'Clientes',encomendas:'Encomendas',estoque:'Estoque',compras:'Compras',projetos:'Projetos',orcamentos:'Orçamentos',equipe:'Equipe',analises:'Análises',config:'Configurações'};
+var SEC_TITLES={visao:'Visão geral',financeiro:'Financeiro',entradas:'Entradas',saidas:'Saídas',conciliacao:'Conciliação',clientes:'Clientes',encomendas:'Encomendas',estoque:'Estoque',compras:'Compras',projetos:'Projetos',orcamentos:'Orçamentos',equipe:'Equipe',marketing:'Marketing',analises:'Análises',config:'Configurações'};
 /* ── ANÁLISES (21/10/2026) ──
    Lê analises.json (mesma pasta do dashboard no GitHub): lista de
    {id, assunto, titulo, data:'dd/mm/aaaa', especialista, resumo, conteudo (markdown simples)}.
    Agrupa por assunto (recolhível), mais recente primeiro. */
 var ANALISES=null,anAberto={};
+/* ── MARKETING (23/10/2026) ──
+   marketing.json (mesma pasta do dashboard): {plano, campanhas[{nome,inicio,fim,canal,custo}],
+   metricas[{data,rede,seguidores,alcance,interacoes,sem_resposta,avaliacoes,nota}], calendario[...]}.
+   Gráfico: faturamento diário (vendas válidas, lojas do filtro) com as campanhas sombreadas.
+   "Efeito" de cada campanha = média diária durante a campanha ÷ média diária fora de campanhas (mesma janela). */
+var MKT=null;
+function carregarMarketing(){return fetch('marketing.json?v='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():{};}).catch(function(){return {};}).then(function(m){MKT=m||{};return MKT;});}
+var MK_CORES=['rgba(201,122,26,.16)','rgba(59,91,201,.14)','rgba(156,86,184,.14)','rgba(131,171,51,.18)'];
+function renMarketing(){
+  if(MKT===null){carregarMarketing().then(renMarketing);return;}
+  var m=MKT||{},camp=m.campanhas||[],met=m.metricas||[],cal=m.calendario||[],pl=m.plano||{};
+  var hoje=new Date();hoje.setHours(0,0,0,0);
+  // KPIs
+  var redes={};met.forEach(function(x){var d=parsePtD(x.data);if(!d)return;(redes[x.rede]=redes[x.rede]||[]).push({d:d,x:x});});
+  var kp=Object.keys(redes).map(function(r){var a=redes[r].sort(function(p,q){return q.d-p.d;}),u=a[0].x,ant=a[1]&&a[1].x;var dif=ant&&u.seguidores!==undefined&&ant.seguidores!==undefined?(parseFloat(u.seguidores)-parseFloat(ant.seguidores)):null;
+    return '<div class="kpi gn"><div class="ki">👥</div><div class="kl">'+esc(r)+'</div><div class="kv">'+(u.seguidores!==undefined&&u.seguidores!==''?parseFloat(u.seguidores).toLocaleString('pt-BR'):'—')+'</div><div class="ks">'+(dif!==null?(dif>=0?'+':'')+dif+' desde '+esc(ant.data):'seguidores em '+esc(u.data))+'</div></div>';});
+  var semResp=Object.keys(redes).reduce(function(a,r){var u=redes[r].sort(function(p,q){return q.d-p.d;})[0].x;return a+(parseFloat(u.sem_resposta)||0);},0);
+  var mesAtual=cal.filter(function(c){var d=parsePtD(c.data);return d&&d.getMonth()===hoje.getMonth()&&d.getFullYear()===hoje.getFullYear();});
+  var feitos=mesAtual.filter(function(c){return /feito|publicad|agendad/i.test(c.status||'');}).length;
+  var ativas=camp.filter(function(c){var i=parsePtD(c.inicio),f=parsePtD(c.fim);return i&&f&&hoje>=i&&hoje<=f;});
+  document.getElementById('mk-kpis').innerHTML=(kp.length?kp.join(''):'<div class="kpi"><div class="ki">👥</div><div class="kl">Seguidores</div><div class="kv">—</div><div class="ks">1ª medição em 01/11 (rotina)</div></div>')+
+    '<div class="kpi '+(semResp>0?'ro':'gn')+'"><div class="ki">💬</div><div class="kl">Mensagens sem resposta</div><div class="kv">'+(met.length?semResp:'—')+'</div><div class="ks">última medição de cada rede</div></div>'+
+    '<div class="kpi"><div class="ki">🗓️</div><div class="kl">Posts do mês</div><div class="kv">'+feitos+' / '+mesAtual.length+'</div><div class="ks">feitos ou agendados</div></div>'+
+    '<div class="kpi"><div class="ki">📣</div><div class="kl">Campanhas ativas</div><div class="kv">'+ativas.length+'</div><div class="ks">'+(ativas.map(function(c){return esc(c.nome);}).join(', ')||'nenhuma hoje')+'</div></div>';
+  // Gráfico vendas x campanhas
+  var ini=new Date(hoje);ini.setDate(ini.getDate()-120);var fim=new Date(hoje);fim.setDate(fim.getDate()+45);
+  var dias=[],idx={};for(var d=new Date(ini);d<=fim;d.setDate(d.getDate()+1)){var k=d.getTime();idx[k]=dias.length;dias.push({t:k,v:0});}
+  vendasValidas(gLojaOnly(D.vendas)).forEach(function(v){var dv=parsePtD(v.Data);if(!dv)return;var k=new Date(dv.getFullYear(),dv.getMonth(),dv.getDate()).getTime();if(idx[k]!==undefined)dias[idx[k]].v+=parseFloat(v.Total||0);});
+  var faixas=camp.map(function(c,i){var a=parsePtD(c.inicio),b=parsePtD(c.fim);return a&&b?{nome:c.nome,a:a.getTime(),b:b.getTime(),cor:MK_CORES[i%MK_CORES.length]}:null;}).filter(Boolean);
+  var lbl=dias.map(function(x){var d=new Date(x.t);return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0');});
+  var serie=dias.map(function(x){return x.t<=hoje.getTime()?x.v:null;});
+  var plugFaixas={id:'mkFaixas',beforeDatasetsDraw:function(ch){var xs=ch.scales.x,ar=ch.chartArea,c=ch.ctx;faixas.forEach(function(f){var i1=dias.findIndex(function(x){return x.t>=f.a;}),i2=-1;dias.forEach(function(x,i){if(x.t<=f.b)i2=i;});if(i1<0||i2<i1)return;var x1=xs.getPixelForValue(i1)-3,x2=xs.getPixelForValue(i2)+3;c.save();c.fillStyle=f.cor;c.fillRect(x1,ar.top,x2-x1,ar.bottom-ar.top);c.fillStyle='#555';c.font='10px Sora, sans-serif';c.fillText(f.nome,x1+3,ar.top+11);c.restore();});}};
+  if(window._cMk)window._cMk.destroy();
+  var cv=document.getElementById('c-mk');
+  if(cv&&window.Chart)window._cMk=new Chart(cv.getContext('2d'),{type:'line',data:{labels:lbl,datasets:[{label:'Faturamento',data:serie,borderColor:'#3B6D11',backgroundColor:'rgba(59,109,17,.08)',fill:true,pointRadius:0,tension:.25,spanGaps:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:function(c){return ' '+fmt(c.raw);}}}},scales:{x:{grid:{display:false},ticks:{font:{size:10},maxTicksLimit:10,color:'#999'}},y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10},color:'#999',callback:function(v){return 'R$'+(v/1000).toFixed(1)+'k';}},border:{display:false}}}},plugins:[plugFaixas]});
+  // efeito das campanhas
+  var foraSoma=0,foraN=0;dias.forEach(function(x){if(x.t>hoje.getTime())return;if(faixas.some(function(f){return x.t>=f.a&&x.t<=f.b;}))return;if(new Date(x.t).getDay()===0)return;foraSoma+=x.v;foraN++;});
+  var mediaFora=foraN?foraSoma/foraN:0;
+  document.getElementById('mk-camp-res').innerHTML='<table class="dt dt-compact"><thead><tr><th>Campanha</th><th>Período</th><th>Canal</th><th>Custo</th><th>Média/dia na campanha</th><th>x média fora (seg–sáb)</th></tr></thead><tbody>'+
+    (camp.length?camp.map(function(c){var a=parsePtD(c.inicio),b=parsePtD(c.fim);var s2=0,n2=0;dias.forEach(function(x){if(a&&b&&x.t>=a.getTime()&&x.t<=b.getTime()&&x.t<=hoje.getTime()&&new Date(x.t).getDay()!==0){s2+=x.v;n2++;}});
+      var med=n2?s2/n2:null,ef=med!==null&&mediaFora?(med/mediaFora-1)*100:null;
+      return '<tr><td>'+esc(c.nome)+'</td><td>'+esc(c.inicio)+' a '+esc(c.fim)+'</td><td>'+esc(c.canal||'')+'</td><td>'+(c.custo?fmt(c.custo):'—')+'</td><td>'+(med!==null?fmt(med):'ainda não começou')+'</td><td>'+(ef!==null?'<b style="color:'+(ef>=0?'var(--vf)':'var(--red)')+';">'+(ef>=0?'+':'')+ef.toFixed(0)+'%</b>':'—')+'</td></tr>';}).join(''):'<tr><td colspan="6">Nenhuma campanha registrada</td></tr>')+
+    '</tbody></table><div style="font-size:11px;color:var(--light);margin-top:4px;">Média fora de campanhas (seg–sáb, lojas do filtro): '+fmt(mediaFora)+'/dia. Efeito = média na campanha ÷ média fora − 1. Não prova causa sozinho — compare também com o "Como nos conheceu?".</div>';
+  // calendário: próximos 10 dias
+  var prox=cal.filter(function(c){var d=parsePtD(c.data);return d&&d>=hoje;}).slice(0,10);
+  var atras=cal.filter(function(c){var d=parsePtD(c.data);return d&&d<hoje&&!/feito|publicad|agendad/i.test(c.status||'');}).length;
+  document.getElementById('mk-cal').innerHTML=(atras?'<div style="font-size:12px;color:var(--red);font-weight:600;margin-bottom:6px;">⚠ '+atras+' post(s) de dias anteriores sem status "feito"</div>':'')+
+    (prox.length?'<table class="dt dt-compact"><thead><tr><th>Data</th><th>Tema</th><th>Onde</th><th>Legenda (rascunho)</th><th>Status</th></tr></thead><tbody>'+prox.map(function(c){return '<tr><td>'+esc(c.data)+' '+esc(c.dia||'')+'</td><td>'+esc(c.tema)+'</td><td style="font-size:11px;">'+esc(c.rede)+'</td><td style="font-size:11px;white-space:normal;min-width:260px;">'+esc(c.legenda)+'</td><td>'+esc(c.status||'')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">Sem posts programados — peça o calendário do próximo mês ao Claude</div>');
+  // plano
+  var lis=function(a){return '<ul style="margin:4px 0 8px 18px;">'+(a||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>';};
+  document.getElementById('mk-plano').innerHTML='<div style="font-size:13px;line-height:1.55;">'+
+    '<p><b>Objetivo:</b> '+esc(pl.objetivo||'')+'</p><p><b>Posicionamento:</b> '+esc(pl.posicionamento||'')+'</p>'+
+    '<div><b>Pilares de conteúdo</b>'+lis(pl.pilares)+'</div><div><b>Produtos carro-chefe (fortalecer a marca)</b>'+lis(pl.carros_chefe)+'</div>'+
+    '<p><b>Ritmo:</b> '+esc(pl.ritmo||'')+'</p>'+
+    '<div><b>Como medir</b><table class="dt dt-compact"><thead><tr><th>Métrica</th><th>Quando</th><th>Meta</th></tr></thead><tbody>'+(pl.metricas||[]).map(function(r){return '<tr><td>'+esc(r[0])+'</td><td>'+esc(r[1])+'</td><td>'+esc(r[2])+'</td></tr>';}).join('')+'</tbody></table></div>'+
+    '<div style="margin-top:8px;"><b>Plano de ação</b><table class="dt dt-compact"><thead><tr><th>Fase</th><th>Ação</th><th>Quem</th><th>Status</th></tr></thead><tbody>'+(pl.acoes||[]).map(function(a){return '<tr><td>'+esc(a.fase)+'</td><td style="white-space:normal;">'+esc(a.acao)+'</td><td>'+esc(a.resp)+'</td><td>'+(a.status==='feito'?'✅ feito':esc(a.status))+'</td></tr>';}).join('')+'</tbody></table></div>'+
+    '<p style="margin-top:8px;"><b>Automação das postagens:</b> '+esc(pl.automacao||'')+'</p></div>';
+  // métricas
+  document.getElementById('mk-met').innerHTML=met.length?'<table class="dt dt-compact"><thead><tr><th>Data</th><th>Rede</th><th>Seguidores</th><th>Alcance</th><th>Interações</th><th>Sem resposta</th><th>Avaliações</th><th>Nota</th></tr></thead><tbody>'+met.slice().sort(function(a,b){return (parsePtD(b.data)||0)-(parsePtD(a.data)||0);}).map(function(x){return '<tr><td>'+esc(x.data)+'</td><td>'+esc(x.rede)+'</td><td>'+esc(x.seguidores||'—')+'</td><td>'+esc(x.alcance||'—')+'</td><td>'+esc(x.interacoes||'—')+'</td><td>'+esc(x.sem_resposta!==undefined?String(x.sem_resposta):'—')+'</td><td>'+esc(x.avaliacoes||'—')+'</td><td>'+esc(x.nota||'—')+'</td></tr>';}).join('')+'</tbody></table>':'<div class="empty">Sem medições ainda — a 1ª é em 01/11 (pasta marketing/metricas)</div>';
+}
 function carregarAnalises(){
   return fetch('analises.json?v='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():[];}).catch(function(){return [];})
     .then(function(a){ANALISES=Array.isArray(a)?a:[];return ANALISES;});
@@ -1073,6 +1169,7 @@ function goSec(id,btn){
   if(pb)pb.style.display=(id==='conciliacao')?'none':'';
   if(id==='config')initCfg();
   if(id==='analises')renAnalises();
+  if(id==='marketing')renMarketing();
   if(D.vendas.length){
     if(id==='estoque')renEst();
     if(id==='encomendas')renEnc();
@@ -1418,7 +1515,25 @@ async function loadData(){
 function renAll(){renVisao();if(secAtiva==='entradas')renEntradas();if(secAtiva==='saidas')renSai();if(secAtiva==='conciliacao')renConciliacao();if(secAtiva==='clientes')renCli();if(secAtiva==='encomendas')renEnc();if(secAtiva==='estoque')renEst();if(secAtiva==='financeiro')renderFinanceiro();if(secAtiva==='compras')renCompras();if(secAtiva==='projetos')renProjetos();if(secAtiva==='orcamentos')renOrc();if(secAtiva==='equipe')renEquipe();}
 
 /* ── VISÃO GERAL ── */
+/* 23/10/2026: canal de venda (coluna Canal da aba Vendas) e origem dos clientes
+   (coluna Como_Conheceu da aba Clientes). % = quantidade ÷ total com resposta. */
+function barrasPct(itens,cor){
+  var tot=itens.reduce(function(a,x){return a+x.n;},0)||1;
+  return itens.map(function(x){var pc=x.n/tot*100;return '<div class="br"><span class="bl" style="width:120px">'+esc(x.k)+'</span><div class="bt"><div class="bf" style="width:'+pc.toFixed(0)+'%;background:'+cor+'"></div></div><span class="bv" style="width:auto;min-width:110px;">'+pc.toFixed(0)+'% · '+x.n+(x.v!==undefined?' · '+fmt(x.v):'')+'</span></div>';}).join('');
+}
+function renCanais(){
+  var el=document.getElementById('vg-canal'),el2=document.getElementById('vg-origem');if(!el||!el2)return;
+  var c={},semCanal=0;
+  vendasValidas(gDL(D.vendas)).forEach(function(v){var k=String(v.Canal||'').trim();if(!k){semCanal++;return;}c[k]=c[k]||{n:0,v:0};c[k].n++;c[k].v+=parseFloat(v.Total||0);});
+  var it=Object.keys(c).map(function(k){return{k:k,n:c[k].n,v:c[k].v};}).sort(function(a,b){return b.n-a.n;});
+  el.innerHTML=(it.length?barrasPct(it,'var(--vj)'):'<div class="empty">Nenhuma venda com canal no período</div>')+(semCanal?'<div style="font-size:11px;color:var(--light);margin-top:4px;">'+semCanal+' venda(s) sem canal (antes de 10/10 ou lançamento manual) não entram no %</div>':'');
+  var o={},resp=0,tot=0;
+  gLojaOnly(D.clientes).forEach(function(cl){tot++;var k=String(cl.Como_Conheceu||'').trim();if(!k)return;resp++;o[k]=(o[k]||0)+1;});
+  var it2=Object.keys(o).map(function(k){return{k:k,n:o[k]};}).sort(function(a,b){return b.n-a.n;});
+  el2.innerHTML=(it2.length?barrasPct(it2,'var(--gold)'):'<div class="empty">Ainda sem respostas — a pergunta aparece no PDV na hora da venda</div>')+'<div style="font-size:11px;color:var(--light);margin-top:4px;">'+resp+' de '+tot+' clientes responderam</div>';
+}
 function renVisao(){
+  try{renCanais();}catch(e){}
   var vnd=gDL(D.vendas),pag=gLojaOnly(D.pagamentos); // pag: nao filtra por periodo (kv-ap e Proximos vencimentos sao "sempre atuais")
   var fat=vnd.reduce(function(s,v){return s+parseFloat(v.Total||0);},0),qtd=vendasValidas(vnd).length;
   sEl('kv-fat',fmt(fat));sEl('kv-vnd',qtd);sEl('kv-tkt',fmt(qtd?fat/qtd:0));
@@ -1814,7 +1929,36 @@ function getFinDesp(){
     var r=Object.assign({},p);r.Vencimento=p.Vencimento||p.Data;r._val=parseFloat(p.Valor||0);r._cat=p.Categoria||'Pagamentos';return r;
   });
 }
+/* ── CHECKLIST CONTABILIDADE (23/10/2026) ──
+   Itens que vão pra contabilidade todo mês, referentes ao mês ANTERIOR. Janela de aviso:
+   do dia 25 ao dia 5 do mês seguinte (prazo combinado: até dia 5). As marcações ficam salvas
+   neste navegador, por mês de referência. */
+var CONTAB_ITENS=[
+  ['extratos','Extratos bancários do mês (Caixa, Itaú, C6 conta e PagBank) — PDF ou OFX'],
+  ['faturas','Faturas dos cartões (C6, Itaú, Magalu) com os itens'],
+  ['vendas','Relatório de vendas por loja e forma de pagamento (dashboard › Entradas, filtro do mês)'],
+  ['notas','Notas/comprovantes das compras de mercadoria (Ceagesp, fornecedores, boletos)'],
+  ['contas','Comprovantes das contas fixas pagas (aluguel, água, luz, internet, sistemas)'],
+  ['folha','Folha: ponto/horas, vales e adiantamentos, admissões/demissões (dashboard › Equipe)'],
+  ['prolabore','Pró-labore / retiradas dos sócios no mês'],
+  ['guias','Guias pagas do mês (DAS, FGTS, INSS) e as que chegaram para pagar'],
+  ['caixa','Fechamentos de caixa (sobras/faltas) e despesas pagas em dinheiro']
+];
+function mesRefContab(){var h=new Date();var r=h.getDate()>=25?new Date(h.getFullYear(),h.getMonth(),1):new Date(h.getFullYear(),h.getMonth()-1,1);return r;}
+function contabKey(){var r=mesRefContab();return 'mayse_contab_'+r.getFullYear()+'-'+String(r.getMonth()+1).padStart(2,'0');}
+function contabEstado(){try{return JSON.parse(localStorage.getItem(contabKey())||'{}');}catch(e){return {};}}
+function toggleContab(id){var st=contabEstado();st[id]=!st[id];try{localStorage.setItem(contabKey(),JSON.stringify(st));}catch(e){}renContab();}
+function renContab(){
+  var el=document.getElementById('contab-lst');if(!el)return;
+  var r=mesRefContab(),st=contabEstado(),h=new Date(),dia=h.getDate(),janela=dia>=25||dia<=5;
+  var feitos=CONTAB_ITENS.filter(function(x){return st[x[0]];}).length,nomeMes=MESES_PT[r.getMonth()]+'/'+r.getFullYear();
+  sEl('contab-sub','Referente a '+nomeMes+' · prazo até dia 5 · '+feitos+' de '+CONTAB_ITENS.length+' enviados'+(janela&&feitos<CONTAB_ITENS.length?' · ⚠ período de envio':''));
+  var cc=document.getElementById('cc-contab');if(cc){cc.style.borderColor=(janela&&feitos<CONTAB_ITENS.length)?'var(--gold)':'';if(janela&&feitos<CONTAB_ITENS.length)cc.classList.remove('cc-collapsed');}
+  el.innerHTML=CONTAB_ITENS.map(function(x){return '<label style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;cursor:pointer;"><input type="checkbox" '+(st[x[0]]?'checked':'')+' onchange="toggleContab(\''+x[0]+'\')"><span style="'+(st[x[0]]?'text-decoration:line-through;color:var(--light);':'')+'">'+esc(x[1])+'</span></label>';}).join('')+
+    '<div style="font-size:11px;color:var(--light);margin-top:6px;">Marcações salvas neste navegador. Recomeça zerado a cada mês de referência.</div>';
+}
 function renderFinanceiro(){
+  try{renContab();}catch(e){}
   var vendas=vendasValidas(gDL(D.vendas));
   var despesas=getFinDesp();
   var receita=vendas.reduce(function(s,r){return s+parseFloat(r.Total||0);},0);
@@ -1956,6 +2100,7 @@ function toggleDreRegime(){
   try{localStorage.setItem('mayse_dre_regime',dreRegime);}catch(e){}
   renderDREMensal();
 }
+var RATEIO_SUBS=['Contabilidade','Sistemas','Marketing']; // 23/10/2026: custos rateados entre as lojas (ver ℹ️ Regras)
 function renderDREMensal(){
   atualizarBtnRegime();
   var thead=document.getElementById('tb-dremensal-head'),tbody=document.getElementById('tb-dremensal');
@@ -1966,7 +2111,22 @@ function renderDREMensal(){
   function dentroPer(d){if(!d)return false;if(perDe&&d.getTime()<perDe.getTime())return false;if(perAte&&d.getTime()>perAte.getTime())return false;return true;}
   var kDe=perDe?chaveMes(perDe):'',kAte=perAte?chaveMes(perAte):'9999-12';
   var vendas=gLojaOnly(D.vendas).filter(function(v){return dentroPer(parsePtD(v.Data));});
-  var pagtos=gLojaOnly(pagtosFundidos()).filter(function(p){return dentroPer(dataDRE(p));});
+  // 23/10/2026 (backlog 78): RATEIO -- custos compartilhados (subcategorias em RATEIO_SUBS, Grupo
+  // Empresa) são divididos entre as lojas pelo % de faturamento de cada uma no mês, não importa
+  // em qual loja foram lançados. Com todas as lojas no filtro o total não muda.
+  var recLojaMes={};
+  (D.vendas||[]).forEach(function(v){var lj=lSlug(v.Loja||'');if(lj==='pessoal')return;var d=parsePtD(v.Data);if(!d)return;var k=chaveMes(d);(recLojaMes[k]=recLojaMes[k]||{})[lj]=((recLojaMes[k]||{})[lj]||0)+parseFloat(v.Total||0);});
+  function fatiaLojasAtivas(k){var m=recLojaMes[k]||{},tot=0,sel=0;Object.keys(m).forEach(function(lj){tot+=m[lj];if(lojasAtivas.has(lj))sel+=m[lj];});return tot>0?sel/tot:null;}
+  var pagtos=[];
+  pagtosFundidos().forEach(function(p){
+    var d=dataDRE(p);if(!dentroPer(d))return;
+    var grp=String(p.Grupo||'').trim()||(lSlug(p.Loja||'')==='pessoal'?'Pessoal':'Empresa');
+    if(grp==='Empresa'&&RATEIO_SUBS.indexOf(String(p.Subcategoria||'').trim())>=0&&d){
+      var f=fatiaLojasAtivas(chaveMes(d));
+      if(f!==null){if(f>0)pagtos.push(Object.assign({},p,{Valor:parseFloat(p.Valor||0)*f,_rateio:f}));return;}
+    }
+    if(lojasAtivas.has(lSlug(p.Loja||p.loja||'')))pagtos.push(p);
+  });
   var metas=gLojaOnly(D.metas).filter(function(m){return m.AnoMes&&m.AnoMes>=kDe&&m.AnoMes<=kAte;});
   var DRE_INICIO='2026-07';
   var mesesSet={};
@@ -2065,7 +2225,7 @@ function renderDREMensal(){
     if(ab){
       lst=lst.slice().sort(function(a,b){return (b.d?b.d.getTime():0)-(a.d?a.d.getTime():0);});
       row+='<tr><td colspan="'+(meses.length+1)+'" style="background:#fff;padding:4px 8px 8px 28px;"><table style="width:100%;font-size:11px;border-collapse:collapse;"><tr style="color:var(--mid);text-align:left;"><th>Data</th><th>Descrição</th><th>Loja</th><th style="text-align:right">Valor</th><th>Status</th><th>Linha</th></tr>'+
-        lst.map(function(x){var p=x.p;return '<tr style="border-top:1px solid var(--border);'+(x.pago?'':'opacity:.55;')+'"><td>'+(x.d?fmtDateBR(x.d):'—')+'</td><td>'+esc(p.Descricao||'')+'</td><td>'+esc(p.Loja||'')+'</td><td style="text-align:right">'+fmt(parseFloat(p.Valor||0))+'</td><td>'+(x.pago?'Pago':'planejado ('+esc(p.Status||'—')+')')+'</td><td>'+(p._linha||'aba Compras')+'</td></tr>';}).join('')+
+        lst.map(function(x){var p=x.p;return '<tr style="border-top:1px solid var(--border);'+(x.pago?'':'opacity:.55;')+'"><td>'+(x.d?fmtDateBR(x.d):'—')+'</td><td>'+esc(p.Descricao||'')+'</td><td>'+esc(p.Loja||'')+(p._rateio!==undefined?' <span style="color:var(--gold);">(rateado '+(p._rateio*100).toFixed(0)+'%)</span>':'')+'</td><td style="text-align:right">'+fmt(parseFloat(p.Valor||0))+'</td><td>'+(x.pago?'Pago':'planejado ('+esc(p.Status||'—')+')')+'</td><td>'+(p._linha||'aba Compras')+'</td></tr>';}).join('')+
         '</table></td></tr>';
     }
     return row;
