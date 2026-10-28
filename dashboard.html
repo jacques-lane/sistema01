@@ -704,6 +704,12 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <div id="sec-marketing" class="section">
       <div class="kgrid" id="mk-kpis"></div>
       <div class="cc" style="margin-bottom:20px;">
+        <div class="ch"><div><div class="ct">📲 Redes dia a dia</div><div class="csb">Gravado todo dia pela rotina automática (aba MarketingDiario) · post de hoje, arte de amanhã e seguidores por rede</div></div></div>
+        <div id="mk-dia-status" style="margin-bottom:10px;"></div>
+        <div style="height:220px;"><canvas id="c-mk-dia"></canvas></div>
+        <div id="mk-dia-tab" style="margin-top:10px;"></div>
+      </div>
+      <div class="cc" style="margin-bottom:20px;">
         <div class="ch"><div><div class="ct">📈 Vendas x Campanhas</div><div class="csb">Faturamento por dia (lojas do filtro, últimos 120 dias + próximos 45) · faixas coloridas = período de cada campanha · compare com a média fora das campanhas</div></div></div>
         <div style="height:240px;"><canvas id="c-mk"></canvas></div>
         <div id="mk-camp-res" style="margin-top:10px;"></div>
@@ -1051,11 +1057,57 @@ var ANALISES=null,anAberto={};
    "Efeito" de cada campanha = média diária durante a campanha ÷ média diária fora de campanhas (mesma janela). */
 var MKT=null;
 function carregarMarketing(){return fetch('marketing.json?v='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():{};}).catch(function(){return {};}).then(function(m){MKT=m||{};return MKT;});}
+/* ── MARKETING DIÁRIO (27/10/2026) ──
+   Aba MarketingDiario (pacote COLAR_backend_marketing_27-10.gs): 1 linha por Data+Rede.
+   Rede = Instagram/Facebook/TikTok/Google… (Seguidores, Alcance_7d, Interacoes_7d) ou "Post"
+   (Post_Status do post do dia, Post_Tema, Link, Arte_Amanha = "ok"/"falta").
+   Gravada pela tarefa agendada "Marketing diário Mayse" chamando mktRegistrarDiario() nesta página.
+   Lida à parte (não entra no loadData): se o backend ainda não tiver a aba, o card só fica vazio. */
+var MKT_DIA=null;
+function carregarMktDiario(){return apiGetSeguro('MarketingDiario').then(function(r){MKT_DIA=r.ok?r.data:[];return MKT_DIA;});}
+/* usada pela rotina: mktRegistrarDiario([{data:'dd/mm/aaaa',rede:'Instagram',seguidores:123,alcance7d:..,interacoes7d:..},{data,rede:'Post',postStatus:'feito',postTema,link,arteAmanha:'ok'|'falta',obs}]) -> {ok,erro} */
+function mktRegistrarDiario(linhas){return postServidorD({tipo:'marketing_diario',linhas:linhas||[]}).then(function(r){if(r.ok)MKT_DIA=null;return r;});}
+function renMktDiario(){
+  var box=document.getElementById('mk-dia-status');if(!box)return;
+  if(MKT_DIA===null){box.innerHTML='<div class="empty">Carregando…</div>';carregarMktDiario().then(renMarketing);return;}
+  var rows=(MKT_DIA||[]).map(function(x){return {d:parsePtD(x.Data),x:x};}).filter(function(o){return o.d;}).sort(function(a,b){return a.d-b.d;});
+  var hoje=new Date();hoje.setHours(0,0,0,0);
+  var posts=rows.filter(function(o){return o.x.Rede==='Post';});
+  var ult=posts.length?posts[posts.length-1]:null;
+  if(!rows.length){box.innerHTML='<div class="empty">Sem registros ainda — a rotina diária grava aqui a partir da publicação do pacote de backend de 27/10</div>';}
+  else{
+    var dHoje=ult&&ult.d.getTime()===hoje.getTime();
+    var st=ult?String(ult.x.Post_Status||''):'';
+    var corSt=/feito|publicad/i.test(st)?'var(--vf)':(/sem arte|erro|falh/i.test(st)?'var(--red)':'var(--mid)');
+    var falta=ult&&/falta/i.test(String(ult.x.Arte_Amanha||''));
+    box.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:14px;font-size:13px;">'+
+      '<div><b>Post '+(dHoje?'de hoje':'('+esc(ult?ult.x.Data:'')+')')+':</b> <span style="color:'+corSt+';font-weight:600;">'+esc(st||'sem registro')+'</span>'+(ult&&ult.x.Post_Tema?' · '+esc(ult.x.Post_Tema):'')+(ult&&ult.x.Link&&/^https?:/.test(ult.x.Link)?' · <a href="'+esc(ult.x.Link)+'" target="_blank">ver post</a>':'')+'</div>'+
+      (ult?'<div><b>Arte de amanhã:</b> '+(falta?'<span style="color:var(--red);font-weight:600;">⚠ falta na pasta</span>':'<span style="color:var(--vf);font-weight:600;">✓ na pasta</span>')+'</div>':'')+
+      (ult&&ult.x.Obs?'<div style="color:var(--light);">'+esc(ult.x.Obs)+'</div>':'')+'</div>';
+  }
+  // gráfico: seguidores por rede (últimos 60 dias)
+  var ini=new Date(hoje);ini.setDate(ini.getDate()-59);
+  var redes={},dias=[];for(var d=new Date(ini);d<=hoje;d.setDate(d.getDate()+1))dias.push(d.getTime());
+  rows.forEach(function(o){if(o.x.Rede==='Post'||o.d<ini)return;var v=parseFloat(o.x.Seguidores);if(isNaN(v))return;(redes[o.x.Rede]=redes[o.x.Rede]||{})[o.d.getTime()]=v;});
+  var CORES=['#C13584','#3B5998','#111111','#3B6D11','#C97A1A','#9C56B8'];
+  var ds=Object.keys(redes).map(function(r,i){return {label:r,data:dias.map(function(t){return redes[r][t]!==undefined?redes[r][t]:null;}),borderColor:CORES[i%CORES.length],backgroundColor:CORES[i%CORES.length],pointRadius:2,tension:.2,spanGaps:true};});
+  if(window._cMkDia)window._cMkDia.destroy();
+  var cv=document.getElementById('c-mk-dia');
+  if(cv&&window.Chart)window._cMkDia=new Chart(cv.getContext('2d'),{type:'line',data:{labels:dias.map(function(t){var x=new Date(t);return String(x.getDate()).padStart(2,'0')+'/'+String(x.getMonth()+1).padStart(2,'0');}),datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:ds.length>0,labels:{font:{size:11}}},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{display:false},ticks:{font:{size:10},maxTicksLimit:10,color:'#999'}},y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10},color:'#999'},border:{display:false}}}}});
+  // tabela: últimos 7 dias
+  var rec=rows.filter(function(o){return (hoje-o.d)/864e5<7;}).reverse();
+  document.getElementById('mk-dia-tab').innerHTML=rec.length?'<table class="dt dt-compact"><thead><tr><th>Data</th><th>Rede</th><th>Seguidores</th><th>Alcance 7d</th><th>Interações 7d</th><th>Post</th></tr></thead><tbody>'+rec.map(function(o){var x=o.x,isP=x.Rede==='Post';return '<tr><td>'+esc(x.Data)+'</td><td>'+esc(x.Rede)+'</td><td>'+(isP?'':esc(String(x.Seguidores===''?'—':x.Seguidores)))+'</td><td>'+(isP?'':esc(String(x.Alcance_7d===''?'—':x.Alcance_7d)))+'</td><td>'+(isP?'':esc(String(x.Interacoes_7d===''?'—':x.Interacoes_7d)))+'</td><td>'+(isP?esc(x.Post_Status)+(x.Post_Tema?' · '+esc(x.Post_Tema):''):'')+'</td></tr>';}).join('')+'</tbody></table>':'';
+}
 var MK_CORES=['rgba(201,122,26,.16)','rgba(59,91,201,.14)','rgba(156,86,184,.14)','rgba(131,171,51,.18)'];
 function renMarketing(){
   if(MKT===null){carregarMarketing().then(renMarketing);return;}
-  var m=MKT||{},camp=m.campanhas||[],met=m.metricas||[],cal=m.calendario||[],pl=m.plano||{};
+  var m=MKT||{},camp=m.campanhas||[],met=(m.metricas||[]).slice(),cal=(m.calendario||[]).map(function(c){return Object.assign({},c);}),pl=m.plano||{};
   var hoje=new Date();hoje.setHours(0,0,0,0);
+  renMktDiario();
+  if(MKT_DIA&&MKT_DIA.length){
+    var stDia={};MKT_DIA.forEach(function(x){if(x.Rede==='Post'&&x.Post_Status)stDia[x.Data]=x.Post_Status;else if(x.Rede!=='Post'&&x.Seguidores!==''&&x.Seguidores!==undefined)met.push({data:x.Data,rede:x.Rede,seguidores:x.Seguidores,alcance:x.Alcance_7d,interacoes:x.Interacoes_7d});});
+    cal.forEach(function(c){if(stDia[c.data])c.status=stDia[c.data];});
+  }
   // KPIs
   var redes={};met.forEach(function(x){var d=parsePtD(x.data);if(!d)return;(redes[x.rede]=redes[x.rede]||[]).push({d:d,x:x});});
   var kp=Object.keys(redes).map(function(r){var a=redes[r].sort(function(p,q){return q.d-p.d;}),u=a[0].x,ant=a[1]&&a[1].x;var dif=ant&&u.seguidores!==undefined&&ant.seguidores!==undefined?(parseFloat(u.seguidores)-parseFloat(ant.seguidores)):null;
