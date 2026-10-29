@@ -1111,6 +1111,7 @@ function renMarketing(){
   // KPIs
   var redes={};met.forEach(function(x){var d=parsePtD(x.data);if(!d)return;(redes[x.rede]=redes[x.rede]||[]).push({d:d,x:x});});
   var kp=Object.keys(redes).map(function(r){var a=redes[r].sort(function(p,q){return q.d-p.d;}),u=a[0].x,ant=a[1]&&a[1].x;var dif=ant&&u.seguidores!==undefined&&ant.seguidores!==undefined?(parseFloat(u.seguidores)-parseFloat(ant.seguidores)):null;
+    if(/^Google/.test(r))return '<div class="kpi gn"><div class="ki">⭐</div><div class="kl">'+esc(r)+'</div><div class="kv">'+(u.nota?String(u.nota).replace('.',','):'—')+'</div><div class="ks">'+(u.avaliacoes?u.avaliacoes+' avaliações':'')+(u.alcance?' · '+u.alcance+' viram o perfil (mês)':'')+'</div></div>';
     return '<div class="kpi gn"><div class="ki">👥</div><div class="kl">'+esc(r)+'</div><div class="kv">'+(u.seguidores!==undefined&&u.seguidores!==''?parseFloat(u.seguidores).toLocaleString('pt-BR'):'—')+'</div><div class="ks">'+(dif!==null?(dif>=0?'+':'')+dif+' desde '+esc(ant.data):'seguidores em '+esc(u.data))+'</div></div>';});
   var semResp=Object.keys(redes).reduce(function(a,r){var u=redes[r].sort(function(p,q){return q.d-p.d;})[0].x;return a+(parseFloat(u.sem_resposta)||0);},0);
   var mesAtual=cal.filter(function(c){var d=parsePtD(c.data);return d&&d.getMonth()===hoje.getMonth()&&d.getFullYear()===hoje.getFullYear();});
@@ -3079,6 +3080,8 @@ function toggleCC(el){
   if(cc)cc.classList.toggle('cc-collapsed');
 }
 var cpIdealPreco=null;
+/* 29/10/2026: sugestão de compra sem produtos montados (Sob encomenda / Buquês, Cestas, Serviços) */
+function ehProdutoMontadoDash(p){var c=String((p&&p.Categoria)||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();return ehSobEncDash(p)||['buques','buque','cestas','cesta','servicos','servico'].indexOf(c)>=0;}
 function estComprado(p){return String(p.Fornecedor||'').trim()!=='';}
 /* 23/10/2026: produto "Sob encomenda" (coluna Sob_Encomenda = Sim): feito na hora, não controla
    estoque -> fora de zerado/baixo/sugestão de compra. Quantidade dele é tratada como "infinita". */
@@ -3154,7 +3157,7 @@ function renCompras(){
   });
   document.getElementById('tb-compras').innerHTML=rows.join('')||'<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--light);">Nenhuma compra no período</td></tr>';
   var dl=document.getElementById('cp-prod-list');
-  if(dl){var nomes=[...new Set(D.estoque.filter(estComprado).map(function(p){return p.Nome;}))];dl.innerHTML=nomes.map(function(n){return '<option value="'+esc(n)+'">';}).join('');}
+  if(dl){var nomes=[...new Set(D.estoque.filter(function(p){return estComprado(p)&&!ehProdutoMontadoDash(p);}).map(function(p){return p.Nome;}))];dl.innerHTML=nomes.map(function(n){return '<option value="'+esc(n)+'">';}).join('');}
 
   /* Produtos com margem atual abaixo do ideal, independente de terem sido comprados recentemente.
      21/10/2026 (decisão Jax): ideal = sugerido da compra = custo × 2,5 (MARKUP_IDEAL). Tolerância de 1 centavo no markup. */

@@ -1846,10 +1846,17 @@ function prioridadeNum(p) {
   var n = parseInt(p && p.Prioridade, 10);
   return isNaN(n) ? Infinity : n;
 }
+/* 29/10/2026: sugestões de COMPRA mostram só matéria-prima/revenda. Ficam de fora os
+   produtos montados na loja: marcados "Sob encomenda" ou das categorias Buquês, Cestas e
+   Serviços (ex.: "Buquê 12 rosas", "Ramalhete 1 rosa"). Dá pra digitar qualquer nome mesmo assim. */
+function ehProdutoMontado(p) {
+  var c = String((p&&p.Categoria)||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  return ehSobEnc(p) || ['buques','buque','cestas','cesta','servicos','servico'].indexOf(c) >= 0;
+}
 function popularListaComprasItemDatalist() {
   var dl = document.getElementById('lc-pdv-item-list');
   if (!dl) return;
-  var lista = (estoque||[]).slice().sort(function(a,b){
+  var lista = (estoque||[]).filter(function(p){ return !ehProdutoMontado(p); }).sort(function(a,b){
     var pra = prioridadeNum(a), prb = prioridadeNum(b);
     if (pra!==prb) return pra-prb;
     var qa=parseInt(a.Qtd||0), ma=parseInt(a.Alerta_Minimo||5), qb=parseInt(b.Qtd||0), mb=parseInt(b.Alerta_Minimo||5);
@@ -2536,9 +2543,16 @@ function renderListaComprasPDV() {
       var itemEsc = escapeHtml(String(i.Item||'')).replace(/'/g,"\\'");
       var qtdSug = qtdNumerica(i.Quantidade);
       var custoSug = inferirCustoItem(i.Item);
-      return '<div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">'+
-        '<div style="flex:1;min-width:110px;"><div style="font-weight:600;font-size:13px;">'+escapeHtml(String(i.Item||''))+qtdTxt+'</div>'+
-        '<div style="font-size:10px;color:#5F5E5A;">'+origTxt+'</div></div>'+
+      // 29/10/2026: linha compacta (só o produto + resumo); toque abre os campos pra editar
+      var kAb = LP+'|'+String(i.Item||''), ab = !!lcLinhaAberta[kAb], idL = LP+'-g'+gi+'-it'+ji;
+      return '<div style="border-bottom:1px solid var(--border);padding:7px 0;">'+
+        '<div onclick="toggleLinhaLote(\''+LP+'\','+gi+','+ji+',\''+itemEsc+'\')" style="display:flex;align-items:center;gap:8px;cursor:pointer;">'+
+          '<div style="flex:1;min-width:0;font-size:13px;"><span style="font-weight:600;">'+escapeHtml(String(i.Item||''))+'</span><span style="color:#5F5E5A;font-size:11px;">'+qtdTxt+'</span></div>'+
+          '<span id="'+idL+'-res" style="font-size:11px;color:#5F5E5A;white-space:nowrap;"></span>'+
+          '<span id="'+idL+'-chev" style="font-size:12px;color:#5F5E5A;">'+(ab?'▾':'▸')+'</span>'+
+        '</div>'+
+        '<div id="'+idL+'-det" style="display:'+(ab?'flex':'none')+';align-items:center;gap:6px;flex-wrap:wrap;padding-top:8px;">'+
+        '<div style="flex-basis:100%;font-size:10px;color:#5F5E5A;">'+origTxt+'</div>'+
         '<input type="number" min="0" step="1" class="form-input" id="lc-g'+gi+'-it'+ji+'-qtd" value="'+qtdSug+'" placeholder="Qtd" title="Quantas caixas/maços/unidades comprou" oninput="atualizarLinhaLote(\'lc\','+gi+','+ji+')" style="width:56px;padding:6px;font-size:12px;">'+
         '<input type="number" min="0" step="0.01" class="form-input" id="lc-g'+gi+'-it'+ji+'-valor" value="'+custoSug+'" placeholder="R$ cx" title="Valor pago por caixa/maço/unidade comprada" oninput="atualizarLinhaLote(\'lc\','+gi+','+ji+')" style="width:70px;padding:6px;font-size:12px;"><input type="number" min="1" step="1" class="form-input" id="lc-g'+gi+'-it'+ji+'-frac" value="1" placeholder="un/cx" title="Quantas unidades de venda vêm em cada caixa/maço (1 se vende inteiro)" oninput="atualizarLinhaLote(\'lc\','+gi+','+ji+')" style="width:52px;padding:6px;font-size:12px;">'+
         '<button class="btn btn-primary" style="width:auto;padding:6px 9px;font-size:11px;" title="Comprar este item (caixa/fracionado)" onclick="abrirCompraItemLista(\''+itemEsc+'\',\''+escapeHtml(g.fornecedor).replace(/'/g,"\\'")+'\')">🛒</button>'+
@@ -2550,7 +2564,7 @@ function renderListaComprasPDV() {
           '<span>Validade</span><input type="date" class="form-input" id="'+LP+'-g'+gi+'-it'+ji+'-val" title="Opcional, só pra perecível" style="width:auto;padding:4px;font-size:11px;">'+
         '</div>'+
         '<div style="flex-basis:100%;font-size:12px;" id="'+LP+'-g'+gi+'-it'+ji+'-lucro"></div>'+
-        '</div>';
+        '</div></div>';
     }).join('');
     var fornEsc = escapeHtml(g.fornecedor).replace(/'/g,"\\'");
     return '<div class="lc-grupo" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px;">'+
@@ -2679,6 +2693,13 @@ function popularSelectListasFechadas() {
    Cada linha mostra custo por unidade e venda sugerida (custo × 2,5, mesma regra do Registrar compra);
    o rodapé mostra o total do lote (Σ qtd × valor da caixa) e, no Boleto, pede o vencimento
    do boleto único da compra toda. */
+var lcLinhaAberta = {}; // 29/10: linhas de compra abertas (por lista + item), sobrevive ao recarregar a lista
+function toggleLinhaLote(P, gi, ji, item) {
+  var k = P+'|'+item; lcLinhaAberta[k] = !lcLinhaAberta[k];
+  var det = document.getElementById(P+'-g'+gi+'-it'+ji+'-det'), ch = document.getElementById(P+'-g'+gi+'-it'+ji+'-chev');
+  if (det) det.style.display = lcLinhaAberta[k] ? 'flex' : 'none';
+  if (ch) ch.textContent = lcLinhaAberta[k] ? '▾' : '▸';
+}
 function fracLoteDe(P, gi, ji) { var el = document.getElementById(P+'-g'+gi+'-it'+ji+'-frac'); return Math.max(1, parseFloat(el && el.value)||1); }
 function atualizarLinhaLote(P, gi, ji) {
   var q = parseFloat((document.getElementById(P+'-g'+gi+'-it'+ji+'-qtd')||{}).value)||0;
@@ -2689,6 +2710,8 @@ function atualizarLinhaLote(P, gi, ji) {
   if (vEl && !vEl.dataset.ed) vEl.value = v ? (v/f*2.5).toFixed(2) : '';
   if (info) info.textContent = (q && v) ? ('= '+(q*f)+' un no estoque · custo R$ '+fmt(v/f)+'/un · total R$ '+fmt(q*v)) : '';
   if (lEl) lEl.innerHTML = (q && v) ? linhaLucroHTML(v/f, vEl ? vEl.value : v/f*2.5) : '';
+  var rEl = document.getElementById(P+'-g'+gi+'-it'+ji+'-res');
+  if (rEl) rEl.textContent = (q && v) ? (q+' × R$ '+fmt(v)+' = R$ '+fmt(q*v)) : (q ? q+' × sem valor' : 'não comprar');
   atualizarTotalLote(P, gi);
 }
 function atualizarTotalLote(P, gi) {
@@ -2782,9 +2805,16 @@ function renderListaFechadaPDV(dataSel) {
       var itemEsc = escapeHtml(String(i.Item||'')).replace(/'/g,"\\'");
       var qtdSug = qtdNumerica(i.Quantidade);
       var custoSug = inferirCustoItem(i.Item);
-      return '<div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">'+
-        '<div style="flex:1;min-width:110px;"><div style="font-weight:600;font-size:13px;">'+escapeHtml(String(i.Item||''))+qtdTxt+'</div>'+
-        '<div style="font-size:10px;color:#5F5E5A;">'+origTxt+'</div></div>'+
+      // 29/10/2026: linha compacta (só o produto + resumo); toque abre os campos pra editar
+      var kAb = LP+'|'+String(i.Item||''), ab = !!lcLinhaAberta[kAb], idL = LP+'-g'+gi+'-it'+ji;
+      return '<div style="border-bottom:1px solid var(--border);padding:7px 0;">'+
+        '<div onclick="toggleLinhaLote(\''+LP+'\','+gi+','+ji+',\''+itemEsc+'\')" style="display:flex;align-items:center;gap:8px;cursor:pointer;">'+
+          '<div style="flex:1;min-width:0;font-size:13px;"><span style="font-weight:600;">'+escapeHtml(String(i.Item||''))+'</span><span style="color:#5F5E5A;font-size:11px;">'+qtdTxt+'</span></div>'+
+          '<span id="'+idL+'-res" style="font-size:11px;color:#5F5E5A;white-space:nowrap;"></span>'+
+          '<span id="'+idL+'-chev" style="font-size:12px;color:#5F5E5A;">'+(ab?'▾':'▸')+'</span>'+
+        '</div>'+
+        '<div id="'+idL+'-det" style="display:'+(ab?'flex':'none')+';align-items:center;gap:6px;flex-wrap:wrap;padding-top:8px;">'+
+        '<div style="flex-basis:100%;font-size:10px;color:#5F5E5A;">'+origTxt+'</div>'+
         '<input type="number" min="0" step="1" class="form-input" id="lf-g'+gi+'-it'+ji+'-qtd" value="'+qtdSug+'" placeholder="Qtd" title="Quantas caixas/maços/unidades comprou" oninput="atualizarLinhaLote(\'lf\','+gi+','+ji+')" style="width:56px;padding:6px;font-size:12px;">'+
         '<input type="number" min="0" step="0.01" class="form-input" id="lf-g'+gi+'-it'+ji+'-valor" value="'+custoSug+'" placeholder="R$ cx" title="Valor pago por caixa/maço/unidade comprada" oninput="atualizarLinhaLote(\'lf\','+gi+','+ji+')" style="width:70px;padding:6px;font-size:12px;"><input type="number" min="1" step="1" class="form-input" id="lf-g'+gi+'-it'+ji+'-frac" value="1" placeholder="un/cx" title="Quantas unidades de venda vêm em cada caixa/maço (1 se vende inteiro)" oninput="atualizarLinhaLote(\'lf\','+gi+','+ji+')" style="width:52px;padding:6px;font-size:12px;">'+
         '<button class="btn btn-outline" style="width:auto;padding:6px 9px;font-size:11px;" title="Editar item" onclick="abrirEditLista(\''+itemEsc+'\')">✏️</button>'+
@@ -2797,7 +2827,7 @@ function renderListaFechadaPDV(dataSel) {
           '<span>Validade</span><input type="date" class="form-input" id="'+LP+'-g'+gi+'-it'+ji+'-val" title="Opcional, só pra perecível" style="width:auto;padding:4px;font-size:11px;">'+
         '</div>'+
         '<div style="flex-basis:100%;font-size:12px;" id="'+LP+'-g'+gi+'-it'+ji+'-lucro"></div>'+
-        '</div>';
+        '</div></div>';
     }).join('');
     var fornEsc = escapeHtml(g.fornecedor).replace(/'/g,"\\'");
     return '<div class="lc-grupo" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px;">'+
@@ -3154,7 +3184,7 @@ function abrirModalCompra(nomeSugerido) {
   cpListaItemRef = null;
   ['cp-produto','cp-fracionado','cp-quantidade','cp-valorpago','cp-venda','cp-obs'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('cp-fornecedor').value='Ceagesp';
-  document.getElementById('cp-produto-list').innerHTML = (estoque||[]).map(function(p){return '<option value="'+escapeHtml(p.Nome||'')+'">';}).join('');
+  document.getElementById('cp-produto-list').innerHTML = (estoque||[]).filter(function(p){ return !ehProdutoMontado(p); }).map(function(p){return '<option value="'+escapeHtml(p.Nome||'')+'">';}).join('');
   document.getElementById('cp-custo-out').textContent='R$ 0,00';
   document.getElementById('cp-pagamento').value='Dinheiro';
   document.getElementById('cp-bol-venc').value=''; document.getElementById('cp-bol-parc').value='1';
