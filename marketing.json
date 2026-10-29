@@ -1,5 +1,5 @@
 {
- "atualizado": "23/10/2026",
+ "atualizado": "28/10/2026",
  "plano": {
   "objetivo": "Até jan/2027: tornar a Mayse Flores & Garden conhecida no Cambuci (SP) e reforçar Juquiá, com verba de ~R$ 1.000/mês, ajudando a chegar nas metas de faturamento (R$ 30 mil/mês Cambuci e R$ 20 mil/mês Juquiá).",
   "posicionamento": "Floricultura e garden com viveiro próprio: flores frescas escolhidas no Ceagesp + folhagens cultivadas por nós em Juquiá. Atendimento próximo pelo WhatsApp, presente feito na hora.",
@@ -122,7 +122,7 @@
     "status": "a fazer"
    }
   ],
-  "automacao": "Postar sozinho nas redes exige conexão com cada conta e aprovação de cada publicação. Rotina proposta: toda semana o Claude prepara os 7 posts (legenda, hashtags e o que fotografar) no calendário; a Mayse aprova e fotografa; os posts do Instagram e do Facebook são agendados no Meta Business Suite (gratuito), e o TikTok e o Google pelo próprio app. No começo do mês, a pasta marketing/AAAA-MM recebe os prints e exportações das redes e o Claude analisa (igual à conciliação) e atualiza o painel."
+  "automacao": "Todo dia às 9h38 a tarefa agendada \"Marketing diário Mayse\" publica o post do dia pelo navegador do app Claude: Instagram + Facebook pelo Meta Business Suite nas duas contas (@maysefloresegarden e @mayseflores.aclimacao, conforme a coluna Loja: Ambas / Juquiá / Aclimação), TikTok da marca (só vídeo .mp4) e Google nos 3 perfis (Cambuci, Loja Juquiá e Viveiro). Regra: arte na pasta marketing/AAAA-MM/artes com o nome da data = post aprovado; sem arte não publica. Depois grava seguidores e números da semana na aba MarketingDiario (card Redes dia a dia) e avisa se falta a arte de amanhã. Nada pago, sem responder mensagens nem mudar configurações."
  },
  "campanhas": [
   {
@@ -162,7 +162,8 @@
    "rede": "Instagram Stories",
    "formato": "Ambiente decorado com plantas / repost de cliente",
    "legenda": "🌱 Domingo é dia de casa bonita. Inspiração pra semana: plantas que deixam qualquer canto mais vivo. (Loja fechada aos domingos — voltamos segunda!)",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "02/11/2026",
@@ -171,7 +172,8 @@
    "rede": "Instagram + Facebook · Google · WhatsApp",
    "formato": "Arranjos e flores para homenagem — mostrar opções e preços",
    "legenda": "🕊️ Finados: homenageie quem você ama com flores. Arranjos, vasos e buquês prontos e sob encomenda — loja aberta. Reserve pelo WhatsApp.",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "03/11/2026",
@@ -180,7 +182,8 @@
    "rede": "Instagram Reels · TikTok",
    "formato": "Vídeo curto (15–30s) mostrando 1 cuidado prático",
    "legenda": "💧 Dica rápida: regue só quando a terra estiver seca ao toque. Salva esse vídeo pra não esquecer! Dúvida sobre a sua planta? Manda foto no nosso WhatsApp que a gente te ajuda.",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "04/11/2026",
@@ -189,7 +192,8 @@
    "rede": "Instagram + Facebook · Google (post)",
    "formato": "Foto bonita do buquê/cesta em destaque, com preço",
    "legenda": "💐 Buquê \"Mimo da alegria\" — feito na hora, do jeitinho que você imaginou. Encomende pelo WhatsApp e retire na loja ou receba no Cambuci e região.",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "05/11/2026",
@@ -198,7 +202,8 @@
    "rede": "Instagram Stories · TikTok",
    "formato": "Ceagesp de madrugada, montagem de buquê, chegada de mercadoria, viveiro",
    "legenda": "🌙 Enquanto a cidade dorme, a gente escolhe flor por flor no Ceagesp pra chegar fresquinha na loja. Bastidores da Mayse Flores & Garden. 🌸",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "06/11/2026",
@@ -207,7 +212,8 @@
    "rede": "Instagram + Facebook · Google (post) · Status do WhatsApp",
    "formato": "Arte/foto com as novidades e um motivo pra vir na loja ou encomendar",
    "legenda": "✨ Chegaram novidades pro fim de semana! Orquídeas floridas. Passa na loja ou chama no WhatsApp pra reservar. Funcionamos de segunda a sábado.",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "07/11/2026",
@@ -216,7 +222,8 @@
    "rede": "Instagram + Facebook",
    "formato": "Foto de entrega/cliente (com autorização) ou print de avaliação do Google",
    "legenda": "💚 Nada melhor que ver nossas flores chegando em boas mãos! Obrigado pela confiança. Já comprou com a gente? Deixa sua avaliação no Google — ajuda muito!",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "08/11/2026",
@@ -225,7 +232,8 @@
    "rede": "Instagram Stories",
    "formato": "Ambiente decorado com plantas / repost de cliente",
    "legenda": "🌱 Domingo é dia de casa bonita. Inspiração pra semana: plantas que deixam qualquer canto mais vivo. (Loja fechada aos domingos — voltamos segunda!)",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "09/11/2026",
@@ -234,7 +242,8 @@
    "rede": "Instagram + Facebook (feed) · TikTok",
    "formato": "Foto/vídeo de uma folhagem do nosso viveiro em Juquiá (maranta, colocasia, aglaonema, begônia…)",
    "legenda": "🌿 Planta da semana: Maranta. Cultivada no nosso viveiro em Juquiá, chega até você cheia de saúde. Luz, rega e onde fica linda na sua casa? Conta nos comentários! 📍 Cambuci (SP) e Juquiá · Pedidos pelo WhatsApp.",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "10/11/2026",
@@ -243,7 +252,8 @@
    "rede": "Instagram Reels · TikTok",
    "formato": "Vídeo curto (15–30s) mostrando 1 cuidado prático",
    "legenda": "💧 Dica rápida: orquídea gosta de luz, mas sem sol direto. Salva esse vídeo pra não esquecer! Dúvida sobre a sua planta? Manda foto no nosso WhatsApp que a gente te ajuda.",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "11/11/2026",
@@ -252,7 +262,8 @@
    "rede": "Instagram + Facebook · Google (post)",
    "formato": "Foto bonita do buquê/cesta em destaque, com preço",
    "legenda": "💐 Cesta \"Pausa para um brinde\" — feito na hora, do jeitinho que você imaginou. Encomende pelo WhatsApp e retire na loja ou receba no Cambuci e região.",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "12/11/2026",
@@ -261,7 +272,8 @@
    "rede": "Instagram Stories · TikTok",
    "formato": "Ceagesp de madrugada, montagem de buquê, chegada de mercadoria, viveiro",
    "legenda": "🌙 Enquanto a cidade dorme, a gente escolhe flor por flor no Ceagesp pra chegar fresquinha na loja. Bastidores da Mayse Flores & Garden. 🌸",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "13/11/2026",
@@ -270,7 +282,8 @@
    "rede": "Instagram + Facebook · Google (post) · Status do WhatsApp",
    "formato": "Arte/foto com as novidades e um motivo pra vir na loja ou encomendar",
    "legenda": "✨ Chegaram novidades pro fim de semana! Girassóis. Passa na loja ou chama no WhatsApp pra reservar. Funcionamos de segunda a sábado.",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "14/11/2026",
@@ -279,7 +292,8 @@
    "rede": "Instagram + Facebook",
    "formato": "Foto de entrega/cliente (com autorização) ou print de avaliação do Google",
    "legenda": "💚 Nada melhor que ver nossas flores chegando em boas mãos! Obrigado pela confiança. Já comprou com a gente? Deixa sua avaliação no Google — ajuda muito!",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "15/11/2026",
@@ -288,7 +302,8 @@
    "rede": "Instagram Stories",
    "formato": "Ambiente decorado com plantas / repost de cliente",
    "legenda": "🌱 Domingo é dia de casa bonita. Inspiração pra semana: plantas que deixam qualquer canto mais vivo. (Loja fechada aos domingos — voltamos segunda!)",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "16/11/2026",
@@ -297,7 +312,8 @@
    "rede": "Instagram + Facebook (feed) · TikTok",
    "formato": "Foto/vídeo de uma folhagem do nosso viveiro em Juquiá (maranta, colocasia, aglaonema, begônia…)",
    "legenda": "🌿 Planta da semana: Colocasia. Cultivada no nosso viveiro em Juquiá, chega até você cheia de saúde. Luz, rega e onde fica linda na sua casa? Conta nos comentários! 📍 Cambuci (SP) e Juquiá · Pedidos pelo WhatsApp.",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "17/11/2026",
@@ -306,7 +322,8 @@
    "rede": "Instagram Reels · TikTok",
    "formato": "Vídeo curto (15–30s) mostrando 1 cuidado prático",
    "legenda": "💧 Dica rápida: folhagem com ponta seca pede mais umidade no ar. Salva esse vídeo pra não esquecer! Dúvida sobre a sua planta? Manda foto no nosso WhatsApp que a gente te ajuda.",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "18/11/2026",
@@ -315,7 +332,8 @@
    "rede": "Instagram + Facebook · Google (post)",
    "formato": "Foto bonita do buquê/cesta em destaque, com preço",
    "legenda": "💐 Buquê \"Charme em flor\" — feito na hora, do jeitinho que você imaginou. Encomende pelo WhatsApp e retire na loja ou receba no Cambuci e região.",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "19/11/2026",
@@ -324,16 +342,18 @@
    "rede": "Instagram Stories · TikTok",
    "formato": "Ceagesp de madrugada, montagem de buquê, chegada de mercadoria, viveiro",
    "legenda": "🌙 Enquanto a cidade dorme, a gente escolhe flor por flor no Ceagesp pra chegar fresquinha na loja. Bastidores da Mayse Flores & Garden. 🌸",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "20/11/2026",
    "dia": "sex",
-   "tema": "Consciência Negra (feriado em SP)",
+   "tema": "Consciência Negra (feriado nacional)",
    "rede": "Instagram + Facebook · Google",
    "formato": "Confirmar horário do feriado em cada loja e avisar",
-   "legenda": "📅 Feriado em São Paulo: confira nosso horário de hoje. Aproveite o dia pra deixar a casa mais verde! 🌿",
-   "status": "a preparar"
+   "legenda": "📅 Hoje é feriado nacional (Consciência Negra): confira o horário de cada loja. Aproveite o dia pra deixar a casa mais verde! 🌿",
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "21/11/2026",
@@ -342,7 +362,8 @@
    "rede": "Instagram + Facebook",
    "formato": "Foto de entrega/cliente (com autorização) ou print de avaliação do Google",
    "legenda": "💚 Nada melhor que ver nossas flores chegando em boas mãos! Obrigado pela confiança. Já comprou com a gente? Deixa sua avaliação no Google — ajuda muito!",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "22/11/2026",
@@ -351,7 +372,8 @@
    "rede": "Instagram Stories",
    "formato": "Ambiente decorado com plantas / repost de cliente",
    "legenda": "🌱 Domingo é dia de casa bonita. Inspiração pra semana: plantas que deixam qualquer canto mais vivo. (Loja fechada aos domingos — voltamos segunda!)",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "23/11/2026",
@@ -360,7 +382,8 @@
    "rede": "Instagram + Facebook · TikTok · WhatsApp",
    "formato": "Anunciar a ação da semana (ex.: 2º vaso com desconto / combo planta + cachepô)",
    "legenda": "🖤 Semana Black Friday na Mayse! Todo dia uma oferta nas plantas e flores. Ativa o sininho e fica de olho nos stories.",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "24/11/2026",
@@ -369,7 +392,8 @@
    "rede": "Instagram Reels · TikTok",
    "formato": "Vídeo curto (15–30s) mostrando 1 cuidado prático",
    "legenda": "💧 Dica rápida: gire o vaso a cada 15 dias pra crescer por igual. Salva esse vídeo pra não esquecer! Dúvida sobre a sua planta? Manda foto no nosso WhatsApp que a gente te ajuda.",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "25/11/2026",
@@ -378,7 +402,8 @@
    "rede": "Instagram + Facebook · Google (post)",
    "formato": "Foto bonita do buquê/cesta em destaque, com preço",
    "legenda": "💐 Buquê de 12 rosas — feito na hora, do jeitinho que você imaginou. Encomende pelo WhatsApp e retire na loja ou receba no Cambuci e região.",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "26/11/2026",
@@ -387,7 +412,8 @@
    "rede": "Instagram Stories · TikTok",
    "formato": "Ceagesp de madrugada, montagem de buquê, chegada de mercadoria, viveiro",
    "legenda": "🌙 Enquanto a cidade dorme, a gente escolhe flor por flor no Ceagesp pra chegar fresquinha na loja. Bastidores da Mayse Flores & Garden. 🌸",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "27/11/2026",
@@ -396,7 +422,8 @@
    "rede": "Instagram + Facebook · Google · TikTok · WhatsApp",
    "formato": "Oferta principal do dia + impulsionamento local (Cambuci 3 km)",
    "legenda": "🖤 É HOJE! Black Friday Mayse Flores & Garden: [definir a oferta com a Mayse]. Só hoje ou enquanto durar o estoque. Corre pra loja ou chama no WhatsApp!",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "28/11/2026",
@@ -405,7 +432,8 @@
    "rede": "Instagram Stories · WhatsApp",
    "formato": "Reforço da oferta + agradecimento",
    "legenda": "⏰ Último dia das ofertas da Black Friday! Obrigado a todo mundo que passou por aqui. 💚",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "29/11/2026",
@@ -414,7 +442,8 @@
    "rede": "Instagram Stories",
    "formato": "Ambiente decorado com plantas / repost de cliente",
    "legenda": "🌱 Domingo é dia de casa bonita. Inspiração pra semana: plantas que deixam qualquer canto mais vivo. (Loja fechada aos domingos — voltamos segunda!)",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   },
   {
    "data": "30/11/2026",
@@ -423,7 +452,8 @@
    "rede": "Instagram + Facebook · TikTok",
    "formato": "Teaser: cestas de Natal, bico-de-papagaio (poinsétia), arranjos natalinos",
    "legenda": "🎄 O Natal chegou na Mayse! Cestas, arranjos e plantas natalinas. Encomendas abertas — garanta o seu presente com antecedência.",
-   "status": "a preparar"
+   "status": "a preparar",
+   "loja": "Ambas"
   }
  ]
 }
