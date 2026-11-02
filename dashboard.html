@@ -704,6 +704,10 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <div id="sec-marketing" class="section">
       <div class="kgrid" id="mk-kpis"></div>
       <div class="cc" style="margin-bottom:20px;">
+        <div class="ch"><div><div class="ct">✅ Efetividade da automação</div><div class="csb">Cada rede x cada dia (últimos 14) · regra na legenda abaixo · fonte: aba MarketingDiario (gravada pela rotina das 9h38) + calendário do mês</div></div></div>
+        <div id="mk-matriz" style="overflow-x:auto;"></div>
+      </div>
+      <div class="cc" style="margin-bottom:20px;">
         <div class="ch"><div><div class="ct">📲 Redes dia a dia</div><div class="csb">Gravado todo dia pela rotina automática (aba MarketingDiario) · post de hoje, arte de amanhã e seguidores por rede</div></div></div>
         <div id="mk-dia-status" style="margin-bottom:10px;"></div>
         <div style="height:220px;"><canvas id="c-mk-dia"></canvas></div>
@@ -1067,9 +1071,58 @@ var MKT_DIA=null;
 function carregarMktDiario(){return apiGetSeguro('MarketingDiario').then(function(r){MKT_DIA=r.ok?r.data:[];return MKT_DIA;});}
 /* usada pela rotina: mktRegistrarDiario([{data:'dd/mm/aaaa',rede:'Instagram',seguidores:123,alcance7d:..,interacoes7d:..},{data,rede:'Post',postStatus:'feito',postTema,link,arteAmanha:'ok'|'falta',obs}]) -> {ok,erro} */
 function mktRegistrarDiario(linhas){return postServidorD({tipo:'marketing_diario',linhas:linhas||[]}).then(function(r){if(r.ok)MKT_DIA=null;return r;});}
+/* 02/11/2026: matriz de efetividade da automação (redes x dias).
+   Status por rede vem da aba MarketingDiario, coluna Post_Status de cada linha de rede:
+   "auto" (publicado pela rotina) · "manual" (publicado por alguém) · "pendente" (tinha arte, não saiu) · "sem arte" · "não previsto".
+   Sem registro do dia: deduz pelo calendário (marketing.json: rede/loja/arte). */
+var MK_REDES=[
+  {k:'Instagram Juquiá',re:/instagram.*maysefloresegarden/i,on:/instagram/i,loja:/ambas|juqui/i},
+  {k:'Instagram Aclimação',re:/instagram.*aclimacao/i,on:/instagram/i,loja:/ambas|aclima|cambuci/i},
+  {k:'Facebook Juquiá',re:/facebook.*garden/i,on:/facebook|stories/i,loja:/ambas|juqui/i},
+  {k:'Facebook Aclimação',re:/facebook.*aclima/i,on:/facebook|stories/i,loja:/ambas|aclima|cambuci/i},
+  {k:'TikTok',re:/tiktok/i,on:/tiktok/i,loja:/./},
+  {k:'YouTube Shorts',re:/youtube/i,on:/tiktok|youtube|shorts/i,loja:/./},
+  {k:'Google Cambuci',re:/google.*cambuci/i,on:/google/i,loja:/ambas|aclima|cambuci/i},
+  {k:'Google Juquiá',re:/google.*juqui/i,on:/google/i,loja:/ambas|juqui/i},
+  {k:'Google Viveiro',re:/google.*viveiro/i,on:/google/i,loja:/ambas|juqui|viveiro/i}
+];
+var MK_ICO={auto:['✓','#2e7d32','Publicado pela automação'],manual:['●','#1e63c9','Publicado manualmente por alguém'],pend:['●','#e0a800','Tinha arte aprovada e não foi publicado'],sem:['✗','#e53935','Não publicado — sem arte'],np:['–','#bbb','Não previsto no calendário para essa rede'],esp:['…','#999','Hoje — aguardando a rotina das 9h38']};
+function mkClassSt(st){st=String(st||'').toLowerCase();if(!st)return null;if(/manual/.test(st))return 'manual';if(/sem arte|falta/.test(st))return 'sem';if(/n[ãa]o previsto|n\/a/.test(st))return 'np';if(/pendente|n[ãa]o publicad|falh|erro|com arte/.test(st))return 'pend';if(/auto|publicad|feito|ok/.test(st))return 'auto';return null;}
+function renMktMatriz(){
+  var box=document.getElementById('mk-matriz');if(!box)return;
+  var hoje=new Date();hoje.setHours(0,0,0,0);
+  var dias=[];for(var i=13;i>=0;i--){var d=new Date(hoje);d.setDate(d.getDate()-i);dias.push(d);}
+  var f2=function(d){return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();};
+  var reg={},postDia={};
+  (MKT_DIA||[]).forEach(function(x){var d=parsePtD(x.Data);if(!d)return;var k=f2(d);
+    if(x.Rede==='Post'){postDia[k]=x.Post_Status;return;}
+    MK_REDES.forEach(function(r){if(r.re.test(x.Rede||'')){var c=mkClassSt(x.Post_Status);if(c)(reg[r.k]=reg[r.k]||{})[k]=c;}});});
+  var cal={};((MKT&&MKT.calendario)||[]).forEach(function(c){(cal[c.data]=cal[c.data]||[]).push(c);});
+  var agoraH=new Date().getHours()+new Date().getMinutes()/60;
+  var tot={auto:0,manual:0,pend:0,sem:0};
+  var linhas=MK_REDES.map(function(r){var cont={auto:0,manual:0,pend:0,sem:0};
+    var tds=dias.map(function(d){var k=f2(d),c=(reg[r.k]||{})[k];
+      if(!c){var cs=(cal[k]||[]).filter(function(x){return r.on.test(String(x.rede||''))&&r.loja.test(String(x.loja||'Ambas'));});
+        if(!cs.length)c='np';
+        else if(d.getTime()===hoje.getTime()&&agoraH<11)c='esp';
+        else{var pd=mkClassSt(postDia[k]);var arte=cs.some(function(x){return x.arte===true||/aprovad|feito/i.test(x.status||'');});
+          c=(pd==='auto'&&!/google/i.test(r.k))?'auto':(arte?'pend':'sem');}}
+      if(cont[c]!==undefined){cont[c]++;tot[c]++;}
+      var ic=MK_ICO[c];return '<td title="'+esc(r.k+' · '+k+' · '+ic[2])+'" style="text-align:center;font-size:16px;font-weight:700;color:'+ic[1]+';padding:4px 6px;">'+ic[0]+'</td>';}).join('');
+    var prev=cont.auto+cont.manual+cont.pend+cont.sem,ef=prev?Math.round(cont.auto/prev*100):null;
+    return '<tr><td style="font-weight:600;white-space:nowrap;padding:4px 10px;">'+esc(r.k)+'</td>'+tds+'<td style="text-align:center;font-weight:700;color:'+(ef===null?'#999':ef>=80?'var(--vf)':ef>=50?'#e0a800':'var(--red)')+';">'+(ef===null?'—':ef+'%')+'</td></tr>';}).join('');
+  var prevT=tot.auto+tot.manual+tot.pend+tot.sem,efT=prevT?Math.round(tot.auto/prevT*100):null;
+  var dSem=['dom','seg','ter','qua','qui','sex','sáb'];
+  box.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:16px;font-size:13px;margin-bottom:8px;"><div><b>Efetividade da automação (14 dias):</b> <span style="font-size:18px;font-weight:700;color:'+(efT===null?'#999':efT>=80?'var(--vf)':efT>=50?'#e0a800':'var(--red)')+';">'+(efT===null?'—':efT+'%')+'</span></div>'+
+    '<div>✓ '+tot.auto+' automáticos · <span style="color:#1e63c9;">●</span> '+tot.manual+' manuais · <span style="color:#e0a800;">●</span> '+tot.pend+' com arte e não publicados · <span style="color:#e53935;">✗</span> '+tot.sem+' sem arte</div></div>'+
+    '<table class="dt" style="font-size:12px;"><thead><tr><th style="text-align:left;">Rede</th>'+dias.map(function(d){return '<th style="text-align:center;padding:4px 6px;'+(d.getDay()===0?'color:#999;':'')+'">'+String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'<br><span style="font-weight:400;font-size:10px;">'+dSem[d.getDay()]+'</span></th>';}).join('')+'<th style="text-align:center;">Efetiv.</th></tr></thead><tbody>'+linhas+'</tbody></table>'+
+    '<div style="font-size:11px;color:var(--mid);margin-top:8px;line-height:1.6;">'+Object.keys(MK_ICO).map(function(k){var ic=MK_ICO[k];return '<span style="color:'+ic[1]+';font-weight:700;">'+ic[0]+'</span> '+ic[2];}).join(' &nbsp;·&nbsp; ')+
+    '<br><b>Regra:</b> efetividade = posts publicados pela automação ÷ posts previstos no calendário para a rede (✓ + ● + ● + ✗; o "–" não conta). A rotina das 9h38 grava o status de cada rede na aba MarketingDiario; post feito por alguém antes da rotina é marcado como manual (azul). Dia sem registro é deduzido do calendário: previsto e com arte aprovada = amarelo; previsto sem arte = vermelho.</div>';
+}
 function renMktDiario(){
   var box=document.getElementById('mk-dia-status');if(!box)return;
   if(MKT_DIA===null){box.innerHTML='<div class="empty">Carregando…</div>';carregarMktDiario().then(renMarketing);return;}
+  renMktMatriz();
   var rows=(MKT_DIA||[]).map(function(x){return {d:parsePtD(x.Data),x:x};}).filter(function(o){return o.d;}).sort(function(a,b){return a.d-b.d;});
   var hoje=new Date();hoje.setHours(0,0,0,0);
   var posts=rows.filter(function(o){return o.x.Rede==='Post';});
