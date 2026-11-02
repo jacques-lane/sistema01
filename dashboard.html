@@ -1076,22 +1076,31 @@ function mktRegistrarDiario(linhas){return postServidorD({tipo:'marketing_diario
    "auto" (publicado pela rotina) · "manual" (publicado por alguém) · "pendente" (tinha arte, não saiu) · "sem arte" · "não previsto".
    Sem registro do dia: deduz pelo calendário (marketing.json: rede/loja/arte). */
 var MK_REDES=[
-  {k:'Instagram Juquiá',re:/instagram.*maysefloresegarden/i,on:/instagram/i,loja:/ambas|juqui/i},
-  {k:'Instagram Aclimação',re:/instagram.*aclimacao/i,on:/instagram/i,loja:/ambas|aclima|cambuci/i},
-  {k:'Facebook Juquiá',re:/facebook.*garden/i,on:/facebook|stories/i,loja:/ambas|juqui/i},
-  {k:'Facebook Aclimação',re:/facebook.*aclima/i,on:/facebook|stories/i,loja:/ambas|aclima|cambuci/i},
-  {k:'TikTok',re:/tiktok/i,on:/tiktok/i,loja:/./},
-  {k:'YouTube Shorts',re:/youtube/i,on:/tiktok|youtube|shorts/i,loja:/./},
-  {k:'Google Cambuci',re:/google.*cambuci/i,on:/google/i,loja:/ambas|aclima|cambuci/i},
-  {k:'Google Juquiá',re:/google.*juqui/i,on:/google/i,loja:/ambas|juqui/i},
-  {k:'Google Viveiro',re:/google.*viveiro/i,on:/google/i,loja:/ambas|juqui|viveiro/i}
+  {k:'Instagram Juquiá',re:/instagram.*maysefloresegarden/i,on:/instagram/i,loja:/ambas|juqui/i,lj:'juquia',url:'https://www.instagram.com/maysefloresegarden/'},
+  {k:'Instagram Aclimação',re:/instagram.*aclimacao/i,on:/instagram/i,loja:/ambas|aclima|cambuci/i,lj:'cambuci',url:'https://www.instagram.com/mayseflores.aclimacao/'},
+  {k:'Facebook Juquiá',re:/facebook.*garden/i,on:/facebook|stories/i,loja:/ambas|juqui/i,lj:'juquia',url:'https://www.facebook.com/profile.php?id=61556117110644'},
+  {k:'Facebook Aclimação',re:/facebook.*aclima/i,on:/facebook|stories/i,loja:/ambas|aclima|cambuci/i,lj:'cambuci',url:'https://www.facebook.com/profile.php?id=61594213145536'},
+  {k:'TikTok',re:/tiktok/i,on:/tiktok/i,loja:/./,lj:'marca',url:'https://www.tiktok.com/@mayse.helen8'},
+  {k:'YouTube Shorts',re:/youtube/i,on:/tiktok|youtube|shorts/i,loja:/./,lj:'marca',url:'https://www.youtube.com/@mayse.hellen/shorts'},
+  {k:'Google Cambuci',re:/google.*cambuci/i,on:/google/i,loja:/ambas|aclima|cambuci/i,lj:'cambuci',url:'https://www.google.com/local/business/11417563999136398356/promote/updates?hl=pt-BR'},
+  {k:'Google Juquiá',re:/google.*juqui/i,on:/google/i,loja:/ambas|juqui/i,lj:'juquia',url:'https://www.google.com/local/business/16528951596966608465/promote/updates?hl=pt-BR'},
+  {k:'Google Viveiro',re:/google.*viveiro/i,on:/google/i,loja:/ambas|juqui|viveiro/i,lj:'viveiro',url:'https://www.google.com/local/business/2600001353303508089/promote/updates?hl=pt-BR'}
 ];
-var MK_ICO={auto:['✓','#2e7d32','Publicado pela automação'],manual:['●','#1e63c9','Publicado manualmente por alguém'],pend:['●','#e0a800','Tinha arte aprovada e não foi publicado'],sem:['✗','#e53935','Não publicado — sem arte'],np:['–','#bbb','Não previsto no calendário para essa rede'],esp:['…','#999','Hoje — aguardando a rotina das 9h38']};
-function mkClassSt(st){st=String(st||'').toLowerCase();if(!st)return null;if(/manual/.test(st))return 'manual';if(/sem arte|falta/.test(st))return 'sem';if(/n[ãa]o previsto|n\/a/.test(st))return 'np';if(/pendente|n[ãa]o publicad|falh|erro|com arte/.test(st))return 'pend';if(/auto|publicad|feito|ok/.test(st))return 'auto';return null;}
+/* filtro de loja no Marketing: cada rede pertence a uma loja; TikTok e YouTube são da marca (aparecem com qualquer loja, menos só "Pessoal") */
+function mkRedeInfo(nome){for(var i=0;i<MK_REDES.length;i++){if(MK_REDES[i].re.test(nome||'')||MK_REDES[i].k===nome)return MK_REDES[i];}return null;}
+function mkRedeAtiva(nome){var r=typeof nome==='string'?mkRedeInfo(nome):nome;if(!r)return true;if(r.lj==='marca')return lojasAtivas.has('juquia')||lojasAtivas.has('cambuci')||lojasAtivas.has('viveiro');return lojasAtivas.has(r.lj);}
+function mkLinkRede(nome,txt){var r=mkRedeInfo(nome);var t=esc(txt||nome);return r&&r.url?'<a href="'+r.url+'" target="_blank" rel="noopener" title="Abrir '+esc(r.k)+'" style="color:inherit;text-decoration:underline dotted;">'+t+' ↗</a>':t;}
+function mkCalLojaOk(c){var l=String(c.loja||'Ambas');if(/ambas/i.test(l))return true;return (/juqui/i.test(l)&&(lojasAtivas.has('juquia')||lojasAtivas.has('viveiro')))||(/aclima|cambuci/i.test(l)&&lojasAtivas.has('cambuci'));}
+/* período do filtro global aplicado ao Marketing (dias), limitado a hoje */
+function mkDiasPeriodo(minDia){var hoje=new Date();hoje.setHours(0,0,0,0);var ate=perAte&&perAte<hoje?new Date(perAte):new Date(hoje);var de=perDe?new Date(perDe):(minDia?new Date(minDia):new Date(ate.getTime()-13*864e5));var dias=[];for(var d=new Date(de);d<=ate;d.setDate(d.getDate()+1))dias.push(new Date(d));var cort=dias.length>92;if(cort)dias=dias.slice(-92);return {dias:dias,cortado:cort};}
+var MK_ICO={auto:['✓','#2e7d32','Publicado pela automação no horário'],atras:['✓','#9ccc65','Publicado com atraso (recuperado depois da falha)'],manual:['●','#1e63c9','Publicado manualmente por alguém'],pend:['●','#e0a800','Tinha arte aprovada e não foi publicado'],sem:['✗','#e53935','Não publicado — sem arte'],np:['–','#bbb','Não previsto no calendário para essa rede'],esp:['…','#999','Hoje — aguardando a rotina das 9h38']};
+function mkClassSt(st){st=String(st||'').toLowerCase();if(!st)return null;if(/manual/.test(st))return 'manual';if(/sem arte|falta/.test(st))return 'sem';if(/n[ãa]o previsto|n\/a/.test(st))return 'np';if(/atrasad|recuperad/.test(st))return 'atras';if(/pendente|n[ãa]o publicad|falh|erro|com arte/.test(st))return 'pend';if(/auto|publicad|feito|ok/.test(st))return 'auto';return null;}
 function renMktMatriz(){
   var box=document.getElementById('mk-matriz');if(!box)return;
   var hoje=new Date();hoje.setHours(0,0,0,0);
-  var dias=[];for(var i=13;i>=0;i--){var d=new Date(hoje);d.setDate(d.getDate()-i);dias.push(d);}
+  var minD=null;(MKT_DIA||[]).forEach(function(x){var d=parsePtD(x.Data);if(d&&(!minD||d<minD))minD=d;});
+  var PER=mkDiasPeriodo(minD),dias=PER.dias;
+  if(!dias.length){box.innerHTML='<div class="empty">Período sem dias até hoje</div>';return;}
   var f2=function(d){return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();};
   var reg={},postDia={};
   (MKT_DIA||[]).forEach(function(x){var d=parsePtD(x.Data);if(!d)return;var k=f2(d);
@@ -1099,8 +1108,8 @@ function renMktMatriz(){
     MK_REDES.forEach(function(r){if(r.re.test(x.Rede||'')){var c=mkClassSt(x.Post_Status);if(c)(reg[r.k]=reg[r.k]||{})[k]=c;}});});
   var cal={};((MKT&&MKT.calendario)||[]).forEach(function(c){(cal[c.data]=cal[c.data]||[]).push(c);});
   var agoraH=new Date().getHours()+new Date().getMinutes()/60;
-  var tot={auto:0,manual:0,pend:0,sem:0};
-  var linhas=MK_REDES.map(function(r){var cont={auto:0,manual:0,pend:0,sem:0};
+  var tot={auto:0,atras:0,manual:0,pend:0,sem:0};
+  var linhas=MK_REDES.filter(mkRedeAtiva).map(function(r){var cont={auto:0,atras:0,manual:0,pend:0,sem:0};
     var tds=dias.map(function(d){var k=f2(d),c=(reg[r.k]||{})[k];
       if(!c){var cs=(cal[k]||[]).filter(function(x){return r.on.test(String(x.rede||''))&&r.loja.test(String(x.loja||'Ambas'));});
         if(!cs.length)c='np';
@@ -1109,21 +1118,21 @@ function renMktMatriz(){
           c=(pd==='auto'&&!/google/i.test(r.k))?'auto':(arte?'pend':'sem');}}
       if(cont[c]!==undefined){cont[c]++;tot[c]++;}
       var ic=MK_ICO[c];return '<td title="'+esc(r.k+' · '+k+' · '+ic[2])+'" style="text-align:center;font-size:16px;font-weight:700;color:'+ic[1]+';padding:4px 6px;">'+ic[0]+'</td>';}).join('');
-    var prev=cont.auto+cont.manual+cont.pend+cont.sem,ef=prev?Math.round(cont.auto/prev*100):null;
-    return '<tr><td style="font-weight:600;white-space:nowrap;padding:4px 10px;">'+esc(r.k)+'</td>'+tds+'<td style="text-align:center;font-weight:700;color:'+(ef===null?'#999':ef>=80?'var(--vf)':ef>=50?'#e0a800':'var(--red)')+';">'+(ef===null?'—':ef+'%')+'</td></tr>';}).join('');
-  var prevT=tot.auto+tot.manual+tot.pend+tot.sem,efT=prevT?Math.round(tot.auto/prevT*100):null;
+    var prev=cont.auto+cont.atras+cont.manual+cont.pend+cont.sem,ef=prev?Math.round((cont.auto+cont.atras)/prev*100):null;
+    return '<tr><td style="font-weight:600;white-space:nowrap;padding:4px 10px;">'+mkLinkRede(r.k)+'</td>'+tds+'<td style="text-align:center;font-weight:700;color:'+(ef===null?'#999':ef>=80?'var(--vf)':ef>=50?'#e0a800':'var(--red)')+';">'+(ef===null?'—':ef+'%')+'</td></tr>';}).join('');
+  var prevT=tot.auto+tot.atras+tot.manual+tot.pend+tot.sem,efT=prevT?Math.round((tot.auto+tot.atras)/prevT*100):null;
   var dSem=['dom','seg','ter','qua','qui','sex','sáb'];
-  box.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:16px;font-size:13px;margin-bottom:8px;"><div><b>Efetividade da automação (14 dias):</b> <span style="font-size:18px;font-weight:700;color:'+(efT===null?'#999':efT>=80?'var(--vf)':efT>=50?'#e0a800':'var(--red)')+';">'+(efT===null?'—':efT+'%')+'</span></div>'+
-    '<div>✓ '+tot.auto+' automáticos · <span style="color:#1e63c9;">●</span> '+tot.manual+' manuais · <span style="color:#e0a800;">●</span> '+tot.pend+' com arte e não publicados · <span style="color:#e53935;">✗</span> '+tot.sem+' sem arte</div></div>'+
+  box.innerHTML='<div style="display:flex;flex-wrap:wrap;gap:16px;font-size:13px;margin-bottom:8px;"><div><b>Efetividade da automação ('+dias.length+' dia'+(dias.length>1?'s':'')+(PER.cortado?', últimos 92 do período':'')+'):</b> <span style="font-size:18px;font-weight:700;color:'+(efT===null?'#999':efT>=80?'var(--vf)':efT>=50?'#e0a800':'var(--red)')+';">'+(efT===null?'—':efT+'%')+'</span></div>'+
+    '<div>✓ '+tot.auto+' no horário · <span style="color:#9ccc65;">✓</span> '+tot.atras+' com atraso · <span style="color:#1e63c9;">●</span> '+tot.manual+' manuais · <span style="color:#e0a800;">●</span> '+tot.pend+' com arte e não publicados · <span style="color:#e53935;">✗</span> '+tot.sem+' sem arte</div></div>'+
     '<table class="dt" style="font-size:12px;"><thead><tr><th style="text-align:left;">Rede</th>'+dias.map(function(d){return '<th style="text-align:center;padding:4px 6px;'+(d.getDay()===0?'color:#999;':'')+'">'+String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'<br><span style="font-weight:400;font-size:10px;">'+dSem[d.getDay()]+'</span></th>';}).join('')+'<th style="text-align:center;">Efetiv.</th></tr></thead><tbody>'+linhas+'</tbody></table>'+
     '<div style="font-size:11px;color:var(--mid);margin-top:8px;line-height:1.6;">'+Object.keys(MK_ICO).map(function(k){var ic=MK_ICO[k];return '<span style="color:'+ic[1]+';font-weight:700;">'+ic[0]+'</span> '+ic[2];}).join(' &nbsp;·&nbsp; ')+
-    '<br><b>Regra:</b> efetividade = posts publicados pela automação ÷ posts previstos no calendário para a rede (✓ + ● + ● + ✗; o "–" não conta). A rotina das 9h38 grava o status de cada rede na aba MarketingDiario; post feito por alguém antes da rotina é marcado como manual (azul). Dia sem registro é deduzido do calendário: previsto e com arte aprovada = amarelo; previsto sem arte = vermelho.</div>';
+    '<br><b>Filtros:</b> período = dias do filtro de cima (até hoje; "Tudo" começa no 1º registro); loja = redes daquela loja — TikTok e YouTube são da marca e aparecem para todas. <b>Regra:</b> efetividade = posts publicados pela automação (no horário ou com atraso) ÷ posts previstos no calendário para a rede; o "–" (dia sem post previsto naquela rede) não conta. A conferência das 11h42 publica o que faltou e marca "com atraso". A rotina das 9h38 grava o status de cada rede na aba MarketingDiario; post feito por alguém antes da rotina é marcado como manual (azul). Dia sem registro é deduzido do calendário: previsto e com arte aprovada = amarelo; previsto sem arte = vermelho.</div>';
 }
 function renMktDiario(){
   var box=document.getElementById('mk-dia-status');if(!box)return;
   if(MKT_DIA===null){box.innerHTML='<div class="empty">Carregando…</div>';carregarMktDiario().then(renMarketing);return;}
   renMktMatriz();
-  var rows=(MKT_DIA||[]).map(function(x){return {d:parsePtD(x.Data),x:x};}).filter(function(o){return o.d;}).sort(function(a,b){return a.d-b.d;});
+  var rows=(MKT_DIA||[]).map(function(x){return {d:parsePtD(x.Data),x:x};}).filter(function(o){return o.d&&(o.x.Rede==='Post'||mkRedeAtiva(o.x.Rede));}).sort(function(a,b){return a.d-b.d;});
   var hoje=new Date();hoje.setHours(0,0,0,0);
   var posts=rows.filter(function(o){return o.x.Rede==='Post';});
   var ult=posts.length?posts[posts.length-1]:null;
@@ -1139,17 +1148,17 @@ function renMktDiario(){
       (ult&&ult.x.Obs?'<div style="color:var(--light);">'+esc(ult.x.Obs)+'</div>':'')+'</div>';
   }
   // gráfico: seguidores por rede (últimos 60 dias)
-  var ini=new Date(hoje);ini.setDate(ini.getDate()-59);
-  var redes={},dias=[];for(var d=new Date(ini);d<=hoje;d.setDate(d.getDate()+1))dias.push(d.getTime());
-  rows.forEach(function(o){if(o.x.Rede==='Post'||o.d<ini)return;var v=parseFloat(o.x.Seguidores);if(isNaN(v))return;(redes[o.x.Rede]=redes[o.x.Rede]||{})[o.d.getTime()]=v;});
+  var minD=rows.length?rows[0].d:null;var PD=mkDiasPeriodo(minD);var ini=PD.dias.length?PD.dias[0]:hoje;
+  var redes={},dias=PD.dias.map(function(d){return d.getTime();});var fimP=dias.length?dias[dias.length-1]:hoje.getTime();
+  rows.forEach(function(o){if(o.x.Rede==='Post'||o.d<ini||o.d.getTime()>fimP)return;var v=parseFloat(o.x.Seguidores);if(isNaN(v))return;(redes[o.x.Rede]=redes[o.x.Rede]||{})[o.d.getTime()]=v;});
   var CORES=['#C13584','#3B5998','#111111','#3B6D11','#C97A1A','#9C56B8'];
   var ds=Object.keys(redes).map(function(r,i){return {label:r,data:dias.map(function(t){return redes[r][t]!==undefined?redes[r][t]:null;}),borderColor:CORES[i%CORES.length],backgroundColor:CORES[i%CORES.length],pointRadius:2,tension:.2,spanGaps:true};});
   if(window._cMkDia)window._cMkDia.destroy();
   var cv=document.getElementById('c-mk-dia');
   if(cv&&window.Chart)window._cMkDia=new Chart(cv.getContext('2d'),{type:'line',data:{labels:dias.map(function(t){var x=new Date(t);return String(x.getDate()).padStart(2,'0')+'/'+String(x.getMonth()+1).padStart(2,'0');}),datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:ds.length>0,labels:{font:{size:11}}},tooltip:{mode:'index',intersect:false}},scales:{x:{grid:{display:false},ticks:{font:{size:10},maxTicksLimit:10,color:'#999'}},y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10},color:'#999'},border:{display:false}}}}});
   // tabela: últimos 7 dias
-  var rec=rows.filter(function(o){return (hoje-o.d)/864e5<7;}).reverse();
-  document.getElementById('mk-dia-tab').innerHTML=rec.length?'<table class="dt dt-compact"><thead><tr><th>Data</th><th>Rede</th><th>Seguidores</th><th>Alcance 7d</th><th>Interações 7d</th><th>Post</th></tr></thead><tbody>'+rec.map(function(o){var x=o.x,isP=x.Rede==='Post';return '<tr><td>'+esc(x.Data)+'</td><td>'+esc(x.Rede)+'</td><td>'+(isP?'':esc(String(x.Seguidores===''?'—':x.Seguidores)))+'</td><td>'+(isP?'':esc(String(x.Alcance_7d===''?'—':x.Alcance_7d)))+'</td><td>'+(isP?'':esc(String(x.Interacoes_7d===''?'—':x.Interacoes_7d)))+'</td><td>'+(isP?esc(x.Post_Status)+(x.Post_Tema?' · '+esc(x.Post_Tema):''):'')+'</td></tr>';}).join('')+'</tbody></table>':'';
+  var rec=rows.filter(function(o){return o.d>=ini&&o.d.getTime()<=fimP;}).reverse().slice(0,150);
+  document.getElementById('mk-dia-tab').innerHTML=rec.length?'<table class="dt dt-compact"><thead><tr><th>Data</th><th>Rede</th><th>Seguidores</th><th>Alcance 7d</th><th>Interações 7d</th><th>Post</th></tr></thead><tbody>'+rec.map(function(o){var x=o.x,isP=x.Rede==='Post';return '<tr><td>'+esc(x.Data)+'</td><td>'+(isP?esc(x.Rede):mkLinkRede(x.Rede))+'</td><td>'+(isP?'':esc(String(x.Seguidores===''?'—':x.Seguidores)))+'</td><td>'+(isP?'':esc(String(x.Alcance_7d===''?'—':x.Alcance_7d)))+'</td><td>'+(isP?'':esc(String(x.Interacoes_7d===''?'—':x.Interacoes_7d)))+'</td><td>'+(isP?esc(x.Post_Status)+(x.Post_Tema?' · '+esc(x.Post_Tema):''):'')+'</td></tr>';}).join('')+'</tbody></table>':'';
 }
 var MK_CORES=['rgba(201,122,26,.16)','rgba(59,91,201,.14)','rgba(156,86,184,.14)','rgba(131,171,51,.18)'];
 function renMarketing(){
@@ -1162,11 +1171,12 @@ function renMarketing(){
     cal.forEach(function(c){if(stDia[c.data])c.status=stDia[c.data];});
   }
   // KPIs
-  var redes={};met.forEach(function(x){var d=parsePtD(x.data);if(!d)return;(redes[x.rede]=redes[x.rede]||[]).push({d:d,x:x});});
+  var redes={};met.forEach(function(x){var d=parsePtD(x.data);if(!d||!mkRedeAtiva(x.rede))return;if(perAte&&d>perAte)return;(redes[x.rede]=redes[x.rede]||[]).push({d:d,x:x});});
   var kp=Object.keys(redes).map(function(r){var a=redes[r].sort(function(p,q){return q.d-p.d;}),u=a[0].x,ant=a[1]&&a[1].x;var dif=ant&&u.seguidores!==undefined&&ant.seguidores!==undefined?(parseFloat(u.seguidores)-parseFloat(ant.seguidores)):null;
-    if(/^Google/.test(r))return '<div class="kpi gn"><div class="ki">⭐</div><div class="kl">'+esc(r)+'</div><div class="kv">'+(u.nota?String(u.nota).replace('.',','):'—')+'</div><div class="ks">'+(u.avaliacoes?u.avaliacoes+' avaliações':'')+(u.alcance?' · '+u.alcance+' viram o perfil (mês)':'')+'</div></div>';
-    return '<div class="kpi gn"><div class="ki">👥</div><div class="kl">'+esc(r)+'</div><div class="kv">'+(u.seguidores!==undefined&&u.seguidores!==''?parseFloat(u.seguidores).toLocaleString('pt-BR'):'—')+'</div><div class="ks">'+(dif!==null?(dif>=0?'+':'')+dif+' desde '+esc(ant.data):'seguidores em '+esc(u.data))+'</div></div>';});
+    if(/^Google/.test(r))return '<div class="kpi gn"><div class="ki">⭐</div><div class="kl">'+mkLinkRede(r)+'</div><div class="kv">'+(u.nota?String(u.nota).replace('.',','):'—')+'</div><div class="ks">'+(u.avaliacoes?u.avaliacoes+' avaliações':'')+(u.alcance?' · '+u.alcance+' viram o perfil (mês)':'')+'</div></div>';
+    return '<div class="kpi gn"><div class="ki">👥</div><div class="kl">'+mkLinkRede(r)+'</div><div class="kv">'+(u.seguidores!==undefined&&u.seguidores!==''?parseFloat(u.seguidores).toLocaleString('pt-BR'):'—')+'</div><div class="ks">'+(dif!==null?(dif>=0?'+':'')+dif+' desde '+esc(ant.data):'seguidores em '+esc(u.data))+'</div></div>';});
   var semResp=Object.keys(redes).reduce(function(a,r){var u=redes[r].sort(function(p,q){return q.d-p.d;})[0].x;return a+(parseFloat(u.sem_resposta)||0);},0);
+  cal=cal.filter(mkCalLojaOk);
   var mesAtual=cal.filter(function(c){var d=parsePtD(c.data);return d&&d.getMonth()===hoje.getMonth()&&d.getFullYear()===hoje.getFullYear();});
   var feitos=mesAtual.filter(function(c){return /feito|publicad|agendad/i.test(c.status||'');}).length;
   var ativas=camp.filter(function(c){var i=parsePtD(c.inicio),f=parsePtD(c.fim);return i&&f&&hoje>=i&&hoje<=f;});
@@ -1297,12 +1307,12 @@ function togLojaChip(id){
   if(lojasAtivas.has(id))lojasAtivas.delete(id);else lojasAtivas.add(id);
   if(!lojasAtivas.size)lojasAtivas.add(id);
   updFL();
-  if(D.vendas.length)renAll();
+  if(D.vendas.length)renAll(); else if(secAtiva==='marketing')renMarketing();
 }
 function togLojaTodas(){
   lojasAtivas=lojasAtivas.size===TODAS_LOJAS.length?new Set(['juquia']):new Set(TODAS_LOJAS);
   updFL();
-  if(D.vendas.length)renAll();
+  if(D.vendas.length)renAll(); else if(secAtiva==='marketing')renMarketing();
 }
 function updFL(){
   document.querySelectorAll('.lchip').forEach(function(b){b.classList.toggle('on',lojasAtivas.has(b.dataset.l));});
@@ -1386,7 +1396,7 @@ function setPeriodo(p){
   var r=calcPeriodo(p);
   perDe=r.de; perAte=r.ate;
   updPerLbl();
-  if(D.vendas.length) renAll();
+  if(D.vendas.length) renAll(); else if(secAtiva==='marketing') renMarketing();
 }
 
 function onCustomDateChange(){
@@ -1394,7 +1404,7 @@ function onCustomDateChange(){
   perDe = deVal? new Date(deVal+'T00:00:00') : null;
   perAte = ateVal? new Date(ateVal+'T00:00:00') : null;
   updPerLbl();
-  if(D.vendas.length) renAll();
+  if(D.vendas.length) renAll(); else if(secAtiva==='marketing') renMarketing();
 }
 
 // Saldo real acumulado ANTES do início do período selecionado (entradas - saídas já pagas),
@@ -1618,7 +1628,7 @@ async function loadData(){
   document.getElementById('btn-lbl').textContent='Carregar';document.getElementById('btn-sp').style.display='none';
   document.getElementById('lov').classList.remove('show');
 }
-function renAll(){renVisao();if(secAtiva==='entradas')renEntradas();if(secAtiva==='saidas')renSai();if(secAtiva==='conciliacao')renConciliacao();if(secAtiva==='clientes')renCli();if(secAtiva==='encomendas')renEnc();if(secAtiva==='estoque')renEst();if(secAtiva==='financeiro')renderFinanceiro();if(secAtiva==='compras')renCompras();if(secAtiva==='projetos')renProjetos();if(secAtiva==='orcamentos')renOrc();if(secAtiva==='equipe')renEquipe();}
+function renAll(){renVisao();if(secAtiva==='marketing')renMarketing();if(secAtiva==='entradas')renEntradas();if(secAtiva==='saidas')renSai();if(secAtiva==='conciliacao')renConciliacao();if(secAtiva==='clientes')renCli();if(secAtiva==='encomendas')renEnc();if(secAtiva==='estoque')renEst();if(secAtiva==='financeiro')renderFinanceiro();if(secAtiva==='compras')renCompras();if(secAtiva==='projetos')renProjetos();if(secAtiva==='orcamentos')renOrc();if(secAtiva==='equipe')renEquipe();}
 
 /* ── VISÃO GERAL ── */
 /* 23/10/2026: canal de venda (coluna Canal da aba Vendas) e origem dos clientes

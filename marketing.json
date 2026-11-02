@@ -126,13 +126,13 @@
  },
  "campanhas": [
   {
-   "id": "reativacao-wa-nov2026",
-   "nome": "Reativação WhatsApp (\"Saudade\")",
+   "id": "disparo-cambuci-nov2026",
+   "nome": "Disparo WhatsApp Cambuci (\"Abrimos!\")",
    "inicio": "03/11/2026",
-   "fim": "16/11/2026",
-   "canal": "WhatsApp (individual + listas de transmissão)",
+   "fim": "18/11/2026",
+   "canal": "WhatsApp (envio individual pelo WhatsApp Web)",
    "custo": 0,
-   "obs": "314 clientes inativos (+30 dias) recebem lembrete sem desconto; 53 no grupo controle. Mede: % que voltou a comprar (telefone no PDV) x controle. Planilha: marketing/campanhas/2026-11_reativacao_whatsapp"
+   "obs": "Aprovada pela Mayse em 02/11. 149 contatos do Cambuci em 3 lotes às 9h (03, 04 e 05/11), sem nome do cliente. Medição até 18/11. Planilha: marketing/campanhas/2026-11_reativacao_whatsapp/Disparo_Cambuci_2026-11.xlsx"
   },
   {
    "id": "bf2026",
