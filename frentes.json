@@ -1,0 +1,289 @@
+{
+ "gerado_em": "02/11/2026 23:23",
+ "fonte": "produtos/Catalogo_Produtos_Mayse.xlsx + pastas de artes (gerar_frentes.py)",
+ "frentes": [
+  {
+   "id": "loja",
+   "nome": "Loja física",
+   "produtos": [],
+   "site": {
+    "estado": "na",
+    "ev": "Loja física não depende de site"
+   }
+  },
+  {
+   "id": "assinatura",
+   "nome": "Assinatura floral",
+   "produtos": [
+    {
+     "nome": "Mayse Clube Essencial (por entrega)",
+     "doc": true,
+     "situacao": "ok",
+     "preco": 59.9,
+     "artes": 3,
+     "chave": "clube.*essencial"
+    },
+    {
+     "nome": "Mayse Clube Clássico (por entrega)",
+     "doc": true,
+     "situacao": "ok",
+     "preco": 110,
+     "artes": 2,
+     "chave": "clube.*cl[aá]ssico"
+    },
+    {
+     "nome": "Mayse Clube Premium (por entrega)",
+     "doc": true,
+     "situacao": "ok",
+     "preco": 200,
+     "artes": 2,
+     "chave": "clube.*premium"
+    }
+   ],
+   "site": {
+    "estado": "nao",
+    "ev": "Nuvemshop (mayseplantaseflores.com.br) fechada com senha \"Estamos reformando a loja\"",
+    "em": "02/11/2026"
+   }
+  },
+  {
+   "id": "ecommerce",
+   "nome": "E-commerce (plantas)",
+   "produtos": [
+    {
+     "nome": "Planta — Maranta Rosada (Calathea roseopicta)",
+     "doc": true,
+     "situacao": "ok",
+     "preco": 59.9,
+     "artes": 0,
+     "chave": "Maranta\\s*Rosada"
+    },
+    {
+     "nome": "Planta — Maranta White Fusion",
+     "doc": false,
+     "situacao": "falta custo",
+     "preco": 59.9,
+     "artes": 0,
+     "chave": "Maranta\\s*White\\s*Fusion"
+    },
+    {
+     "nome": "Planta — Maranta Rubi",
+     "doc": false,
+     "situacao": "falta custo",
+     "preco": 59.9,
+     "artes": 0,
+     "chave": "Maranta\\s*Rubi"
+    },
+    {
+     "nome": "Planta — Maranta Saturno",
+     "doc": false,
+     "situacao": "falta custo",
+     "preco": 69.9,
+     "artes": 0,
+     "chave": "Maranta\\s*Saturno"
+    },
+    {
+     "nome": "Planta — Maranta Medalhão (Calathea veitchiana)",
+     "doc": false,
+     "situacao": "falta custo",
+     "preco": 59.9,
+     "artes": 0,
+     "chave": "Maranta\\s*Medalhão"
+    },
+    {
+     "nome": "Planta — Aglaonema Elephant",
+     "doc": true,
+     "situacao": "ok",
+     "preco": 69.9,
+     "artes": 0,
+     "chave": "Aglaonema\\s*Elephant"
+    },
+    {
+     "nome": "Planta — Aglaonema White Joy",
+     "doc": true,
+     "situacao": "ok",
+     "preco": 69.9,
+     "artes": 0,
+     "chave": "Aglaonema\\s*White\\s*Joy"
+    },
+    {
+     "nome": "Planta — Árvore da Felicidade (fêmea)",
+     "doc": true,
+     "situacao": "ok",
+     "preco": 39,
+     "artes": 0,
+     "chave": "Árvore\\s*da\\s*Felicidade"
+    },
+    {
+     "nome": "Planta — Colocasia Kona Coffee",
+     "doc": true,
+     "situacao": "ok",
+     "preco": 99.99,
+     "artes": 0,
+     "chave": "Colocasia\\s*Kona\\s*Coffee"
+    },
+    {
+     "nome": "Planta — Colocasia Lemon Lime Gecko",
+     "doc": true,
+     "situacao": "ok",
+     "preco": 99,
+     "artes": 0,
+     "chave": "Colocasia\\s*Lemon\\s*Lime\\s*Gecko"
+    },
+    {
+     "nome": "Planta — Colocasia Elena",
+     "doc": true,
+     "situacao": "ok",
+     "preco": 99,
+     "artes": 0,
+     "chave": "Colocasia\\s*Elena"
+    }
+   ],
+   "site": {
+    "estado": "nao",
+    "ev": "Tray (maysefloresegarden.com.br) no ar, mas sem produtos ativos — busca por maranta/aglaonema/colocasias sem resultado",
+    "em": "02/11/2026"
+   }
+  },
+  {
+   "id": "buques",
+   "nome": "Buquês e presentes",
+   "produtos": [
+    {
+     "nome": "Buquê 3 rosas",
+     "doc": true,
+     "situacao": "ok",
+     "preco": 55,
+     "artes": 2,
+     "chave": "buqu.*\\b3 rosas"
+    },
+    {
+     "nome": "Buquê 6 rosas",
+     "doc": true,
+     "situacao": "ok",
+     "preco": 110,
+     "artes": 2,
+     "chave": "buqu.*\\b6 rosas"
+    },
+    {
+     "nome": "Buquê 12 rosas",
+     "doc": true,
+     "situacao": "ok",
+     "preco": 204,
+     "artes": 2,
+     "chave": "buqu.*12 rosas"
+    },
+    {
+     "nome": "Buquê 1 girassol + 2 rosas",
+     "doc": true,
+     "situacao": "ok",
+     "preco": 75,
+     "artes": 2,
+     "chave": "girassol.*2 rosas"
+    },
+    {
+     "nome": "Caixa \"Você é Especial\" (orquídea + Ferrero)",
+     "doc": true,
+     "situacao": "ok",
+     "preco": 148.9,
+     "artes": 2,
+     "chave": "voc[eê] [eé] especial"
+    }
+   ],
+   "site": {
+    "estado": "nao",
+    "ev": "Nuvemshop fechada com senha (reforma)",
+    "em": "02/11/2026"
+   }
+  },
+  {
+   "id": "cestas",
+   "nome": "Cestas para maternidade",
+   "produtos": [
+    {
+     "nome": "Kit Boas-vindas",
+     "doc": true,
+     "situacao": "ok",
+     "preco": 151.9,
+     "artes": 2,
+     "chave": "boas.?vindas"
+    },
+    {
+     "nome": "Kit Boas-vindas Premium",
+     "doc": true,
+     "situacao": "ok",
+     "preco": 301.9,
+     "artes": 2,
+     "chave": "boas.?vindas.*premium"
+    }
+   ],
+   "site": {
+    "estado": "nao",
+    "ev": "Nuvemshop fechada com senha (reforma)",
+    "em": "02/11/2026"
+   }
+  },
+  {
+   "id": "b2b",
+   "nome": "Orquídeas para B2B",
+   "produtos": [
+    {
+     "nome": "Recepção 1 orquídea (troca mensal)",
+     "doc": true,
+     "situacao": "ok",
+     "preco": 139.9,
+     "artes": 2,
+     "chave": "recep[cç][aã]o.*1 orqu"
+    },
+    {
+     "nome": "Recepção 3 orquídeas (troca mensal)",
+     "doc": true,
+     "situacao": "ok",
+     "preco": 376.9,
+     "artes": 2,
+     "chave": "recep[cç][aã]o.*3 orqu"
+    }
+   ],
+   "site": {
+    "estado": "nao",
+    "ev": "Sem página de B2B em nenhum site",
+    "em": "02/11/2026"
+   }
+  },
+  {
+   "id": "vasos",
+   "nome": "Vasos prontos",
+   "produtos": [
+    {
+     "nome": "Vaso P — Antúrio com cachepô",
+     "doc": true,
+     "situacao": "ok",
+     "preco": 54.9,
+     "artes": 2,
+     "chave": "ant[uú]rio.*cachep"
+    },
+    {
+     "nome": "Vaso M — Zamioculca em vaso de barro",
+     "doc": true,
+     "situacao": "ok",
+     "preco": 115.9,
+     "artes": 2,
+     "chave": "zamioculca.*barro"
+    },
+    {
+     "nome": "Vaso G — Aglaonema em vaso coluna",
+     "doc": true,
+     "situacao": "ok",
+     "preco": 153.9,
+     "artes": 2,
+     "chave": "aglaonema.*coluna"
+    }
+   ],
+   "site": {
+    "estado": "nao",
+    "ev": "Nuvemshop fechada com senha; Tray sem produtos ativos",
+    "em": "02/11/2026"
+   }
+  }
+ ]
+}
