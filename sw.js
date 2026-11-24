@@ -15,15 +15,25 @@ self.addEventListener('fetch', function (e) {
   var mesmoSite = url.origin === self.location.origin;
   var fonte = /fonts\.(googleapis|gstatic)\.com$/.test(url.hostname);
   if (!mesmoSite && !fonte) return; // planilha e o resto: não intercepta
+  var chave = mesmoSite ? url.pathname : req;
+  var daRede = fetch(req).then(function (resp) {
+    if (resp && (resp.ok || resp.type === 'opaque')) {
+      var copia = resp.clone();
+      caches.open(CACHE).then(function (c) { c.put(chave, copia); });
+    }
+    return resp;
+  });
+  var doCache = function () {
+    return caches.match(chave).then(function (r) { return r || caches.match('./pdv.html'); });
+  };
+  // 24/11/2026: com sinal fraco a rede não falha, só demora -> a página ficava
+  // presa abrindo. Agora espera a rede no máximo 4 s; passou disso, abre a cópia
+  // guardada (a versão nova continua baixando e fica pra próxima abertura).
+  var limite = new Promise(function (ok) { setTimeout(ok, 4000); }).then(function () {
+    return doCache().then(function (r) { return r || daRede; });
+  });
   e.respondWith(
-    fetch(req).then(function (resp) {
-      if (resp && (resp.ok || resp.type === 'opaque')) {
-        var copia = resp.clone();
-        caches.open(CACHE).then(function (c) { c.put(mesmoSite ? url.pathname : req, copia); });
-      }
-      return resp;
-    }).catch(function () {
-      return caches.match(mesmoSite ? url.pathname : req).then(function (r) { return r || caches.match('./pdv.html'); });
-    })
+    Promise.race([daRede.catch(function () { return doCache(); }), limite])
+      .then(function (r) { return r || daRede; })
   );
 });

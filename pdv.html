@@ -456,6 +456,13 @@ body{font-family:'Sora',sans-serif;background:var(--cream);color:var(--grafite);
     <button type="button" class="canal-btn on" id="canal-presencial" onclick="setCanalVenda('Presencial')"><span class="canal-box">✓</span>🏪 Presencial</button>
     <button type="button" class="canal-btn" id="canal-whatsapp" onclick="setCanalVenda('WhatsApp')"><span class="canal-box">✓</span>💬 WhatsApp</button>
   </div>
+  <!-- 20/11/2026: "Veio por mensagem ou post nosso?" (opcional, toda venda) -- mede campanhas
+       (disparo no WhatsApp, post no Instagram) com cliente novo E antigo. Vai na venda como
+       "veioPor" -> coluna Veio_Por da aba Vendas. Sem resposta = fica vazio (não conta). -->
+  <div style="margin:2px 0 10px;">
+    <div style="font-size:12px;font-weight:600;color:var(--mid);margin-bottom:6px;">Veio por mensagem ou post nosso? <span style="font-weight:400;">(opcional — pergunte ao cliente)</span></div>
+    <div id="vp-chips" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+  </div>
   <div class="form-group prod-search-wrap" id="wrap-busca-cli">
     <label class="form-label">Buscar cliente por nome</label>
     <input class="prod-search-input" id="busca-cli" type="text" placeholder="🔍 Digite o nome…" autocomplete="off" oninput="filtrarClienteNome(this.value)" onfocus="filtrarClienteNome(this.value)" onblur="fecharDropdownCliDelay()">
@@ -1589,12 +1596,13 @@ function filaSalvar(fila) {
   atualizarIndicadorFila();
 }
 function novoRid() { return Date.now() + '_' + Math.random().toString(36).slice(2,8); }
-function filaAdicionar(dados, rid, res) {
+function filaAdicionar(dados, rid, res, enviando) {
   var fila = filaObter();
   fila.push({
     id: rid || novoRid(), dados: dados, criadoEm: new Date().toISOString(),
     tentativas: res ? 1 : 0, ultimaTentativa: res ? Date.now() : 0,
-    ultimoErro: res ? res.erro : '', recusado: !!(res && !res.rede)
+    ultimoErro: res ? res.erro : '', recusado: !!(res && !res.rede),
+    enviandoDesde: enviando ? Date.now() : 0 // 24/11: envio direto em andamento -> a fila não manda em dobro
   });
   filaSalvar(fila);
 }
@@ -1677,6 +1685,7 @@ async function filaProcessar() {
     for (var k = 0; k < fila.length; k++) {
       var item = fila[k];
       if (item.recusado && Date.now() - (item.ultimaTentativa || 0) < FILA_RETRY_RECUSADO_MS) continue;
+      if (item.enviandoDesde && Date.now() - item.enviandoDesde < 25000) continue; // 24/11: envio direto ainda tentando
       var res = await postServidor(Object.assign({_rid: item.id}, item.dados));
       if (res.ok) {
         filaAtualizarItem(item.id, function(){ return null; });
@@ -1780,17 +1789,33 @@ async function enviarParaSheets(dados) {
   if (!dados.operador) dados.operador = operador || 'PDV';
 
   var rid = novoRid();
-  if (!navigator.onLine) {
-    filaAdicionar(dados, rid);
+  // 24/11/2026: grava no aparelho ANTES de tentar a internet (nada se perde) e
+  // não prende a tela. Com sinal fraco (Ceagesp) o celular diz "online" mas a
+  // resposta demora até 20 s -> cada compra ficava travada no "Salvando…".
+  // Agora a tela espera no máximo ENVIO_ESPERA_MS; se a planilha não respondeu
+  // até lá, libera o operador e o envio continua sozinho em segundo plano
+  // (mesmo _rid: se chegar 2x, o servidor ignora a cópia).
+  var online = navigator.onLine;
+  filaAdicionar(dados, rid, null, online); // online: marca "enviando" pra fila não mandar em dobro
+  if (!online) return 'fila';
+  var envio = postServidor(Object.assign({_rid: rid}, dados)).then(function(res){
+    if (res.ok) { filaAtualizarItem(rid, function(){ return null; }); return true; }
+    filaAtualizarItem(rid, function(it){
+      it.tentativas = (it.tentativas || 0) + 1;
+      it.ultimaTentativa = Date.now();
+      it.ultimoErro = res.erro;
+      it.enviandoDesde = 0;
+      if (!res.rede) it.recusado = true;
+      return it;
+    });
+    // Erro do servidor (não é falta de internet): avisa na hora, sem esconder.
+    if (!res.rede) showToast('⚠️ A planilha não gravou (' + res.erro + '). Ficou guardado no aparelho e vou tentar de novo.', true);
     return 'fila';
-  }
-  var res = await postServidor(Object.assign({_rid: rid}, dados));
-  if (res.ok) return true;
-  filaAdicionar(dados, rid, res);
-  // Erro do servidor (não é falta de internet): avisa na hora, sem esconder.
-  if (!res.rede) showToast('⚠️ A planilha não gravou (' + res.erro + '). Ficou guardado no aparelho e vou tentar de novo.', true);
-  return 'fila';
+  });
+  var espera = new Promise(function(r){ setTimeout(function(){ r('fila'); }, ENVIO_ESPERA_MS); });
+  return Promise.race([envio, espera]);
 }
+var ENVIO_ESPERA_MS = 5000;
 
 // Cacheia cada leitura com sucesso e, se a rede falhar, devolve o último
 // cache salvo em vez de lista vazia — assim o PDV continua mostrando
@@ -2302,7 +2327,8 @@ async function finalizarVenda() {
     hora:agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
     ts:agora.getTime(),
     operador:operador||'Não identificado', cidade:(sessaoLoja||pdvLoja), dispositivo:pdvNome, loja:(sessaoLoja||pdvLoja),
-    canal: canalVenda
+    canal: canalVenda,
+    veioPor: veioPorSel
   };
 
   setLoading('btn-finalizar','btn-text','spinner',true,'Salvando…');
@@ -2371,6 +2397,16 @@ function enviarWhatsapp() {
   novaVenda();
 }
 
+// 20/11/2026: resposta "Veio por mensagem ou post nosso?" (vazio = não perguntou)
+var VEIO_POR = ['Não','Mensagem no WhatsApp','Post no Instagram'];
+var veioPorSel = '';
+function renderVeioPor(){
+  var w=document.getElementById('vp-chips'); if(!w) return;
+  w.innerHTML = VEIO_POR.map(function(o){
+    var on = o===veioPorSel;
+    return '<button type="button" onclick="veioPorSel=(veioPorSel===\''+o+'\'?\'\':\''+o+'\');renderVeioPor()" style="padding:6px 10px;border-radius:16px;font-size:12px;cursor:pointer;border:1.5px solid '+(on?'#12340D':'var(--border)')+';background:'+(on?'#12340D':'#fff')+';color:'+(on?'#fff':'var(--mid)')+';font-family:inherit;">'+o+'</button>';
+  }).join('');
+}
 var canalVenda = 'Presencial';
 function setCanalVenda(c) {
   canalVenda = c;
@@ -2380,6 +2416,7 @@ function setCanalVenda(c) {
 function novaVenda() {
   comoConheceuSel = ''; renderComoConheceu(false);
   setCanalVenda('Presencial');
+  veioPorSel = ''; renderVeioPor();
   document.getElementById('modal-recibo').classList.remove('open');
   document.getElementById('nome').value='';
   document.getElementById('telefone').value='';
@@ -3326,7 +3363,8 @@ async function salvarCompra() {
   setLoading('btn-cp-text','btn-cp-text','spinner-cp',false,'Registrar compra');
   _salvandoCompra = false;
   if(ok){
-    showToast('Compra registrada, estoque atualizado!');
+    // 24/11: 'fila' = guardada no celular (sinal fraco), sobe sozinha depois
+    showToast(ok==='fila' ? '📱 Compra guardada no celular — sobe sozinha pra planilha' : 'Compra registrada, estoque atualizado!');
     document.getElementById('modal-compra').classList.remove('open');
     carregarEstoque();
     if (cpListaItemRef) { carregarListaComprasPDV(); }
@@ -4029,5 +4067,6 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('sw.js').catch(function(){});
 }
 </script>
+<script>try{renderVeioPor();}catch(e){}</script>
 </body>
 </html>
